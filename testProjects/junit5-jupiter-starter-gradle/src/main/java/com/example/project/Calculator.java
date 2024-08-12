@@ -10,10 +10,40 @@
 
 package com.example.project;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 public class Calculator {
 
-	public int add(int a, int b) {
-		return a + b;
-	}
+  public int add(int a, int b) {
+    return a + b;
+  }
 
+
+  public static void main(String[] args) {
+    // TODO wait until upgrade of BSP 2.2 and support for OnRunReadStdin then uncomment
+    // and handle in integ tests
+    /*
+    if (args.length != 1) {
+      System.out.println("Requires 1 arg");
+      System.exit(1);
+    }*/
+    System.out.println("Sysout test");
+    System.err.println("Syserr test");
+    // TODO wait until upgrade of BSP 2.2 and support for OnRunReadStdin then uncomment
+    /*try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
+      String input = br.readLine();
+      String requiredInput = args[0];
+      if (requiredInput.equals(input)) {
+        System.out.println("OK!");
+        System.err.println("No error");
+      } else  {
+        System.err.println("Expected [" + requiredInput + "] but got [" + input + "]");
+      }
+    } catch (IOException e) {
+      System.err.println("I/O Error getting string" + e);
+      System.exit(1);
+    }*/
+  }
 }

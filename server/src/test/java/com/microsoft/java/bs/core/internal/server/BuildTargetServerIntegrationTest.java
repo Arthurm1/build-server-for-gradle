@@ -15,6 +15,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -49,6 +50,10 @@ import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
 import ch.epfl.scala.bsp4j.MessageType;
 import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
+import ch.epfl.scala.bsp4j.RunParams;
+import ch.epfl.scala.bsp4j.RunParamsDataKind;
+import ch.epfl.scala.bsp4j.RunResult;
+import ch.epfl.scala.bsp4j.ScalaMainClass;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
@@ -1273,6 +1278,63 @@ class BuildTargetServerIntegrationTest {
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
+      client.clearMessages();
+    });
+  }
+
+  @Test
+  void testCleanStraightToRun() {
+    withNewTestServer("junit5-jupiter-starter-gradle", (gradleBuildServer, client) -> {
+      // get targets
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+          .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+          .map(BuildTarget::getId)
+          .collect(Collectors.toList());
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      gradleBuildServer.buildTargetCleanCache(cleanCacheParams).join();
+      client.clearMessages();
+
+      // a request to run mainClass straight after a clean should produce compile results/reports
+      // run main
+      ScalaMainClass mainClass = new ScalaMainClass("com.example.project.Calculator",
+          Collections.emptyList(), Collections.emptyList());
+      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+            "junit5-jupiter-starter-gradle [main]");
+      RunParams runParams = new RunParams(btId);
+      runParams.setOriginId("originId");
+      runParams.setDataKind(RunParamsDataKind.SCALA_MAIN_CLASS);
+      runParams.setData(mainClass);
+      RunResult runResult = gradleBuildServer.buildTargetRun(runParams).join();
+      assertEquals("originId", runResult.getOriginId());
+      client.waitOnStartReports(2);
+      client.waitOnFinishReports(2);
+      client.waitOnCompileTasks(1);
+      client.waitOnCompileReports(1);
+      // TODO change after upgrade to BSP 2.2 and switch to run/printStdout and run/printStderr
+      client.waitOnLogMessages(22);
+      client.waitOnTestStarts(0);
+      client.waitOnTestFinishes(0);
+      client.waitOnTestReports(0);
+      // TODO- switch to checking run/printStderr messages
+      assertTrue(client.logMessages.stream().anyMatch(message ->
+          message.getType() == MessageType.ERROR
+          && message.getMessage().equals("Syserr test")));
+      // TODO- switch to checking run/printStdout messages
+      assertTrue(client.logMessages.stream().anyMatch(message ->
+          message.getType() == MessageType.INFORMATION
+          && message.getMessage().equals("Sysout test")));
+      for (CompileReport message : client.compileReports) {
+        assertFalse(message.getNoOp());
+      }
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      assertEquals(StatusCode.OK, runResult.getStatusCode(),
+          () -> client.finishReports.stream().map(TaskFinishParams::getMessage)
+                    .collect(Collectors.joining("\n")));
       client.clearMessages();
     });
   }

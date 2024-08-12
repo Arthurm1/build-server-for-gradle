@@ -64,6 +64,10 @@ import ch.epfl.scala.bsp4j.OutputPathsResult;
 import ch.epfl.scala.bsp4j.ResourcesItem;
 import ch.epfl.scala.bsp4j.ResourcesParams;
 import ch.epfl.scala.bsp4j.ResourcesResult;
+import ch.epfl.scala.bsp4j.RunParams;
+import ch.epfl.scala.bsp4j.RunParamsDataKind;
+import ch.epfl.scala.bsp4j.RunResult;
+import ch.epfl.scala.bsp4j.ScalaMainClass;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
@@ -560,6 +564,56 @@ public class BuildTargetService {
       }
     }
     return testResult;
+  }
+
+  /**
+   * Run the main class.
+   */
+  public RunResult buildTargetRun(RunParams params) {
+    RunResult runResult = new RunResult(StatusCode.OK);
+    runResult.setOriginId(params.getOriginId());
+    if (!RunParamsDataKind.SCALA_MAIN_CLASS.equals(params.getDataKind())) {
+      LOGGER.warning("Run Data Kind " + params.getDataKind() + " not supported");
+      runResult.setStatusCode(StatusCode.ERROR);
+    } else {
+      // running tests can trigger compilation that must be reported on
+      CompileProgressReporter compileProgressReporter = new CompileProgressReporter(client,
+              params.getOriginId(), getFullTaskPathMap());
+      GradleBuildTarget buildTarget = getGradleBuildTarget(params.getTarget());
+      if (buildTarget == null) {
+        // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
+        throw new IllegalArgumentException("The build target does not exist: "
+          + params.getTarget().getUri());
+      }
+      URI projectUri = getRootProjectUri(params.getTarget());
+      // ideally BSP would have a jvmRunEnv style runkind for executing tests, not scala.
+      ScalaMainClass mainClass = JsonUtils.toModel(params.getData(), ScalaMainClass.class);
+      // TODO BSP is not clear on which argument set takes precedence
+      List<String> arguments1 = params.getArguments();
+      List<String> arguments2 = mainClass.getArguments();
+      List<String> argumentsToUse;
+      if (arguments1 == null || arguments1.isEmpty()) {
+        argumentsToUse = arguments2;
+      } else {
+        argumentsToUse = arguments1;
+      }
+      // TODO upgrade to later BSP version and then env vars can be passed to runMainClass
+      StatusCode statusCode = connector.runMainClass(projectUri,
+              buildTarget.getSourceSet().getProjectPath(),
+              buildTarget.getSourceSet().getSourceSetName(),
+              mainClass.getClassName(),
+              null,
+              mainClass.getJvmOptions(),
+              argumentsToUse,
+              client,
+              params.getOriginId(),
+              compileProgressReporter);
+
+      if (statusCode != StatusCode.OK) {
+        runResult.setStatusCode(statusCode);
+      }
+    }
+    return runResult;
   }
 
   /**
