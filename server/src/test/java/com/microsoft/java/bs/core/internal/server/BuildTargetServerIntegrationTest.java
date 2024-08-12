@@ -48,6 +48,7 @@ import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
 import ch.epfl.scala.bsp4j.MessageType;
+import ch.epfl.scala.bsp4j.PrintParams;
 import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
@@ -284,6 +285,16 @@ class BuildTargetServerIntegrationTest {
 
     @Override
     public void onBuildTargetDidChange(DidChangeBuildTarget params) {
+      // do nothing
+    }
+
+    @Override
+    public void onRunPrintStdout(PrintParams params) {
+      // do nothing
+    }
+
+    @Override
+    public void onRunPrintStderr(PrintParams params) {
       // do nothing
     }
   }

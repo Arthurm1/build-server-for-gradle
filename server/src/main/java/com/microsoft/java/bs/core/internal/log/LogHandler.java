@@ -51,7 +51,7 @@ public class LogHandler extends Handler {
     } else if (Level.WARNING.equals(level)) {
       return MessageType.WARNING;
     } else {
-      return MessageType.INFORMATION;
+      return MessageType.INFO;
     }
   }
 }
