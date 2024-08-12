@@ -56,8 +56,8 @@ public class GradleApiConnector {
    * Get the Gradle version of the project.
    */
   public String getGradleVersion(URI projectUri) {
-    try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      return getGradleVersion(connection);
+    try {
+      return getBuildEnvironment(projectUri).getGradle().getGradleVersion();
     } catch (BuildException e) {
       LOGGER.severe("Failed to get Gradle version: " + e.getMessage());
       return "";
@@ -65,10 +65,25 @@ public class GradleApiConnector {
   }
 
   private String getGradleVersion(ProjectConnection connection) {
-    BuildEnvironment model = connection
+    return getBuildEnvironment(connection).getGradle().getGradleVersion();
+  }
+
+  /**
+   * Get the Gradle {@link BuildEnvironment}.
+   *
+   * @param projectUri uri of the project
+   * @return an instance of {@link BuildEnvironment}
+   */
+  public BuildEnvironment getBuildEnvironment(URI projectUri) {
+    try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
+      return getBuildEnvironment(connection);
+    }
+  }
+
+  private BuildEnvironment getBuildEnvironment(ProjectConnection connection) {
+    return connection
         .model(BuildEnvironment.class)
         .get();
-    return model.getGradle().getGradleVersion();
   }
 
   /**
