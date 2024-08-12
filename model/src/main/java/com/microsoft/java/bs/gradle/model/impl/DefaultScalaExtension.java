@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 
@@ -156,6 +157,11 @@ public class DefaultScalaExtension implements ScalaExtension {
   }
 
   @Override
+  public boolean isGroovyExtension() {
+    return false;
+  }
+
+  @Override
   public JavaExtension getAsJavaExtension() {
     return null;
   }
@@ -163,5 +169,10 @@ public class DefaultScalaExtension implements ScalaExtension {
   @Override
   public ScalaExtension getAsScalaExtension() {
     return this;
+  }
+
+  @Override
+  public GroovyExtension getAsGroovyExtension() {
+    return null;
   }
 }

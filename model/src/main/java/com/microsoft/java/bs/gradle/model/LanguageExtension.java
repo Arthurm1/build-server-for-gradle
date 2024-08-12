@@ -58,6 +58,13 @@ public interface LanguageExtension extends Serializable {
   boolean isScalaExtension();
 
   /**
+   * Checks if the implementing class is a {@link GroovyExtension}.
+   *
+   * @return true if the extension is for Scala, false otherwise.
+   */
+  boolean isGroovyExtension();
+
+  /**
    * Attempts to cast the current object to a {@link JavaExtension} instance.
    * <p>
    * This method should ideally be used only when the implementing class
@@ -80,4 +87,17 @@ public interface LanguageExtension extends Serializable {
    *        or null if the cast fails.
    */
   ScalaExtension getAsScalaExtension();
+
+  /**
+   * Attempts to cast the current object to a {@link GroovyExtension} instance.
+   * <p>
+   * This method should ideally be used only when the implementing class
+   * is known to be a {@link GroovyExtension}.
+   * </p>
+   *
+   * @return the current object cast to a {@link GroovyExtension} instance,
+   *        or null if the cast fails.
+   */
+  GroovyExtension getAsGroovyExtension();
+
 }
