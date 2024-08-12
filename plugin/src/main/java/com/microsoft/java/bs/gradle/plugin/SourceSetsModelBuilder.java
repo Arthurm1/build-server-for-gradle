@@ -181,6 +181,8 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           results.add(new JavaLanguageModelBuilder());
         } else if (language.equalsIgnoreCase(SupportedLanguages.SCALA.getBspName())) {
           results.add(new ScalaLanguageModelBuilder());
+        } else if (language.equalsIgnoreCase(SupportedLanguages.KOTLIN.getBspName())) {
+          results.add(new KotlinLanguageModelBuilder());
         }
       }
     }

@@ -107,6 +107,10 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
       return object.getAsScalaExtension();
     }
 
+    if (object.isKotlinExtension()) {
+      return object.getAsKotlinExtension();
+    }
+
     throw new IllegalArgumentException("No conversion methods defined for object: " + object);
   }
 
