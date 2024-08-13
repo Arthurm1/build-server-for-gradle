@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -20,6 +21,7 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.BuildException;
 import org.gradle.tooling.BuildLauncher;
+import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.GradleConnectionException;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
@@ -44,31 +46,33 @@ import ch.epfl.scala.bsp4j.StatusCode;
  * Connect to Gradle Daemon via Gradle Tooling API.
  */
 public class GradleApiConnector {
-  private final Map<File, GradleConnector> connectors;
+  // cancellations especially can lead to concurrent calls to `connectors#computeIfAbsent`
+  private final ConcurrentHashMap<File, GradleConnector> connectors;
   private final PreferenceManager preferenceManager;
 
   public GradleApiConnector(PreferenceManager preferenceManager) {
     this.preferenceManager = preferenceManager;
-    connectors = new HashMap<>();
+    connectors = new ConcurrentHashMap<>();
   }
 
   /**
    * Get the Gradle version of the project.
    */
-  public String getGradleVersion(URI projectUri) {
+  public String getGradleVersion(URI projectUri, CancellationToken cancellationToken) {
     try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      return getGradleVersion(connection);
+      return getGradleVersion(connection, cancellationToken);
     } catch (BuildException e) {
       LOGGER.severe("Failed to get Gradle version: " + e.getMessage());
       return "";
     }
   }
 
-  private String getGradleVersion(ProjectConnection connection) {
-    BuildEnvironment model = connection
-        .model(BuildEnvironment.class)
-        .get();
-    return model.getGradle().getGradleVersion();
+  private String getGradleVersion(ProjectConnection connection,
+      CancellationToken cancellationToken) {
+    return Utils
+       .getModelBuilder(connection, preferenceManager.getPreferences(), BuildEnvironment.class,
+          cancellationToken)
+       .get().getGradle().getGradleVersion();
   }
 
   /**
@@ -78,7 +82,8 @@ public class GradleApiConnector {
    * @param client     connection to BSP client
    * @return an instance of {@link GradleSourceSets}
    */
-  public GradleSourceSets getGradleSourceSets(URI projectUri, BuildClient client) {
+  public GradleSourceSets getGradleSourceSets(URI projectUri, BuildClient client,
+      CancellationToken cancellationToken) {
     File initScript = Utils.getInitScriptFile();
     if (!initScript.exists()) {
       throw new IllegalStateException("Failed to get init script file.");
@@ -89,8 +94,8 @@ public class GradleApiConnector {
          errorOut) {
       BuildActionExecuter<GradleSourceSets> buildExecutor =
           Utils.getBuildActionExecuter(connection, preferenceManager.getPreferences(),
-            new GetSourceSetsAction());
-      buildExecutor.addProgressListener(reporter,
+            new GetSourceSetsAction(), cancellationToken)
+          .addProgressListener(reporter,
               OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION)
           .setStandardError(errorOut)
           .addArguments("--init-script", initScript.getAbsolutePath());
@@ -120,7 +125,8 @@ public class GradleApiConnector {
    * @param reporter   reporter on feedback from Gradle
    * @param tasks      tasks to run
    */
-  public StatusCode runTasks(URI projectUri, ProgressReporter reporter, String... tasks) {
+  public StatusCode runTasks(URI projectUri, ProgressReporter reporter,
+      String[] tasks, CancellationToken cancellationToken) {
     // Don't issue a start progress update - the listener will pick that up automatically
     final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     StatusCode statusCode = StatusCode.OK;
@@ -128,7 +134,7 @@ public class GradleApiConnector {
          errorOut
     ) {
       BuildLauncher launcher = Utils.getBuildLauncher(connection,
-          preferenceManager.getPreferences());
+          preferenceManager.getPreferences(), cancellationToken);
       // TODO: consider to use outputstream to capture the output.
       launcher.addProgressListener(reporter, OperationType.TASK)
           .setStandardError(errorOut)
@@ -158,12 +164,13 @@ public class GradleApiConnector {
       List<String> args,
       Map<String, String> envVars,
       BuildClient client, String originId,
-      CompileProgressReporter compileProgressReporter) {
+      CompileProgressReporter compileProgressReporter,
+      CancellationToken cancellationToken) {
 
     StatusCode statusCode = StatusCode.OK;
     ProgressReporter reporter = new DefaultProgressReporter(client);
     try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      String gradleVersion = getGradleVersion(connection);
+      String gradleVersion = getGradleVersion(connection, cancellationToken);
       if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("2.6")) < 0) {
         reporter.sendError("Error running test classes: Gradle version "
             + gradleVersion + " must be >= 2.6");
@@ -179,7 +186,7 @@ public class GradleApiConnector {
           final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
           try (errorOut) {
             TestLauncher launcher = Utils
-                .getTestLauncher(connection, preferenceManager.getPreferences())
+                .getTestLauncher(connection, preferenceManager.getPreferences(), cancellationToken)
                 .setStandardError(errorOut)
                 .addProgressListener(testReportReporter, OperationType.TEST);
             if (compileProgressReporter != null) {

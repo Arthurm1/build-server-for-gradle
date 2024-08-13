@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 
 import org.apache.commons.lang3.StringUtils;
+import org.gradle.tooling.CancellationToken;
 
 import com.microsoft.java.bs.core.Constants;
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
@@ -38,9 +39,9 @@ public class LifecycleService {
 
   private Status status = Status.UNINITIALIZED;
 
-  private GradleApiConnector connector;
+  private final GradleApiConnector connector;
 
-  private PreferenceManager preferenceManager;
+  private final PreferenceManager preferenceManager;
 
   /**
    * Constructor for {@link LifecycleService}.
@@ -53,8 +54,9 @@ public class LifecycleService {
   /**
    * Initialize the build server.
    */
-  public InitializeBuildResult initializeServer(InitializeBuildParams params) {
-    initializePreferenceManager(params);
+  public InitializeBuildResult initializeServer(InitializeBuildParams params,
+      CancellationToken cancelToken) {
+    initializePreferenceManager(params, cancelToken);
 
     BuildServerCapabilities capabilities = initializeServerCapabilities();
     return new InitializeBuildResult(
@@ -65,7 +67,7 @@ public class LifecycleService {
     );
   }
 
-  void initializePreferenceManager(InitializeBuildParams params) {
+  void initializePreferenceManager(InitializeBuildParams params, CancellationToken cancelToken) {
     URI rootUri = UriUtils.getUriFromString(params.getRootUri());
     preferenceManager.setRootUri(rootUri);
     preferenceManager.setClientSupportedLanguages(params.getCapabilities().getLanguageIds());
@@ -77,7 +79,7 @@ public class LifecycleService {
     }
 
     preferenceManager.setPreferences(preferences);
-    updateGradleJavaHomeIfNecessary(rootUri);
+    updateGradleJavaHomeIfNecessary(rootUri, cancelToken);
   }
 
   private BuildServerCapabilities initializeServerCapabilities() {
@@ -131,7 +133,7 @@ public class LifecycleService {
    *
    * <p>The JDK installation path string will be set to {@link Preferences#gradleJavaHome}.
    */
-  private void updateGradleJavaHomeIfNecessary(URI rootUri) {
+  private void updateGradleJavaHomeIfNecessary(URI rootUri, CancellationToken cancelToken) {
     Preferences preferences = preferenceManager.getPreferences();
     if (preferences.getJdks() == null || preferences.getJdks().isEmpty()) {
       return;
@@ -145,7 +147,7 @@ public class LifecycleService {
       if (buildKind == GradleBuildKind.SPECIFIED_VERSION) {
         gradleVersion = preferences.getGradleVersion();
       } else {
-        gradleVersion = connector.getGradleVersion(rootUri);
+        gradleVersion = connector.getGradleVersion(rootUri, cancelToken);
       }
 
       if (StringUtils.isNotBlank(gradleVersion)) {

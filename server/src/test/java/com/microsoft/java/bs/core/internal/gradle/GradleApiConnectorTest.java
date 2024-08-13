@@ -62,13 +62,15 @@ class GradleApiConnectorTest {
   }
   
   private GradleSourceSets getGradleSourceSets(File projectDir) {
-    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toURI(), null));
+    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toURI(),
+        null, null));
   }
 
   @Test
   void testGetGradleVersion() {
     File projectDir = projectPath.resolve("gradle-4.3-with-wrapper").toFile();
-    String version = withConnector(connector -> connector.getGradleVersion(projectDir.toURI()));
+    String version = withConnector(connector -> connector.getGradleVersion(projectDir.toURI(),
+        null));
     assertEquals("4.3", version);
   }
 
@@ -309,7 +311,8 @@ class GradleApiConnectorTest {
   void testBuildTargetTest() {
     File projectDir = projectPath.resolve("java-tests").toFile();
     withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(), null);
+      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
+          null, null);
       GradleSourceSet testSourceSet =
           findSourceSet(gradleSourceSets, "java-tests [test]");
       Map<BuildTargetIdentifier, Map<String, Set<String>>> testClassesMap = new HashMap<>();
@@ -319,12 +322,12 @@ class GradleApiConnectorTest {
       Set<String> methods = new HashSet<>();
       classes.put("com.example.project.PassingTests", methods);
       StatusCode passingTest = connector.runTests(projectDir.toURI(),
-          testClassesMap, null, null, null, null, null, null);
+          testClassesMap, null, null, null, null, null, null, null);
       assertEquals(StatusCode.OK, passingTest);
       classes.clear();
       classes.put("com.example.project.FailingTests", methods);
       StatusCode failingTest = connector.runTests(projectDir.toURI(),
-          testClassesMap, null, null, null, null, null, null);
+          testClassesMap, null, null, null, null, null, null, null);
       assertEquals(StatusCode.ERROR, failingTest);
       return null;
     });

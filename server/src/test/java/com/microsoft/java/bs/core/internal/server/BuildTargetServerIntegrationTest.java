@@ -21,8 +21,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import ch.epfl.scala.bsp4j.BuildClient;
@@ -72,11 +74,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.microsoft.java.bs.core.Launcher;
-import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
-import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
-import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
-import com.microsoft.java.bs.core.internal.services.BuildTargetService;
-import com.microsoft.java.bs.core.internal.services.LifecycleService;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 
@@ -189,12 +186,11 @@ class BuildTargetServerIntegrationTest {
                   .collect(Collectors.joining("\n"))));
     }
 
-    private void waitOnMessages(String message, int size, IntSupplier sizeSupplier) {
+    private boolean waitOnSupplier(Supplier<Boolean> supplier) {
       // set to 5000ms because it seems reasonable
       long timeoutMs = 5000;
       long endTime = System.currentTimeMillis() + timeoutMs;
-      while (sizeSupplier.getAsInt() < size
-          && System.currentTimeMillis() < endTime) {
+      while (!supplier.get() && System.currentTimeMillis() < endTime) {
         synchronized (this) {
           long waitTime = endTime - System.currentTimeMillis();
           if (waitTime > 0) {
@@ -206,7 +202,12 @@ class BuildTargetServerIntegrationTest {
           }
         }
       }
-      assertEquals(size, sizeSupplier.getAsInt(), message + " count error");
+      return supplier.get();
+    }
+
+    private void waitOnMessages(String errorMessage, int size, IntSupplier sizeSupplier) {
+      waitOnSupplier(() -> sizeSupplier.getAsInt() >= size);
+      assertEquals(size, sizeSupplier.getAsInt(), errorMessage + " count error");
     }
 
     private CompileReport findCompileReport(BuildTargetIdentifier btId) {
@@ -331,24 +332,9 @@ class BuildTargetServerIntegrationTest {
       } catch (IOException e) {
         throw new IllegalStateException("Cannot setup streams", e);
       }
-      // server
-      BuildTargetManager buildTargetManager = new BuildTargetManager();
-      PreferenceManager preferenceManager = new PreferenceManager();
-      GradleApiConnector connector = new GradleApiConnector(preferenceManager);
-      LifecycleService lifecycleService = new LifecycleService(connector, preferenceManager);
-      BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-          connector, preferenceManager);
-      GradleBuildServer gradleBuildServer = new GradleBuildServer(lifecycleService,
-          buildTargetService);
+      // server - set tracer param to `new PrintWriter(System.out)` for JSON message logging.
       org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher =
-          new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<BuildClient>()
-          .setLocalService(gradleBuildServer)
-          .setRemoteInterface(BuildClient.class)
-          .setOutput(serverOut)
-          .setInput(serverIn)
-          .setExecutorService(threadPool)
-          .create();
-      buildTargetService.setClient(serverLauncher.getRemoteProxy());
+          Launcher.createLauncher(serverOut, serverIn, threadPool, null);
       // client
       TestClient client = new TestClient();
       org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher =
@@ -369,7 +355,11 @@ class BuildTargetServerIntegrationTest {
         testServer.onBuildInitialized();
         consumer.accept(testServer, client);
       } finally {
-        testServer.buildShutdown().join();
+        try {
+          testServer.buildShutdown().get(10000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+          // do nothing
+        }
         threadPool.shutdown();
       }
     } catch (IOException e) {
@@ -1848,7 +1838,6 @@ class BuildTargetServerIntegrationTest {
     });
   }
 
-
   @Test
   void testExtraConfiguration() {
     withNewTestServer("java-tests", (gradleBuildServer, client) -> {
@@ -1937,6 +1926,39 @@ class BuildTargetServerIntegrationTest {
           "extraTest()",
           List.of("extraTest()",
               "ExtraTests")));
+      client.clearMessages();
+    });
+  }
+  
+  /**
+   * This doesn't check that cancellation is successful as it may or may not be depending on timing.
+   */
+  @Test
+  void testCancellation() {
+    withNewTestServer("junit5-jupiter-starter-gradle", (gradleBuildServer, client) -> {
+      // get targets and request cancellation - can't test if it's cancelled as it may have 
+      // completed before cancel or because of cancel
+      gradleBuildServer.workspaceBuildTargets().cancel(false);
+      client.clearMessages();
+
+      // get targets again but don't cancel
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+          .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+          .map(BuildTarget::getId)
+          .collect(Collectors.toList());
+      client.clearMessages();
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      gradleBuildServer.buildTargetCleanCache(cleanCacheParams).join();
+      client.clearMessages();
+
+      // compile targets and request cancellation - can't test if it's cancelled as it may have 
+      // completed before cancel
+      CompileParams compileParams = new CompileParams(btIds);
+      compileParams.setOriginId("originId");
+      gradleBuildServer.buildTargetCompile(compileParams).cancel(false);
       client.clearMessages();
     });
   }
