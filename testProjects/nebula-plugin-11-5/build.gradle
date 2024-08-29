@@ -1,0 +1,8 @@
+plugins {
+  id 'java'
+  id("com.netflix.nebula.ospackage") version "11.5.0"
+}
+
+repositories {
+  mavenCentral()
+}
