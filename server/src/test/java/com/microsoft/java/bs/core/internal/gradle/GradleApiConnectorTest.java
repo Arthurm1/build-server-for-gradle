@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import com.microsoft.java.bs.core.Launcher;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
@@ -90,6 +91,38 @@ class GradleApiConnectorTest {
         "junit5-jupiter-starter-gradle [main]").getSourceSetName());
     assertEquals("test", findSourceSet(gradleSourceSets,
         "junit5-jupiter-starter-gradle [test]").getSourceSetName());
+  }
+
+  @Test
+  void testAndroidSourceSets() {
+    File projectDir = projectPath.resolve("android-test").toFile();
+    PreferenceManager preferenceManager = new PreferenceManager();
+    preferenceManager.setPreferences(new Preferences());
+    GradleApiConnector connector = new GradleApiConnector(preferenceManager);
+    GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(), null);
+    assertEquals(4, gradleSourceSets.getGradleSourceSets().size());
+    findSourceSet(gradleSourceSets, "app [debug]");
+    findSourceSet(gradleSourceSets, "app [release]");
+    findSourceSet(gradleSourceSets, "mylibrary [debug]");
+    findSourceSet(gradleSourceSets, "mylibrary [release]");
+    Set<GradleModuleDependency> combinedModuleDependencies = new HashSet<>();
+    for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
+      assertEquals(2, sourceSet.getSourceDirs().size());
+      assertEquals(4, sourceSet.getResourceDirs().size());
+      assertEquals(0, sourceSet.getExtensions().size());
+      assertEquals(0, sourceSet.getArchiveOutputFiles().size());
+      assertTrue(sourceSet.hasTests());
+      combinedModuleDependencies.addAll(sourceSet.getModuleDependencies());
+    }
+    // This test can vary depending on the environment due to generated files.
+    // Specifically R file and Android Components. For eg:
+    // 1. When android-test project has not been or doesn't have the resources compiled
+    //    the R.jar files don't exist for the build targets and are not included.
+    // 2. ANDROID_HOME is not configured in which case the Android Component classpath
+    //    is not added to module dependencies.
+
+    // 57 is the number of actual project module dependencies without test variant dependencies
+    assertTrue(combinedModuleDependencies.size() >= 57);
   }
 
   private GradleSourceSet findSourceSet(GradleSourceSets gradleSourceSets, String displayName) {

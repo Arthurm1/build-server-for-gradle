@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.microsoft.java.bs.gradle.plugin.utils.AndroidUtils;
+import com.microsoft.java.bs.gradle.plugin.utils.SourceSetUtils;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -33,7 +35,6 @@ import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
@@ -47,17 +48,25 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     return modelName.equals(GradleSourceSets.class.getName());
   }
 
+  @SuppressWarnings("NullableProblems")
   @Override
   public Object buildAll(String modelName, Project project) {
     // mapping Gradle source set to our customized model.
-    List<GradleSourceSet> sourceSets = getSourceSetContainer(project).stream()
-        .map(ss -> getSourceSet(project, ss)).collect(Collectors.toList());
+    List<GradleSourceSet> sourceSets;
+
+    // Fetch source sets depending on the project type
+    if (AndroidUtils.isAndroidProject(project)) {
+      sourceSets = AndroidUtils.getBuildVariantsAsGradleSourceSets(project);
+    } else {
+      sourceSets = getSourceSetContainer(project).stream()
+          .map(ss -> getSourceSet(project, ss)).collect(Collectors.toList());
+    }
 
     excludeSourceDirsFromModules(sourceSets);
 
     return new DefaultGradleSourceSets(sourceSets);
   }
-  
+
   private DefaultGradleSourceSet getSourceSet(Project project, SourceSet sourceSet) {
     DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
     // dependencies are populated by the GradleSourceSetsAction.  Make sure not null.
@@ -69,13 +78,14 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     gradleSourceSet.setProjectDir(project.getProjectDir());
     gradleSourceSet.setRootDir(project.getRootDir());
     gradleSourceSet.setSourceSetName(sourceSet.getName());
-    String classesTaskName = getFullTaskName(projectPath, sourceSet.getClassesTaskName());
+    String classesTaskName =
+        SourceSetUtils.getFullTaskName(projectPath, sourceSet.getClassesTaskName());
     gradleSourceSet.setClassesTaskName(classesTaskName);
-    String cleanTaskName = getFullTaskName(projectPath, "clean");
+    String cleanTaskName = SourceSetUtils.getFullTaskName(projectPath, "clean");
     gradleSourceSet.setCleanTaskName(cleanTaskName);
     Set<String> taskNames = new HashSet<>();
     gradleSourceSet.setTaskNames(taskNames);
-    String projectName = stripPathPrefix(projectPath);
+    String projectName = SourceSetUtils.stripPathPrefix(projectPath);
     if (projectName.isEmpty()) {
       projectName = project.getName();
     }
@@ -90,11 +100,13 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     Set<File> srcDirs = new HashSet<>();
     Set<File> generatedSrcDirs = new HashSet<>();
     Set<File> sourceOutputDirs = new HashSet<>();
-    for (LanguageModelBuilder languageModelBuilder : getSupportedLanguages()) {
+    for (LanguageModelBuilder languageModelBuilder
+        : SourceSetUtils.getSupportedLanguageModelBuilders()) {
       LanguageExtension extension = languageModelBuilder.getExtensionFor(project, sourceSet,
           gradleSourceSet.getModuleDependencies());
       if (extension != null) {
-        String compileTaskName = getFullTaskName(projectPath, extension.getCompileTaskName());
+        String compileTaskName =
+            SourceSetUtils.getFullTaskName(projectPath, extension.getCompileTaskName());
         taskNames.add(compileTaskName);
 
         srcDirs.addAll(extension.getSourceDirs());
@@ -124,16 +136,18 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
 
     // resource output dir
     File resourceOutputDir = sourceSet.getOutput().getResourcesDir();
+    Set<File> resourceOutputDirs = new HashSet<>();
     if (resourceOutputDir != null) {
-      gradleSourceSet.setResourceOutputDir(resourceOutputDir);
+      resourceOutputDirs.add(resourceOutputDir);
     }
+    gradleSourceSet.setResourceOutputDirs(resourceOutputDirs);
 
     // archive output dirs
     Map<File, List<File>> archiveOutputFiles = getArchiveOutputFiles(project, sourceSet);
     gradleSourceSet.setArchiveOutputFiles(archiveOutputFiles);
 
     // tests
-    if (sourceOutputDirs != null) {
+    if (!sourceOutputDirs.isEmpty()) {
       Set<Test> testTasks = tasksWithType(project, Test.class);
       for (Test testTask : testTasks) {
         if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) >= 0) {
@@ -161,7 +175,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
               break;
             }
           } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-                    | IllegalArgumentException | InvocationTargetException  e) {
+                   | IllegalArgumentException | InvocationTargetException e) {
             // ignore
           }
         }
@@ -169,22 +183,6 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     }
 
     return gradleSourceSet;
-  }
-
-  private List<LanguageModelBuilder> getSupportedLanguages() {
-    List<LanguageModelBuilder> results = new LinkedList<>();
-    String supportedLanguagesProps = System.getProperty("bsp.gradle.supportedLanguages");
-    if (supportedLanguagesProps != null) {
-      String[] supportedLanguages = supportedLanguagesProps.split(",");
-      for (String language : supportedLanguages) {
-        if (language.equalsIgnoreCase(SupportedLanguages.JAVA.getBspName())) {
-          results.add(new JavaLanguageModelBuilder());
-        } else if (language.equalsIgnoreCase(SupportedLanguages.SCALA.getBspName())) {
-          results.add(new ScalaLanguageModelBuilder());
-        }
-      }
-    }
-    return results;
   }
 
   private <T extends Task> Set<T> tasksWithType(Project project, Class<T> clazz) {
@@ -199,6 +197,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
    * get all archive tasks for this project and maintain the archive file
    * to source set mapping.
    */
+  @SuppressWarnings("deprecation")
   private Map<File, List<File>> getArchiveOutputFiles(Project project, SourceSet sourceSet) {
     // get all archive tasks for this project and find the dirs that are included in the archive
     Set<AbstractArchiveTask> archiveTasks = tasksWithType(project, AbstractArchiveTask.class);
@@ -213,8 +212,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           } else {
             archiveFile = archiveTask.getArchivePath();
           }
-          List<File> sourceSetOutputs = new LinkedList<>();
-          sourceSetOutputs.addAll(sourceSet.getOutput().getFiles());
+          List<File> sourceSetOutputs = new LinkedList<>(sourceSet.getOutput().getFiles());
           archiveOutputFiles.put(archiveFile, sourceSetOutputs);
         }
       }
@@ -243,8 +241,8 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       if (sourceSet.getSourceOutputDirs() != null) {
         exclusions.addAll(sourceSet.getSourceOutputDirs());
       }
-      if (sourceSet.getResourceOutputDir() != null) {
-        exclusions.add(sourceSet.getResourceOutputDir());
+      if (sourceSet.getResourceOutputDirs() != null) {
+        exclusions.addAll(sourceSet.getResourceOutputDirs());
       }
       if (sourceSet.getArchiveOutputFiles() != null) {
         exclusions.addAll(sourceSet.getArchiveOutputFiles().keySet());
@@ -256,7 +254,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     for (GradleSourceSet sourceSet : sourceSets) {
       Set<GradleModuleDependency> filteredModuleDependencies = sourceSet.getModuleDependencies()
           .stream().filter(mod -> mod.getArtifacts()
-            .stream().anyMatch(art -> !exclusionUris.contains(art.getUri())))
+              .stream().anyMatch(art -> !exclusionUris.contains(art.getUri())))
           .collect(Collectors.toSet());
       if (sourceSet instanceof DefaultGradleSourceSet) {
         ((DefaultGradleSourceSet) sourceSet).setModuleDependencies(filteredModuleDependencies);
@@ -267,7 +265,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   private Collection<SourceSet> getSourceSetContainer(Project project) {
     if (GradleVersion.current().compareTo(GradleVersion.version("5.0")) >= 0) {
       SourceSetContainer sourceSetContainer = project.getExtensions()
-              .findByType(SourceSetContainer.class);
+          .findByType(SourceSetContainer.class);
       if (sourceSetContainer != null) {
         return sourceSetContainer;
       }
@@ -287,35 +285,10 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
         return (SourceSetContainer) getSourceSetsMethod.invoke(pluginConvention);
       }
     } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-             | IllegalArgumentException | InvocationTargetException  e) {
+             | IllegalArgumentException | InvocationTargetException e) {
       // ignore
     }
     return new LinkedList<>();
-  }
-
-  /**
-   * Return a project task name - [project path]:[task].
-   */
-  private String getFullTaskName(String modulePath, String taskName) {
-    if (taskName == null) {
-      return null;
-    }
-    if (taskName.isEmpty()) {
-      return taskName;
-    }
-
-    if (modulePath == null || modulePath.equals(":")) {
-      // must be prefixed with ":" as taskPaths are reported back like that in progress messages
-      return ":" + taskName;
-    }
-    return modulePath + ":" + taskName;
-  }
-
-  private String stripPathPrefix(String projectPath) {
-    if (projectPath.startsWith(":")) {
-      return projectPath.substring(1);
-    }
-    return projectPath;
   }
 
   private Set<Object> getArchiveSourcePaths(CopySpec copySpec) {
@@ -340,7 +313,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
             }
           }
         } catch (NoSuchMethodException | IllegalAccessException
-          | IllegalArgumentException | InvocationTargetException e) {
+                 | IllegalArgumentException | InvocationTargetException e) {
           // cannot get archive information
         }
       }
