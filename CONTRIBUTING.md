@@ -2,7 +2,7 @@
 
 ## Contributing Fixes
 
-If you are interested in writing code to fix issues, please check the following content to see how to set up the developing environment.
+If you are interested in writing code to fix issues, please check the following content to see how to set up the developing environment. If you are interested in understanding how the Gradle Build Server works under the hood visit the [developer documentation](./docs/developer.md).
 
 ### Requirement
 
