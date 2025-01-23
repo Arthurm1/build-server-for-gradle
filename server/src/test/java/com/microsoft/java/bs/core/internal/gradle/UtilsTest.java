@@ -32,6 +32,7 @@ class UtilsTest {
 
   @Test
   void testGetLatestCompatibleJavaVersion() {
+    assertEquals("23", Utils.getLatestCompatibleJavaVersion("8.10"));
     assertEquals("22", Utils.getLatestCompatibleJavaVersion("8.8"));
     assertEquals("21", Utils.getLatestCompatibleJavaVersion("8.5"));
     assertEquals("20", Utils.getLatestCompatibleJavaVersion("8.3"));
