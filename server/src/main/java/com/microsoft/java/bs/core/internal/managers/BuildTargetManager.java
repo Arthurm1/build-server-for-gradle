@@ -72,7 +72,6 @@ public class BuildTargetManager {
           buildTargetCapabilities
       );
       bt.setBaseDirectory(sourceSet.getRootDir().toURI().toString());
-      bt.setDisplayName(sourceSet.getDisplayName());
 
       setBuildTarget(sourceSet, bt);
 
@@ -89,9 +88,40 @@ public class BuildTargetManager {
       BuildTargetDependency dependency = new DefaultBuildTargetDependency(sourceSet);
       dependencyToBuildTargetId.put(dependency, btId);
     }
+    makeDisplayNameUnique(newCache.values());
     updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);
     this.cache = newCache;
     return changedTargets;
+  }
+
+  /**
+   * Returns the gradle project path without the initial {@code :}.
+   *
+   * @param projectPath project path to operate upon
+   */
+  public static String stripPathPrefix(String projectPath) {
+    if (projectPath != null && projectPath.startsWith(":")) {
+      return projectPath.substring(1);
+    }
+    return projectPath;
+  }
+
+  /**
+   * Make project display names unique.
+   *
+   * @param buildTargets all the build targets
+   */
+  private static void makeDisplayNameUnique(Collection<GradleBuildTarget> buildTargets) {
+    for (GradleBuildTarget buildTarget : buildTargets) {
+      GradleSourceSet sourceSet = buildTarget.getSourceSet();
+      String projectName = stripPathPrefix(sourceSet.getProjectPath());
+      if (projectName == null || projectName.isEmpty()) {
+        projectName = sourceSet.getProjectName();
+      }
+      String sourceSetName = sourceSet.getSourceSetName();
+      String displayName = projectName + " [" + sourceSetName + ']';
+      buildTarget.getBuildTarget().setDisplayName(displayName);
+    }
   }
 
   public GradleBuildTarget getGradleBuildTarget(BuildTargetIdentifier buildTargetId) {

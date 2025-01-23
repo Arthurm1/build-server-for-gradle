@@ -23,8 +23,6 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   private String gradleVersion;
 
-  private String displayName;
-
   private String projectName;
 
   private String projectPath;
@@ -74,7 +72,6 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
    */
   public DefaultGradleSourceSet(GradleSourceSet gradleSourceSet) {
     this.gradleVersion = gradleSourceSet.getGradleVersion();
-    this.displayName = gradleSourceSet.getDisplayName();
     this.projectName = gradleSourceSet.getProjectName();
     this.projectPath = gradleSourceSet.getProjectPath();
     this.projectDir = gradleSourceSet.getProjectDir();
@@ -128,15 +125,6 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   public void setGradleVersion(String gradleVersion) {
     this.gradleVersion = gradleVersion;
-  }
-
-  @Override
-  public String getDisplayName() {
-    return displayName;
-  }
-
-  public void setDisplayName(String displayName) {
-    this.displayName = displayName;
   }
 
   @Override
@@ -318,7 +306,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   @Override
   public int hashCode() {
-    return Objects.hash(gradleVersion, displayName, projectName, projectPath,
+    return Objects.hash(gradleVersion, projectName, projectPath,
         projectDir, rootDir, sourceSetName, classesTaskName, cleanTaskName, taskNames, sourceDirs,
         generatedSourceDirs, sourceOutputDirs, resourceDirs, resourceOutputDirs, archiveOutputFiles,
         compileClasspath, runtimeClasspath, moduleDependencies, buildTargetDependencies,
@@ -338,7 +326,6 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
     }
     DefaultGradleSourceSet other = (DefaultGradleSourceSet) obj;
     return Objects.equals(gradleVersion, other.gradleVersion)
-            && Objects.equals(displayName, other.displayName)
             && Objects.equals(projectName, other.projectName)
             && Objects.equals(projectPath, other.projectPath)
             && Objects.equals(projectDir, other.projectDir)

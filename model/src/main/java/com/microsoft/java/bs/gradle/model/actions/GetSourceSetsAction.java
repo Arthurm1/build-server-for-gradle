@@ -104,7 +104,6 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
         .map(DefaultGradleSourceSet::new)
         .collect(Collectors.toList());
 
-    makeDisplayNameUnique(sourceSets);
     populateInterProjectInfo(sourceSets);
 
     return sourceSets;
@@ -124,37 +123,6 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
     @Override
     public GradleSourceSets execute(BuildController controller) {
       return controller.getModel(project, GradleSourceSets.class);
-    }
-  }
-
-  /**
-   * Returns the gradle project path without the initial {@code :}.
-   *
-   * @param projectPath project path to operate upon
-   */
-  public static String stripPathPrefix(String projectPath) {
-    if (projectPath.startsWith(":")) {
-      return projectPath.substring(1);
-    }
-    return projectPath;
-  }
-
-  /**
-   * Make project display names unique.
-   *
-   * @param sourceSets all the project source sets
-   */
-  private static void makeDisplayNameUnique(List<GradleSourceSet> sourceSets) {
-    for (GradleSourceSet sourceSet : sourceSets) {
-      String projectName = stripPathPrefix(sourceSet.getProjectPath());
-      if (projectName.isEmpty()) {
-        projectName = sourceSet.getProjectName();
-      }
-      String sourceSetName = sourceSet.getSourceSetName();
-      String displayName = projectName + " [" + sourceSetName + ']';
-      if (sourceSet instanceof DefaultGradleSourceSet) {
-        ((DefaultGradleSourceSet) sourceSet).setDisplayName(displayName);
-      }
     }
   }
 
