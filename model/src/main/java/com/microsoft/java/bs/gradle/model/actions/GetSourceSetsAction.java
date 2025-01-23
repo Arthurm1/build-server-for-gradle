@@ -97,7 +97,7 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
     }
 
     // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
-    // via a copy constructorso we can treat as a DefaultGradleSourceSet and
+    // via a copy constructor so we can treat as a DefaultGradleSourceSet and
     // populate source set dependencies.
     List<GradleSourceSet> sourceSets = buildController.run(projectActions).stream()
         .flatMap(ss -> ss.getGradleSourceSets().stream())

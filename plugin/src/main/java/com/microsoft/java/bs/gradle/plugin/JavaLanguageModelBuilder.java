@@ -220,7 +220,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
     } catch (Exception e) {
       // DefaultJavaCompileSpec and JavaCompilerArgumentsBuilder are internal so may not exist.
       // Fallback to returning just the compiler arguments the build has specified.
-      // This will miss a lot of arguments derived from the CompileOptions e.g. sourceCompatibilty
+      // This will miss a lot of arguments derived from the CompileOptions e.g. sourceCompatibility
       // Arguments must be cast and converted to String because Groovy can use GStringImpl
       // which then throws IllegalArgumentException when passed back over the tooling connection.
       List<Object> compilerArgs = new LinkedList<>(options.getCompilerArgs());
