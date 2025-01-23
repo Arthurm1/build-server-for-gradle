@@ -1,6 +1,7 @@
 package com.microsoft.java.bs.gradle.plugin.utils;
 
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.plugin.GroovyLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.KotlinLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.LanguageModelBuilder;
@@ -60,6 +61,8 @@ public class SourceSetUtils {
         results.add(new JavaLanguageModelBuilder());
       } else if (language.equalsIgnoreCase(SupportedLanguages.SCALA.getBspName())) {
         results.add(new ScalaLanguageModelBuilder());
+      } else if (language.equalsIgnoreCase(SupportedLanguages.GROOVY.getBspName())) {
+        results.add(new GroovyLanguageModelBuilder());
       } else if (language.equalsIgnoreCase(SupportedLanguages.KOTLIN.getBspName())) {
         results.add(new KotlinLanguageModelBuilder());
       }

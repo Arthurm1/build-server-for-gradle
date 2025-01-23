@@ -107,6 +107,10 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
       return object.getAsScalaExtension();
     }
 
+    if (object.isGroovyExtension()) {
+      return object.getAsGroovyExtension();
+    }
+
     if (object.isKotlinExtension()) {
       return object.getAsKotlinExtension();
     }

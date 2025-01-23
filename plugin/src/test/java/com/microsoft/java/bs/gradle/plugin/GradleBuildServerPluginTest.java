@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
@@ -761,4 +762,63 @@ class GradleBuildServerPluginTest {
     });
   }
 
+
+  @ParameterizedTest(name = "testGroovyModelBuilder {0}")
+  @MethodSource("versionProvider")
+  void testGroovyModelBuilder(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("groovy", gradleVersion, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertEquals("groovy", gradleSourceSet.getProjectName());
+        assertEquals(":", gradleSourceSet.getProjectPath());
+        assertTrue(gradleSourceSet.getSourceSetName().equals("main")
+                || gradleSourceSet.getSourceSetName().equals("test"));
+        assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
+                || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
+        assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+                .anyMatch(file -> file.toPath().endsWith("java")));
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+                .anyMatch(file -> file.toPath().endsWith("groovy")));
+        // annotation processor dirs weren't auto created before 5.2
+        if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
+          assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
+        }
+        assertFalse(gradleSourceSet.getResourceDirs().isEmpty());
+        assertNotNull(gradleSourceSet.getSourceOutputDirs());
+        assertNotNull(gradleSourceSet.getResourceOutputDirs());
+        assertNotNull(gradleSourceSet.getBuildTargetDependencies());
+        assertNotNull(gradleSourceSet.getModuleDependencies());
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
+        assertNotNull(javaExtension);
+        assertNotNull(javaExtension.getJavaHome());
+        assertNotNull(javaExtension.getJavaVersion());
+
+        GroovyExtension groovyExtension = SupportedLanguages.GROOVY.getExtension(gradleSourceSet);
+        assertNotNull(groovyExtension);
+
+        // dirs not split by language before 4.0
+        if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
+          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
+              gradleSourceSet.getSourceSetName()))));
+          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "groovy",
+              gradleSourceSet.getSourceSetName()))));
+          assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
+              gradleSourceSet.getSourceSetName())));
+          assertTrue(groovyExtension.getClassesDir().toPath().endsWith(
+              Paths.get("classes", "groovy", gradleSourceSet.getSourceSetName())));
+        } else {
+          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes",
+              gradleSourceSet.getSourceSetName()))));
+          assertTrue(groovyExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
+              gradleSourceSet.getSourceSetName())));
+          assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
+              gradleSourceSet.getSourceSetName())));
+        }
+      }
+    });
+  }
 }

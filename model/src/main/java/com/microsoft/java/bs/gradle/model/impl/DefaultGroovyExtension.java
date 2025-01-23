@@ -3,20 +3,19 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import java.io.File;
+import java.util.Objects;
+import java.util.Set;
+
 import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 
-import java.io.File;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
 /**
- * Default implementation of {@link KotlinExtension}.
+ * Default implementation of {@link GroovyExtension}.
  */
-public class DefaultKotlinExtension implements KotlinExtension {
+public class DefaultGroovyExtension implements GroovyExtension {
   private static final long serialVersionUID = 1L;
   
   private Set<File> sourceDirs;
@@ -26,14 +25,6 @@ public class DefaultKotlinExtension implements KotlinExtension {
   private String compileTaskName;
 
   private File classesDir;
-
-  private String kotlinLanguageVersion;
-
-  private String kotlinApiVersion;
-
-  private List<String> kotlincOptions;
-
-  private List<String> kotlinAssociates;
 
   @Override
   public Set<File> getSourceDirs() {
@@ -72,45 +63,8 @@ public class DefaultKotlinExtension implements KotlinExtension {
   }
 
   @Override
-  public String getKotlinLanguageVersion() {
-    return kotlinLanguageVersion;
-  }
-
-  public void setKotlinLanguageVersion(String kotlinLanguageVersion) {
-    this.kotlinLanguageVersion = kotlinLanguageVersion;
-  }
-
-  @Override
-  public String getKotlinApiVersion() {
-    return kotlinApiVersion;
-  }
-
-  public void setKotlinApiVersion(String kotlinApiVersion) {
-    this.kotlinApiVersion = kotlinApiVersion;
-  }
-
-  @Override
-  public List<String> getKotlincOptions() {
-    return kotlincOptions;
-  }
-
-  public void setKotlincOptions(List<String> kotlincOptions) {
-    this.kotlincOptions = kotlincOptions;
-  }
-
-  @Override
-  public List<String> getKotlinAssociates() {
-    return kotlinAssociates;
-  }
-
-  public void setKotlinAssociates(List<String> kotlinAssociates) {
-    this.kotlinAssociates = kotlinAssociates;
-  }
-
-  @Override
   public int hashCode() {
-    return Objects.hash(sourceDirs, generatedSourceDirs, compileTaskName, classesDir,
-              kotlinLanguageVersion, kotlinApiVersion, kotlincOptions, kotlinAssociates);
+    return Objects.hash(sourceDirs, generatedSourceDirs, compileTaskName, classesDir);
   }
 
   @Override
@@ -124,16 +78,13 @@ public class DefaultKotlinExtension implements KotlinExtension {
     if (getClass() != obj.getClass()) {
       return false;
     }
-    DefaultKotlinExtension other = (DefaultKotlinExtension) obj;
+    DefaultGroovyExtension other = (DefaultGroovyExtension) obj;
     return Objects.equals(sourceDirs, other.sourceDirs)
             && Objects.equals(generatedSourceDirs, other.generatedSourceDirs)
             && Objects.equals(compileTaskName, other.compileTaskName)
-            && Objects.equals(classesDir, other.classesDir)
-            && Objects.equals(kotlinLanguageVersion, other.kotlinLanguageVersion)
-            && Objects.equals(kotlinApiVersion, other.kotlinApiVersion)
-            && Objects.equals(kotlincOptions, other.kotlincOptions)
-            && Objects.equals(kotlinAssociates, other.kotlinAssociates);
+            && Objects.equals(classesDir, other.classesDir);
   }
+  
 
   @Override
   public boolean isJavaExtension() {
@@ -147,12 +98,12 @@ public class DefaultKotlinExtension implements KotlinExtension {
 
   @Override
   public boolean isGroovyExtension() {
-    return false;
+    return true;
   }
 
   @Override
   public boolean isKotlinExtension() {
-    return true;
+    return false;
   }
 
   @Override
@@ -167,11 +118,11 @@ public class DefaultKotlinExtension implements KotlinExtension {
 
   @Override
   public GroovyExtension getAsGroovyExtension() {
-    return null;
+    return this;
   }
 
   @Override
   public KotlinExtension getAsKotlinExtension() {
-    return this;
+    return null;
   }
 }

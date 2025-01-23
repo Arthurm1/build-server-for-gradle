@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
@@ -157,6 +158,11 @@ public class DefaultJavaExtension implements JavaExtension {
   }
 
   @Override
+  public boolean isGroovyExtension() {
+    return false;
+  }
+
+  @Override
   public boolean isKotlinExtension() {
     return false;
   }
@@ -168,6 +174,11 @@ public class DefaultJavaExtension implements JavaExtension {
 
   @Override
   public ScalaExtension getAsScalaExtension() {
+    return null;
+  }
+
+  @Override
+  public GroovyExtension getAsGroovyExtension() {
     return null;
   }
 

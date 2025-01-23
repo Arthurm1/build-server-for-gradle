@@ -1596,13 +1596,13 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       passingTestParams.setData(passingScalaTestParams);
       TestResult passingTestResult = gradleBuildServer.buildTargetTest(passingTestParams).join();
       // Caveat - this may fail if using too high JDK version for SPOCK.
-      // Dependency `org.spockframework:spock-core:2.3-groovy-4.0` may need upgrading.
+      // Dependency `org.spockframework:spock-core:XXXX` may need upgrading.
       assertEquals(StatusCode.OK, passingTestResult.getStatusCode());
       assertEquals("originId", passingTestResult.getOriginId());
-      client.waitOnStartReports(4);
-      client.waitOnFinishReports(5);
-      client.waitOnCompileTasks(2);
-      client.waitOnCompileReports(2);
+      client.waitOnStartReports(6);
+      client.waitOnFinishReports(7);
+      client.waitOnCompileTasks(4);
+      client.waitOnCompileReports(4);
       client.waitOnLogMessages(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
