@@ -122,7 +122,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     gradleSourceSet.setExtensions(extensions);
     gradleSourceSet.setSourceOutputDirs(sourceOutputDirs);
 
-    // classpath
+    // classpaths
     List<File> compileClasspath = new LinkedList<>();
     try {
       compileClasspath.addAll(sourceSet.getCompileClasspath().getFiles());
@@ -130,6 +130,13 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       // ignore
     }
     gradleSourceSet.setCompileClasspath(compileClasspath);
+    List<File> runtimeClasspath = new LinkedList<>();
+    try {
+      runtimeClasspath.addAll(sourceSet.getRuntimeClasspath().getFiles());
+    } catch (GradleException e) {
+      // ignore
+    }
+    gradleSourceSet.setRuntimeClasspath(runtimeClasspath);
 
     // resource
     Set<File> resourceDirs = sourceSet.getResources().getSrcDirs();

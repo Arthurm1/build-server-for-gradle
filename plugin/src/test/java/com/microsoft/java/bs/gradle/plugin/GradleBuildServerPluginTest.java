@@ -179,6 +179,7 @@ class GradleBuildServerPluginTest {
         assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
             || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertFalse(gradleSourceSet.getRuntimeClasspath().isEmpty());
         assertEquals(1, gradleSourceSet.getSourceDirs().size());
         assertTrue(gradleSourceSet.getSourceDirs().stream()
             .anyMatch(file -> file.toPath().endsWith("java")));
@@ -507,6 +508,7 @@ class GradleBuildServerPluginTest {
         assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertFalse(gradleSourceSet.getRuntimeClasspath().isEmpty());
         assertEquals(2, gradleSourceSet.getSourceDirs().size());
         assertTrue(gradleSourceSet.getSourceDirs().stream()
             .anyMatch(file -> file.toPath().endsWith("java")));
@@ -554,6 +556,8 @@ class GradleBuildServerPluginTest {
 
         assertTrue(gradleSourceSet.getCompileClasspath().stream().anyMatch(
                 file -> file.getName().equals("scala-library-2.13.12.jar")));
+        assertTrue(gradleSourceSet.getRuntimeClasspath().stream().anyMatch(
+                file -> file.getName().equals("scala-library-2.13.12.jar")));
         assertFalse(scalaExtension.getScalaJars().isEmpty());
         assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
                 file -> file.getName().equals("scala-compiler-2.13.12.jar")));
@@ -600,6 +604,7 @@ class GradleBuildServerPluginTest {
         assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertFalse(gradleSourceSet.getRuntimeClasspath().isEmpty());
         assertEquals(2, gradleSourceSet.getSourceDirs().size());
         assertTrue(gradleSourceSet.getSourceDirs().stream()
             .anyMatch(file -> file.toPath().endsWith("java")));
@@ -641,6 +646,8 @@ class GradleBuildServerPluginTest {
         assertTrue(args.contains("-foo"), () -> "Available args: " + args);
 
         assertTrue(gradleSourceSet.getCompileClasspath().stream().anyMatch(
+                file -> file.getName().equals("scala3-library_3-3.3.1.jar")));
+        assertTrue(gradleSourceSet.getRuntimeClasspath().stream().anyMatch(
                 file -> file.getName().equals("scala3-library_3-3.3.1.jar")));
         assertFalse(scalaExtension.getScalaJars().isEmpty());
         assertTrue(scalaExtension.getScalaJars().stream().anyMatch(

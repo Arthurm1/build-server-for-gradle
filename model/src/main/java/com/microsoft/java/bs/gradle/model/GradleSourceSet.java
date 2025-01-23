@@ -101,6 +101,11 @@ public interface GradleSourceSet extends Serializable {
   public List<File> getCompileClasspath();
 
   /**
+   * The runtime classpath for this source set.
+   */
+  public List<File> getRuntimeClasspath();
+
+  /**
    * Module dependencies.
    */
   public Set<GradleModuleDependency> getModuleDependencies();

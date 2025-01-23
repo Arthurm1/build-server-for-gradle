@@ -421,17 +421,16 @@ public class AndroidUtils {
    */
   private static void addClasspath(DefaultGradleSourceSet gradleSourceSet, Object variant) {
 
-    Set<File> classpathFiles = new HashSet<>();
-
+    Set<File> compileClasspathFiles = new HashSet<>();
     try {
       Object compileConfig = Utils.invokeMethod(variant, "getCompileConfiguration");
-      classpathFiles.addAll(Utils.invokeMethod(compileConfig, "getFiles"));
+      compileClasspathFiles.addAll(Utils.invokeMethod(compileConfig, "getFiles"));
     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
       // do nothing
     }
+    gradleSourceSet.setCompileClasspath(new LinkedList<>(compileClasspathFiles));
 
-    gradleSourceSet.setCompileClasspath(new LinkedList<>(classpathFiles));
-
+    gradleSourceSet.setRuntimeClasspath(new LinkedList<>());
   }
 
   /**

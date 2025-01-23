@@ -55,6 +55,8 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   private List<File> compileClasspath;
 
+  private List<File> runtimeClasspath;
+
   private Set<GradleModuleDependency> moduleDependencies;
 
   private Set<BuildTargetDependency> buildTargetDependencies;
@@ -88,14 +90,15 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
     this.resourceOutputDirs = gradleSourceSet.getResourceOutputDirs();
     this.archiveOutputFiles = gradleSourceSet.getArchiveOutputFiles();
     this.compileClasspath = gradleSourceSet.getCompileClasspath();
+    this.runtimeClasspath = gradleSourceSet.getRuntimeClasspath();
     this.moduleDependencies = gradleSourceSet.getModuleDependencies().stream()
-        .map(DefaultGradleModuleDependency::new).collect(Collectors.toSet());
+            .map(DefaultGradleModuleDependency::new).collect(Collectors.toSet());
     this.buildTargetDependencies = gradleSourceSet.getBuildTargetDependencies().stream()
-        .map(DefaultBuildTargetDependency::new).collect(Collectors.toSet());
+            .map(DefaultBuildTargetDependency::new).collect(Collectors.toSet());
     this.hasTests = gradleSourceSet.hasTests();
     this.extensions = gradleSourceSet.getExtensions().entrySet().stream()
-      .collect(Collectors.toMap(Map.Entry::getKey,
-        e -> convertLanguageExtension(e.getValue())));
+            .collect(Collectors.toMap(Map.Entry::getKey,
+                    e -> convertLanguageExtension(e.getValue())));
   }
 
   private LanguageExtension convertLanguageExtension(LanguageExtension object) {
@@ -269,6 +272,15 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
   }
 
   @Override
+  public List<File> getRuntimeClasspath() {
+    return runtimeClasspath;
+  }
+
+  public void setRuntimeClasspath(List<File> runtimeClasspath) {
+    this.runtimeClasspath = runtimeClasspath;
+  }
+
+  @Override
   public Set<GradleModuleDependency> getModuleDependencies() {
     return moduleDependencies;
   }
@@ -309,7 +321,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
     return Objects.hash(gradleVersion, displayName, projectName, projectPath,
         projectDir, rootDir, sourceSetName, classesTaskName, cleanTaskName, taskNames, sourceDirs,
         generatedSourceDirs, sourceOutputDirs, resourceDirs, resourceOutputDirs, archiveOutputFiles,
-        compileClasspath, moduleDependencies, buildTargetDependencies,
+        compileClasspath, runtimeClasspath, moduleDependencies, buildTargetDependencies,
         hasTests, extensions);
   }
 
@@ -326,25 +338,26 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
     }
     DefaultGradleSourceSet other = (DefaultGradleSourceSet) obj;
     return Objects.equals(gradleVersion, other.gradleVersion)
-        && Objects.equals(displayName, other.displayName)
-        && Objects.equals(projectName, other.projectName)
-        && Objects.equals(projectPath, other.projectPath)
-        && Objects.equals(projectDir, other.projectDir)
-        && Objects.equals(rootDir, other.rootDir)
-        && Objects.equals(sourceSetName, other.sourceSetName)
-        && Objects.equals(classesTaskName, other.classesTaskName)
-        && Objects.equals(cleanTaskName, other.cleanTaskName)
-        && Objects.equals(taskNames, other.taskNames)
-        && Objects.equals(sourceDirs, other.sourceDirs)
-        && Objects.equals(generatedSourceDirs, other.generatedSourceDirs)
-        && Objects.equals(sourceOutputDirs, other.sourceOutputDirs)
-        && Objects.equals(resourceDirs, other.resourceDirs)
-        && Objects.equals(resourceOutputDirs, other.resourceOutputDirs)
-        && Objects.equals(archiveOutputFiles, other.archiveOutputFiles)
-        && Objects.equals(compileClasspath, other.compileClasspath)
-        && Objects.equals(moduleDependencies, other.moduleDependencies)
-        && Objects.equals(buildTargetDependencies, other.buildTargetDependencies)
-        && hasTests == other.hasTests
-        && Objects.equals(extensions, other.extensions);
+            && Objects.equals(displayName, other.displayName)
+            && Objects.equals(projectName, other.projectName)
+            && Objects.equals(projectPath, other.projectPath)
+            && Objects.equals(projectDir, other.projectDir)
+            && Objects.equals(rootDir, other.rootDir)
+            && Objects.equals(sourceSetName, other.sourceSetName)
+            && Objects.equals(classesTaskName, other.classesTaskName)
+            && Objects.equals(cleanTaskName, other.cleanTaskName)
+            && Objects.equals(taskNames, other.taskNames)
+            && Objects.equals(sourceDirs, other.sourceDirs)
+            && Objects.equals(generatedSourceDirs, other.generatedSourceDirs)
+            && Objects.equals(sourceOutputDirs, other.sourceOutputDirs)
+            && Objects.equals(resourceDirs, other.resourceDirs)
+            && Objects.equals(resourceOutputDirs, other.resourceOutputDirs)
+            && Objects.equals(archiveOutputFiles, other.archiveOutputFiles)
+            && Objects.equals(compileClasspath, other.compileClasspath)
+            && Objects.equals(runtimeClasspath, other.runtimeClasspath)
+            && Objects.equals(moduleDependencies, other.moduleDependencies)
+            && Objects.equals(buildTargetDependencies, other.buildTargetDependencies)
+            && hasTests == other.hasTests
+            && Objects.equals(extensions, other.extensions);
   }
 }

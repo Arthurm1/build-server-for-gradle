@@ -158,24 +158,40 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
     // replace classpath entries that reference jars with classes dirs.
     for (GradleSourceSet sourceSet : sourceSets) {
       Set<BuildTargetDependency> dependencies = new HashSet<>();
-      List<File> classpath = new ArrayList<>();
+      List<File> compileClasspath = new ArrayList<>();
       for (File file : sourceSet.getCompileClasspath()) {
         // add project dependency
         GradleSourceSet otherSourceSet = outputsToSourceSet.get(file);
-        if (otherSourceSet != null) {
+        if (otherSourceSet != null && !otherSourceSet.equals(sourceSet)) {
           dependencies.add(new DefaultBuildTargetDependency(otherSourceSet));
         }
         // replace jar on classpath with source output on classpath
         List<File> sourceOutputDir = archivesToSourceOutput.get(file);
         if (sourceOutputDir == null) {
-          classpath.add(file);
+          compileClasspath.add(file);
         } else {
-          classpath.addAll(sourceOutputDir);
+          compileClasspath.addAll(sourceOutputDir);
+        }
+      }
+      List<File> runtimeClasspath = new ArrayList<>();
+      for (File file : sourceSet.getRuntimeClasspath()) {
+        // add project dependency
+        GradleSourceSet otherSourceSet = outputsToSourceSet.get(file);
+        if (otherSourceSet != null && !otherSourceSet.equals(sourceSet)) {
+          dependencies.add(new DefaultBuildTargetDependency(otherSourceSet));
+        }
+        // replace jar on classpath with source output on classpath
+        List<File> sourceOutputDir = archivesToSourceOutput.get(file);
+        if (sourceOutputDir == null) {
+          runtimeClasspath.add(file);
+        } else {
+          runtimeClasspath.addAll(sourceOutputDir);
         }
       }
       if (sourceSet instanceof DefaultGradleSourceSet) {
         ((DefaultGradleSourceSet) sourceSet).setBuildTargetDependencies(dependencies);
-        ((DefaultGradleSourceSet) sourceSet).setCompileClasspath(classpath);
+        ((DefaultGradleSourceSet) sourceSet).setCompileClasspath(compileClasspath);
+        ((DefaultGradleSourceSet) sourceSet).setRuntimeClasspath(runtimeClasspath);
       }
     }
   }
