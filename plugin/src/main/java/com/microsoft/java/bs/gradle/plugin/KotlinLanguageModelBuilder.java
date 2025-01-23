@@ -164,7 +164,8 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
     if (GradleVersion.current().compareTo(GradleVersion.version("4.2")) >= 0) {
       // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
       try {
-        Method getDestinationDirectoryMethod = kotlinCompile.getClass().getMethod("getDestinationDirectory");
+        Method getDestinationDirectoryMethod =
+            kotlinCompile.getClass().getMethod("getDestinationDirectory");
         Object destinationDirectory = getDestinationDirectoryMethod.invoke(kotlinCompile);
         Method getAsFileMethod = destinationDirectory.getClass().getMethod("getAsFile");
         Object fileProviderObject = getAsFileMethod.invoke(destinationDirectory);
