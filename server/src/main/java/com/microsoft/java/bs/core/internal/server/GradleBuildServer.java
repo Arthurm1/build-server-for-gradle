@@ -65,9 +65,9 @@ import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
  */
 public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBuildServer {
 
-  private LifecycleService lifecycleService;
+  private final LifecycleService lifecycleService;
 
-  private BuildTargetService buildTargetService;
+  private final BuildTargetService buildTargetService;
 
   public GradleBuildServer(LifecycleService lifecycleService,
       BuildTargetService buildTargetService) {
