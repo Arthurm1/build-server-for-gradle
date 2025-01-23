@@ -14,10 +14,16 @@ import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 public class DefaultBuildTargetDependency implements BuildTargetDependency {
   private static final long serialVersionUID = 1L;
 
-  private String projectDir;
+  private final String projectDir;
 
-  private String sourceSetName;
+  private final String sourceSetName;
 
+  /**
+   * Constructor.
+   *
+   * @param projectDir project directory.
+   * @param sourceSetName source set name.
+   */
   public DefaultBuildTargetDependency(String projectDir, String sourceSetName) {
     this.projectDir = projectDir;
     this.sourceSetName = sourceSetName;
@@ -42,17 +48,9 @@ public class DefaultBuildTargetDependency implements BuildTargetDependency {
     return projectDir;
   }
 
-  public void setProjectDir(String projectDir) {
-    this.projectDir = projectDir;
-  }
-
   @Override
   public String getSourceSetName() {
     return sourceSetName;
-  }
-
-  public void setSourceSetName(String sourceSetName) {
-    this.sourceSetName = sourceSetName;
   }
 
   @Override

@@ -173,13 +173,6 @@ public class AndroidUtils {
       tasks.add(SourceSetUtils.getFullTaskName(projectPath, compileTaskName));
       gradleSourceSet.setTaskNames(tasks);
 
-      String projectName = SourceSetUtils.stripPathPrefix(projectPath);
-      if (projectName.isEmpty()) {
-        projectName = project.getName();
-      }
-      String displayName = projectName + " [" + variantName + ']';
-      gradleSourceSet.setDisplayName(displayName);
-
       // module dependencies
       addModuleDependencies(gradleSourceSet, project, variant);
 

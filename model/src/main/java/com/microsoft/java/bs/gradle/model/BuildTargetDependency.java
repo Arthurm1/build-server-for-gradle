@@ -10,7 +10,7 @@ import java.io.Serializable;
  * In Java this is a project:sourceset dependency on a project:sourceset.
  */
 public interface BuildTargetDependency extends Serializable {
-  public String getProjectDir();
+  String getProjectDir();
 
-  public String getSourceSetName();
+  String getSourceSetName();
 }

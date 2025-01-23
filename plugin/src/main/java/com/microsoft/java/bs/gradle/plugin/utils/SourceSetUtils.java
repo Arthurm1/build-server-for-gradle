@@ -19,18 +19,6 @@ public class SourceSetUtils {
   }
 
   /**
-   * Returns the gradle project path without the initial {@code :}.
-   *
-   * @param projectPath project path to operate upon
-   */
-  public static String stripPathPrefix(String projectPath) {
-    if (projectPath.startsWith(":")) {
-      return projectPath.substring(1);
-    }
-    return projectPath;
-  }
-
-  /**
    * Return a project task name - [project path]:[task].
    *
    * @param modulePath path of project module
