@@ -46,15 +46,26 @@ public class DependencyCollector {
   private static final String UNKNOWN = "unknown";
 
   /**
-   * Resolve and collect dependencies from a {@link SourceSet}.
+   * Resolve and collect dependencies from a collection of Configuration names.
    */
   public static Set<GradleModuleDependency> getModuleDependencies(Project project,
       Set<String> configurationNames) {
+    List<Configuration> configurations = project.getConfigurations()
+        .stream()
+        .filter(configuration -> configurationNames.contains(configuration.getName()))
+        .collect(Collectors.toList());
+    return getModuleDependencies(project, configurations);
+  }
+
+  /**
+   * Resolve and collect dependencies from a collection of {@link Configuration}.
+   */
+  public static Set<GradleModuleDependency> getModuleDependencies(Project project,
+      List<Configuration> configurations) {
     if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) < 0) {
       try {
-        List<ResolvedConfiguration> configs = project.getConfigurations().stream()
-            .filter(configuration -> configurationNames.contains(configuration.getName()))
-              .map(Configuration::getResolvedConfiguration)
+        List<ResolvedConfiguration> configs = configurations.stream()
+            .map(Configuration::getResolvedConfiguration)
             .collect(Collectors.toList());
         Stream<DefaultGradleModuleDependency> dependencies = configs.stream()
             .flatMap(config -> config.getResolvedArtifacts().stream())
@@ -72,9 +83,7 @@ public class DependencyCollector {
         return new HashSet<>();
       }
     } else {
-      return project.getConfigurations()
-        .stream()
-        .filter(configuration -> configurationNames.contains(configuration.getName()))
+      return configurations.stream()
         .filter(Configuration::isCanBeResolved)
         .flatMap(configuration -> getConfigurationArtifacts(configuration).stream())
         .map(artifactResult -> getArtifact(project, artifactResult))

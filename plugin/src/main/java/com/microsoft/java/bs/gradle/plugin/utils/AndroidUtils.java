@@ -9,9 +9,10 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
 import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
-import com.microsoft.java.bs.gradle.plugin.dependency.AndroidDependencyCollector;
+import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.internal.tasks.compile.DefaultJavaCompileSpec;
 import org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder;
@@ -227,9 +228,22 @@ public class AndroidUtils {
       Project project,
       Object variant
   ) {
+    Set<GradleModuleDependency> moduleDependencies = new HashSet<>();
 
-    Set<GradleModuleDependency> moduleDependencies =
-        AndroidDependencyCollector.getModuleDependencies(project, variant);
+    try {
+      // compile and runtime libraries
+      Configuration compileConfiguration =
+          (Configuration) getProperty(variant, "compileConfiguration");
+      Configuration runtimeConfiguration =
+          (Configuration) getProperty(variant, "runtimeConfiguration");
+
+      List<Configuration> configs = new ArrayList<>();
+      configs.add(compileConfiguration);
+      configs.add(runtimeConfiguration);
+      moduleDependencies.addAll(DependencyCollector.getModuleDependencies(project, configs));
+    } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      // do nothing
+    }
 
     try {
       // add Android SDK
@@ -266,7 +280,6 @@ public class AndroidUtils {
     }
 
     gradleSourceSet.setModuleDependencies(moduleDependencies);
-
   }
 
   /**
