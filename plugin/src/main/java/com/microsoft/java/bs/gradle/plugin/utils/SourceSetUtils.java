@@ -2,6 +2,7 @@ package com.microsoft.java.bs.gradle.plugin.utils;
 
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
+import com.microsoft.java.bs.gradle.plugin.KotlinLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.LanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.ScalaLanguageModelBuilder;
 
@@ -59,6 +60,8 @@ public class SourceSetUtils {
         results.add(new JavaLanguageModelBuilder());
       } else if (language.equalsIgnoreCase(SupportedLanguages.SCALA.getBspName())) {
         results.add(new ScalaLanguageModelBuilder());
+      } else if (language.equalsIgnoreCase(SupportedLanguages.KOTLIN.getBspName())) {
+        results.add(new KotlinLanguageModelBuilder());
       }
     }
     return results;

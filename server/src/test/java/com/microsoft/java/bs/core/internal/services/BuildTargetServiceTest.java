@@ -26,6 +26,7 @@ import ch.epfl.scala.bsp4j.JvmBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaBuildTarget;
 import ch.epfl.scala.bsp4j.ScalacOptionsParams;
 import ch.epfl.scala.bsp4j.ScalacOptionsResult;
+import ch.epfl.scala.bsp4j.extended.KotlinBuildTarget;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -116,6 +117,28 @@ class BuildTargetServiceTest {
     assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
     assertEquals("scala", response.getTargets().get(0).getDataKind());
     assertInstanceOf(ScalaBuildTarget.class, response.getTargets().get(0).getData());
+  }
+
+  @Test
+  void testWorkspaceKotlinBuildTargets() {
+    BuildTarget target = mock(BuildTarget.class);
+    when(target.getBaseDirectory()).thenReturn("foo/bar");
+    when(target.getDataKind()).thenReturn("kotlin");
+    when(target.getData()).thenReturn(new KotlinBuildTarget(null, null, null, null, null));
+    GradleBuildTarget gradleBuildTarget = new GradleBuildTarget(target,
+            mock(GradleSourceSet.class));
+    when(buildTargetManager.getAllGradleBuildTargets())
+            .thenReturn(Arrays.asList(gradleBuildTarget));
+
+    BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
+            connector, preferenceManager);
+
+    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets();
+
+    assertEquals(1, response.getTargets().size());
+    assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
+    assertEquals("kotlin", response.getTargets().get(0).getDataKind());
+    assertInstanceOf(KotlinBuildTarget.class, response.getTargets().get(0).getData());
   }
 
   @Test

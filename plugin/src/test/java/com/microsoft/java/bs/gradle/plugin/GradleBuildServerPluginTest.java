@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
@@ -178,6 +179,8 @@ class GradleBuildServerPluginTest {
             || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
         assertEquals(1, gradleSourceSet.getSourceDirs().size());
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("java")));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -272,6 +275,7 @@ class GradleBuildServerPluginTest {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       int generatedSourceDirCount = 0;
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertEquals(1, gradleSourceSet.getSourceDirs().size());
         generatedSourceDirCount += gradleSourceSet.getGeneratedSourceDirs().size();
         assertTrue(gradleSourceSet.getGeneratedSourceDirs().stream().anyMatch(
             dir -> dir.getAbsolutePath().replaceAll("\\\\", "/")
@@ -503,6 +507,10 @@ class GradleBuildServerPluginTest {
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
         assertEquals(2, gradleSourceSet.getSourceDirs().size());
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("java")));
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("scala")));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -592,6 +600,10 @@ class GradleBuildServerPluginTest {
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
         assertEquals(2, gradleSourceSet.getSourceDirs().size());
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("java")));
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("scala")));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -675,4 +687,78 @@ class GradleBuildServerPluginTest {
       }
     });
   }
+
+  @ParameterizedTest(name = "testKotlinModelBuilder {0}")
+  @MethodSource("versionProvider")
+  void testKotlinModelBuilder(GradleVersion gradleVersion) throws IOException {
+    // can't find a valid compatibility matrix for gradle and kotlin plugin versions
+    // Gradle>7.1 seems to support kotlin-gradle-plugin 1.9.21
+    assumeTrue(gradleVersion.compareTo(GradleVersion.version("7.1")) >= 0);
+    withSourceSets("kotlin", gradleVersion, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertEquals("kotlin", gradleSourceSet.getProjectName());
+        assertEquals(":", gradleSourceSet.getProjectPath());
+        assertTrue(gradleSourceSet.getSourceSetName().equals("main")
+                || gradleSourceSet.getSourceSetName().equals("test"),
+                "Task name is: " + gradleSourceSet.getClassesTaskName());
+        assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
+                || gradleSourceSet.getClassesTaskName().equals(":testClasses"),
+                "Task name is: " + gradleSourceSet.getClassesTaskName());
+        assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("java")));
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("kotlin")));
+        assertFalse(gradleSourceSet.getGeneratedSourceDirs().isEmpty());
+        assertFalse(gradleSourceSet.getResourceDirs().isEmpty());
+        assertNotNull(gradleSourceSet.getSourceOutputDirs());
+        assertNotNull(gradleSourceSet.getResourceOutputDirs());
+        assertNotNull(gradleSourceSet.getBuildTargetDependencies());
+        assertNotNull(gradleSourceSet.getModuleDependencies());
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
+        assertNotNull(javaExtension);
+        assertNotNull(javaExtension.getJavaHome());
+        assertNotNull(javaExtension.getJavaVersion());
+
+        assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
+                dependency -> dependency.getModule().contains("kotlin-stdlib")
+        ));
+
+        KotlinExtension kotlinExtension = SupportedLanguages.KOTLIN.getExtension(gradleSourceSet);
+        assertNotNull(kotlinExtension);
+        assertEquals("1.2", kotlinExtension.getKotlinApiVersion());
+        assertEquals("1.3", kotlinExtension.getKotlinLanguageVersion());
+        assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertTrue(gradleSourceSet.getCompileClasspath().stream().anyMatch(
+                file -> file.getName().equals("kotlin-stdlib-1.9.21.jar")));
+        assertFalse(kotlinExtension.getKotlincOptions().isEmpty());
+        assertTrue(kotlinExtension.getKotlincOptions().stream()
+                .anyMatch(arg -> arg.equals("-opt-in=org.mylibrary.OptInAnnotation")));
+                
+        // dirs not split by language before 4.0
+        if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
+          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
+              gradleSourceSet.getSourceSetName()))));
+          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "kotlin",
+              gradleSourceSet.getSourceSetName()))));
+          assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
+              gradleSourceSet.getSourceSetName())));
+          assertTrue(kotlinExtension.getClassesDir().toPath().endsWith(
+              Paths.get("classes", "kotlin", gradleSourceSet.getSourceSetName())));
+        } else {
+          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes",
+              gradleSourceSet.getSourceSetName()))));
+          assertTrue(kotlinExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
+              gradleSourceSet.getSourceSetName())));
+          assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
+              gradleSourceSet.getSourceSetName())));
+        }
+      }
+    });
+  }
+
 }

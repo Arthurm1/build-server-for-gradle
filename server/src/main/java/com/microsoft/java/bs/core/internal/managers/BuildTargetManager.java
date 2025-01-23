@@ -18,11 +18,13 @@ import java.util.stream.Collectors;
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaPlatform;
+import ch.epfl.scala.bsp4j.extended.KotlinBuildTarget;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
@@ -113,10 +115,15 @@ public class BuildTargetManager {
   }
 
   private void setBuildTarget(GradleSourceSet sourceSet, BuildTarget bt) {
+    // currently BSP can't support Kotlin + Scala, only Scala + kotlin or Java + Kotlin
+    // The next version should output a map of BuildTargets
+    KotlinExtension kotlinExtension = SupportedLanguages.KOTLIN.getExtension(sourceSet);
     ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(sourceSet);
     JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(sourceSet);
     if (scalaExtension != null) {
       setScalaBuildTarget(sourceSet, scalaExtension, javaExtension, bt);
+    } else if (kotlinExtension != null) {
+      setKotlinBuildTarget(sourceSet, kotlinExtension, javaExtension, bt);
     } else if (javaExtension != null) {
       setJvmBuildTarget(sourceSet, javaExtension, bt);
     }
@@ -164,6 +171,31 @@ public class BuildTargetManager {
       JavaExtension javaExtension, BuildTarget bt) {
     bt.setDataKind("scala");
     bt.setData(getScalaBuildTarget(sourceSet, scalaExtension, javaExtension));
+  }
+
+  private KotlinBuildTarget getKotlinBuildTarget(GradleSourceSet sourceSet,
+        KotlinExtension kotlinExtension, JavaExtension javaExtension) {
+    JvmBuildTarget jvmBuildTarget = getJvmBuildTarget(sourceSet, javaExtension);
+    // TODO set associates from kotlinExtension.getKotlinAssociates() once it implemented.
+    List<BuildTargetIdentifier> associates = Collections.emptyList();
+
+    KotlinBuildTarget kotlinBuildTarget = new KotlinBuildTarget(
+            kotlinExtension.getKotlinLanguageVersion() == null ? ""
+                : kotlinExtension.getKotlinLanguageVersion(),
+            kotlinExtension.getKotlinApiVersion() == null ? ""
+                : kotlinExtension.getKotlinApiVersion(),
+            kotlinExtension.getKotlincOptions(),
+            associates,
+            jvmBuildTarget
+    );
+    kotlinBuildTarget.setJvmBuildTarget(jvmBuildTarget);
+    return kotlinBuildTarget;
+  }
+
+  private void setKotlinBuildTarget(GradleSourceSet sourceSet, KotlinExtension kotlinExtension,
+                                   JavaExtension javaExtension, BuildTarget bt) {
+    bt.setDataKind("kotlin");
+    bt.setData(getKotlinBuildTarget(sourceSet, kotlinExtension, javaExtension));
   }
 
   /**

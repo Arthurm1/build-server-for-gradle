@@ -20,12 +20,16 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
 import com.microsoft.java.bs.core.Launcher;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 
@@ -33,8 +37,6 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.StatusCode;
 
 import org.gradle.tooling.model.build.BuildEnvironment;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 
 class GradleApiConnectorTest {
 
@@ -87,6 +89,7 @@ class GradleApiConnectorTest {
     for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
       assertNotNull(SupportedLanguages.JAVA.getExtension(gradleSourceSet));
       assertNull(SupportedLanguages.SCALA.getExtension(gradleSourceSet));
+      assertNull(SupportedLanguages.KOTLIN.getExtension(gradleSourceSet));
       assertEquals("junit5-jupiter-starter-gradle", gradleSourceSet.getProjectName());
       assertEquals(":", gradleSourceSet.getProjectPath());
       assertEquals(projectDir, gradleSourceSet.getProjectDir());
@@ -386,5 +389,25 @@ class GradleApiConnectorTest {
           .anyMatch(arg -> arg.contains("-Xmx1234m")));
       return null;
     }, preferences);
+  }
+
+  @Test
+  void testGetGradleHasKotlin() {
+    File projectDir = projectPath.resolve("kotlin").toFile();
+    GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
+    assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+    GradleSourceSet main = findSourceSet(gradleSourceSets, "kotlin [main]");
+    KotlinExtension kotlinExtension = SupportedLanguages.KOTLIN.getExtension(main);
+    assertNotNull(kotlinExtension);
+    assertEquals("1.2", kotlinExtension.getKotlinApiVersion());
+    assertEquals("1.3", kotlinExtension.getKotlinLanguageVersion());
+    assertFalse(main.getCompileClasspath().isEmpty());
+    assertTrue(main.getCompileClasspath().stream().anyMatch(
+            file -> file.getName().equals("kotlin-stdlib-1.9.21.jar")));
+    assertFalse(kotlinExtension.getKotlincOptions().isEmpty());
+    assertTrue(kotlinExtension.getKotlincOptions().stream()
+            .anyMatch(arg -> arg.equals("-opt-in=org.mylibrary.OptInAnnotation")));
+
+    // TODO test getKotlinAssociates
   }
 }

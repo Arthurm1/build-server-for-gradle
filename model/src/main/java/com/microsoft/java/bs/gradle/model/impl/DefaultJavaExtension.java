@@ -4,6 +4,7 @@
 package com.microsoft.java.bs.gradle.model.impl;
 
 import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 
 import java.io.File;
@@ -156,12 +157,22 @@ public class DefaultJavaExtension implements JavaExtension {
   }
 
   @Override
+  public boolean isKotlinExtension() {
+    return false;
+  }
+
+  @Override
   public JavaExtension getAsJavaExtension() {
     return this;
   }
 
   @Override
   public ScalaExtension getAsScalaExtension() {
+    return null;
+  }
+
+  @Override
+  public KotlinExtension getAsKotlinExtension() {
     return null;
   }
 }
