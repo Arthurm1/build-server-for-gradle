@@ -38,6 +38,7 @@ import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 
 /**
  * The model builder for Gradle source sets.
@@ -162,9 +163,8 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
             break;
           }
         } else {
-          try {
-            Method getTestClassesDir = testTask.getClass().getMethod("getTestClassesDir");
-            Object testClassesDir = getTestClassesDir.invoke(testTask);
+          Object testClassesDir = Utils.invokeMethodIgnoreFail(testTask, "getTestClassesDir");
+          if (testClassesDir != null) {
             for (File sourceOutputDir : sourceOutputDirs) {
               if (sourceOutputDir.equals(testClassesDir)) {
                 gradleSourceSet.setHasTests(true);
@@ -174,9 +174,6 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
             if (gradleSourceSet.hasTests()) {
               break;
             }
-          } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-                   | IllegalArgumentException | InvocationTargetException e) {
-            // ignore
           }
         }
       }
@@ -274,15 +271,12 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       // query the java plugin.  This limits support to Java only if other
       // languages add their own sourcesets
       // use reflection because `getConvention` will be removed in Gradle 9.0
-      Method getConvention = project.getClass().getMethod("getConvention");
-      Object convention = getConvention.invoke(project);
-      Method getPlugins = convention.getClass().getMethod("getPlugins");
-      Object plugins = getPlugins.invoke(convention);
+      Object convention = Utils.invokeMethod(project, "getConvention");
+      Object plugins = Utils.invokeMethod(convention, "getPlugins");
       Method getGet = plugins.getClass().getMethod("get", Object.class);
       Object pluginConvention = getGet.invoke(plugins, "java");
       if (pluginConvention != null) {
-        Method getSourceSetsMethod = pluginConvention.getClass().getMethod("getSourceSets");
-        return (SourceSetContainer) getSourceSetsMethod.invoke(pluginConvention);
+        return Utils.invokeMethod(pluginConvention, "getSourceSets");
       }
     } catch (NoSuchMethodException | SecurityException | IllegalAccessException
              | IllegalArgumentException | InvocationTargetException e) {
@@ -302,19 +296,13 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           sourcePaths.addAll(getArchiveSourcePaths(child));
         }
       } else {
-        try {
-          Method getChildren = defaultCopySpec.getClass().getMethod("getChildren");
-          Object children = getChildren.invoke(defaultCopySpec);
-          if (children instanceof Iterable) {
-            for (Object child : (Iterable<?>) children) {
-              if (child instanceof CopySpec) {
-                sourcePaths.addAll(getArchiveSourcePaths((CopySpec) child));
-              }
+        Object children = Utils.invokeMethodIgnoreFail(defaultCopySpec, "getChildren");
+        if (children instanceof Iterable) {
+          for (Object child : (Iterable<?>) children) {
+            if (child instanceof CopySpec) {
+              sourcePaths.addAll(getArchiveSourcePaths((CopySpec) child));
             }
           }
-        } catch (NoSuchMethodException | IllegalAccessException
-                 | IllegalArgumentException | InvocationTargetException e) {
-          // cannot get archive information
         }
       }
     }

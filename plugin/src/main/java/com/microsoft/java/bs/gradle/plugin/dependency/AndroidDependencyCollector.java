@@ -44,16 +44,16 @@ public class AndroidDependencyCollector {
 
     try {
       // Retrieve and process compile configuration
-      Configuration compileConfiguration =
-          (Configuration) AndroidUtils.getProperty(variant, "compileConfiguration");
+      Configuration compileConfiguration = AndroidUtils.getProperty(variant,
+          "compileConfiguration");
       dependencies.addAll(resolveConfigurationDependencies(
           project,
           compileConfiguration)
       );
 
       // Retrieve and process runtime configuration
-      Configuration runtimeConfiguration =
-          (Configuration) AndroidUtils.getProperty(variant, "runtimeConfiguration");
+      Configuration runtimeConfiguration = AndroidUtils.getProperty(variant,
+          "runtimeConfiguration");
       dependencies.addAll(resolveConfigurationDependencies(
           project,
           runtimeConfiguration)

@@ -26,7 +26,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedList;
@@ -119,12 +118,11 @@ public class AndroidUtils {
    * @param androidExtension AndroidExtension object from which the variants are to be extracted.
    * @param methodNames name of different methods to invoke to get all the variants.
    */
-  @SuppressWarnings("unchecked")
   private static List<Object> getVariants(Object androidExtension, String... methodNames) {
     List<Object> variants = new LinkedList<>();
     for (String methodName : methodNames) {
       try {
-        variants.addAll((Collection<Object>) invokeMethod(androidExtension, methodName));
+        variants.addAll(Utils.invokeMethod(androidExtension, methodName));
       } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
         // do nothing
       }
@@ -158,7 +156,7 @@ public class AndroidUtils {
       gradleSourceSet.setProjectDir(project.getProjectDir());
       gradleSourceSet.setRootDir(project.getRootDir());
 
-      String variantName = (String) invokeMethod(variant, "getName");
+      String variantName = Utils.invokeMethod(variant, "getName");
       gradleSourceSet.setSourceSetName(variantName);
 
       // classes task equivalent in android (assembleRelease)
@@ -202,7 +200,7 @@ public class AndroidUtils {
       gradleSourceSet.setArchiveOutputFiles(new HashMap<>());
 
       // has tests
-      gradleSourceSet.setHasTests((boolean) hasProperty(variant, "testedVariant"));
+      gradleSourceSet.setHasTests(hasProperty(variant, "testedVariant"));
 
       // extensions
       addExtensions(gradleSourceSet, compilerArgs);
@@ -224,7 +222,6 @@ public class AndroidUtils {
    * @param project Instance of Project
    * @param variant Instance of Build Variant
    */
-  @SuppressWarnings("unchecked")
   private static void addModuleDependencies(
       DefaultGradleSourceSet gradleSourceSet,
       Project project,
@@ -242,8 +239,7 @@ public class AndroidUtils {
         Object bootClasspath =
             ((Provider<?>) getProperty(sdkComponents, "bootclasspathProvider")).get();
         try {
-          List<RegularFile> bootClasspathFiles =
-              (List<RegularFile>) invokeMethod(bootClasspath, "get");
+          List<RegularFile> bootClasspathFiles = Utils.invokeMethod(bootClasspath, "get");
           List<File> sdkClasspath =
               bootClasspathFiles.stream().map(RegularFile::getAsFile).collect(Collectors.toList());
           for (File file : sdkClasspath) {
@@ -258,8 +254,8 @@ public class AndroidUtils {
       String taskName = "process" + capitalize(gradleSourceSet.getSourceSetName()) + "Resources";
       Task processResourcesTask = project.getTasks().findByName(taskName);
       if (processResourcesTask != null) {
-        Object output = invokeMethod(processResourcesTask, "getRClassOutputJar");
-        RegularFile file = (RegularFile) invokeMethod(output, "get");
+        Object output = Utils.invokeMethod(processResourcesTask, "getRClassOutputJar");
+        RegularFile file = Utils.invokeMethod(output, "get");
         File jarFile = file.getAsFile();
         if (jarFile.exists()) {
           moduleDependencies.add(mockModuleDependency(jarFile.toURI()));
@@ -280,7 +276,6 @@ public class AndroidUtils {
    * @param variant Instance of Build Variant
    * @param isUnitTest Indicates if the given variant is a unit test variant
    */
-  @SuppressWarnings("unchecked")
   private static void addSourceAndResources(
       DefaultGradleSourceSet gradleSourceSet,
       Object variant,
@@ -294,13 +289,12 @@ public class AndroidUtils {
       Object sourceSets = getProperty(variant, "sourceSets");
       if (sourceSets instanceof Iterable) {
         for (Object sourceSet : (Iterable<?>) sourceSets) {
-          Set<File> javaDirectories =
-              (Set<File>) getProperty(sourceSet, "javaDirectories");
+          Set<File> javaDirectories = getProperty(sourceSet, "javaDirectories");
           sourceDirs.addAll(javaDirectories);
           if (!isUnitTest) {
-            resourceDirs.addAll((Set<File>) getProperty(sourceSet, "resDirectories"));
+            resourceDirs.addAll(getProperty(sourceSet, "resDirectories"));
           }
-          resourceDirs.addAll((Set<File>) getProperty(sourceSet, "resourcesDirectories"));
+          resourceDirs.addAll(getProperty(sourceSet, "resourcesDirectories"));
         }
       }
     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -319,7 +313,6 @@ public class AndroidUtils {
    * @param variant Instance of Build Variant
    * @param isUnitTest Indicates if the given variant is a unit test variant
    */
-  @SuppressWarnings("unchecked")
   private static void addResourceOutputs(
       DefaultGradleSourceSet gradleSourceSet,
       Object variant,
@@ -329,21 +322,20 @@ public class AndroidUtils {
     Set<File> resourceOutputs = new HashSet<>();
 
     try {
-      Provider<Task> resourceProvider =
-          (Provider<Task>) getProperty(variant, "processJavaResourcesProvider");
+      Provider<Task> resourceProvider = getProperty(variant, "processJavaResourcesProvider");
       if (resourceProvider != null) {
         Task resTask = resourceProvider.get();
-        File outputDir = (File) invokeMethod(resTask, "getDestinationDir");
+        File outputDir = Utils.invokeMethod(resTask, "getDestinationDir");
         resourceOutputs.add(outputDir);
       }
 
       if (!isUnitTest) {
-        Provider<Task> resProvider =
-            (Provider<Task>) getProperty(variant, "mergeResourcesProvider");
+        Provider<Task> resProvider = getProperty(variant, "mergeResourcesProvider");
         if (resProvider != null) {
           Task resTask = resProvider.get();
-          Object outputDir = invokeMethod(resTask, "getOutputDir");
-          File output = ((Provider<File>) invokeMethod(outputDir, "getAsFile")).get();
+          Object outputDir = Utils.invokeMethod(resTask, "getOutputDir");
+          Provider<File> fileProvider = Utils.invokeMethod(outputDir, "getAsFile");
+          File output = fileProvider.get();
           resourceOutputs.add(output);
         }
       }
@@ -362,7 +354,6 @@ public class AndroidUtils {
    * @param variant Instance of Build Variant
    * @param compilerArgs List to be populated from the java compiler arguments.
    */
-  @SuppressWarnings("unchecked")
   private static void addGeneratedSourceAndSourceOutputs(
       DefaultGradleSourceSet gradleSourceSet,
       Object variant,
@@ -373,18 +364,17 @@ public class AndroidUtils {
     Set<File> sourceOutputs = new HashSet<>();
 
     try {
-      Provider<Task> javaCompileProvider =
-          (Provider<Task>) getProperty(variant, "javaCompileProvider");
+      Provider<Task> javaCompileProvider = getProperty(variant, "javaCompileProvider");
       if (javaCompileProvider != null) {
         Task javaCompileTask = javaCompileProvider.get();
 
         compilerArgs.addAll(getCompilerArgs((JavaCompile) javaCompileTask));
 
-        File outputDir = (File) invokeMethod(javaCompileTask, "getDestinationDir");
+        File outputDir = Utils.invokeMethod(javaCompileTask, "getDestinationDir");
         sourceOutputs.add(outputDir);
 
-        Object source = invokeMethod(javaCompileTask, "getSource");
-        Set<File> compileSources = (Set<File>) invokeMethod(source, "getFiles");
+        Object source = Utils.invokeMethod(javaCompileTask, "getSource");
+        Set<File> compileSources = Utils.invokeMethod(source, "getFiles");
 
         // generated = compile source - source
         for (File compileSource : compileSources) {
@@ -416,14 +406,13 @@ public class AndroidUtils {
    * @param gradleSourceSet Instance of DefaultGradleSourceSet
    * @param variant Instance of Build Variant
    */
-  @SuppressWarnings("unchecked")
   private static void addClasspath(DefaultGradleSourceSet gradleSourceSet, Object variant) {
 
     Set<File> classpathFiles = new HashSet<>();
 
     try {
-      Object compileConfig = invokeMethod(variant, "getCompileConfiguration");
-      classpathFiles.addAll((Set<File>) invokeMethod(compileConfig, "getFiles"));
+      Object compileConfig = Utils.invokeMethod(variant, "getCompileConfiguration");
+      classpathFiles.addAll(Utils.invokeMethod(compileConfig, "getFiles"));
     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
       // do nothing
     }
@@ -485,8 +474,8 @@ public class AndroidUtils {
     Object extension = null;
 
     try {
-      Object convention = invokeMethod(project, "getConvention");
-      Object extensionMap = invokeMethod(convention, "getAsMap");
+      Object convention = Utils.invokeMethod(project, "getConvention");
+      Object extensionMap = Utils.invokeMethod(convention, "getAsMap");
       extension = extensionMap.getClass()
           .getMethod("get", Object.class).invoke(extensionMap, extensionName);
     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -531,9 +520,10 @@ public class AndroidUtils {
    * @param obj object from which the property is to be extracted
    * @param propertyName name of the property to be extracted
    */
-  public static Object getProperty(Object obj, String propertyName)
+  public static <A> A getProperty(Object obj, String propertyName)
       throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    return obj.getClass().getMethod("getProperty", String.class).invoke(obj, propertyName);
+    return Utils.invokeMethod(obj, new Class<?>[] { String.class }, "getProperty",
+      new Object[] { propertyName });
   }
 
   /**
@@ -542,9 +532,10 @@ public class AndroidUtils {
    * @param obj object from which the property is to be extracted
    * @param propertyName name of the property to be extracted
    */
-  public static Object hasProperty(Object obj, String propertyName)
+  public static boolean hasProperty(Object obj, String propertyName)
       throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    return obj.getClass().getMethod("hasProperty", String.class).invoke(obj, propertyName);
+    return Utils.invokeMethod(obj, new Class<?>[] { String.class }, "hasProperty",
+      new Object[] { propertyName });
   }
 
   /**
@@ -586,11 +577,6 @@ public class AndroidUtils {
         artifacts
     );
 
-  }
-
-  private static Object invokeMethod(Object object, String methodName)
-      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    return object.getClass().getMethod(methodName).invoke(object);
   }
 
   // region TODO: Duplicate code from JavaLanguageModelBuilder
