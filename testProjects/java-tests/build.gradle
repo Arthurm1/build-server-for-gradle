@@ -19,9 +19,9 @@ configurations {
 }
 
 dependencies {
-	testImplementation(platform('org.junit:junit-bom:5.9.2'))
+	testImplementation(platform('org.junit:junit-bom:5.11.4'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
-	extraTestImplementation(platform('org.junit:junit-bom:5.9.2'))
+	extraTestImplementation(platform('org.junit:junit-bom:5.11.4'))
 	extraTestImplementation('org.junit.jupiter:junit-jupiter')
 }
 
