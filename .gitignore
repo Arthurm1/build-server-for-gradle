@@ -29,3 +29,11 @@ build
 
 # buildship
 bin
+
+# intellij
+.idea/
+
+# metals
+.bsp/
+.metals/
+.bloop/
