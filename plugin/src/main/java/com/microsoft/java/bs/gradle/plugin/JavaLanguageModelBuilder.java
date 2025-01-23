@@ -165,7 +165,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
     return null;
   }
 
-  private DefaultJavaCompileSpec getJavaCompileSpec(JavaCompile javaCompile) {
+  private static DefaultJavaCompileSpec getJavaCompileSpec(JavaCompile javaCompile) {
     CompileOptions options = javaCompile.getOptions();
     
     DefaultJavaCompileSpec specs = new DefaultJavaCompileSpec();
@@ -205,7 +205,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
   /**
    * Get the compilation arguments of the source set.
    */
-  private List<String> getCompilerArgs(JavaCompile javaCompile) {
+  public static List<String> getCompilerArgs(JavaCompile javaCompile) {
     CompileOptions options = javaCompile.getOptions();
 
     try {
@@ -234,7 +234,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
   /**
    * Get the source compatibility level of the source set.
    */
-  private String getSourceCompatibility(List<String> compilerArgs) {
+  public static String getSourceCompatibility(List<String> compilerArgs) {
     return findFirstCompilerArgMatch(compilerArgs,
       Stream.of("-source", "--source", "--release"))
       .orElse("");
@@ -243,13 +243,13 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
   /**
    * Get the target compatibility level of the source set.
    */
-  private String getTargetCompatibility(List<String> compilerArgs) {
+  public static String getTargetCompatibility(List<String> compilerArgs) {
     return findFirstCompilerArgMatch(compilerArgs,
       Stream.of("-target", "--target", "--release"))
       .orElse("");
   }
 
-  private Optional<String> findCompilerArg(List<String> compilerArgs, String arg) {
+  private static Optional<String> findCompilerArg(List<String> compilerArgs, String arg) {
     int idx = compilerArgs.indexOf(arg);
     if (idx >= 0 && idx < compilerArgs.size() - 1) {
       return Optional.of(compilerArgs.get(idx + 1));
@@ -257,7 +257,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
     return Optional.empty();
   }
 
-  private Optional<String> findFirstCompilerArgMatch(List<String> compilerArgs,
+  private static Optional<String> findFirstCompilerArgMatch(List<String> compilerArgs,
       Stream<String> args) {
     return args.map(arg -> findCompilerArg(compilerArgs, arg))
       .filter(Optional::isPresent)
