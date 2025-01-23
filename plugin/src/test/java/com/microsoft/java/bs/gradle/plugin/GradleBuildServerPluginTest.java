@@ -162,7 +162,7 @@ class GradleBuildServerPluginTest {
       // JDK source/target options changed from 1.9 -> 9 in 8.0
       new GradleJreVersion("8.0", 19),
       // highest supported version
-      new GradleJreVersion("8.10.2", 22)
+      new GradleJreVersion("8.12", 23)
     ).filter(version -> version.jreVersion >= javaVersion)
      .map(GradleJreVersion::getGradleVersion);
   }
@@ -768,7 +768,6 @@ class GradleBuildServerPluginTest {
       }
     });
   }
-
 
   @ParameterizedTest(name = "testGroovyModelBuilder {0}")
   @MethodSource("versionProvider")
