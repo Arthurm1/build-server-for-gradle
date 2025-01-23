@@ -22,11 +22,6 @@ import ch.epfl.scala.bsp4j.TaskStartParams;
 import ch.epfl.scala.bsp4j.extended.TestFinishEx;
 import ch.epfl.scala.bsp4j.extended.TestStartEx;
 import com.microsoft.java.bs.core.Launcher;
-import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
-import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
-import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
-import com.microsoft.java.bs.core.internal.services.BuildTargetService;
-import com.microsoft.java.bs.core.internal.services.LifecycleService;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import org.apache.commons.lang3.tuple.Pair;
@@ -249,25 +244,8 @@ abstract class IntegrationTest {
       ExecutorService threadPool
   ) {
     // server
-    BuildTargetManager buildTargetManager = new BuildTargetManager();
-    PreferenceManager preferenceManager = new PreferenceManager();
-    GradleApiConnector connector = new GradleApiConnector(preferenceManager);
-    LifecycleService lifecycleService = new LifecycleService(connector, preferenceManager);
-    BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-        connector, preferenceManager);
-    GradleBuildServer gradleBuildServer = new GradleBuildServer(lifecycleService,
-        buildTargetService);
     org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher =
-        new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<BuildClient>()
-            .setLocalService(gradleBuildServer)
-            .setRemoteInterface(BuildClient.class)
-            .setOutput(serverOut)
-            .setInput(serverIn)
-            .setExecutorService(threadPool)
-            .create();
-    BuildClient serverBuildClient = serverLauncher.getRemoteProxy();
-    lifecycleService.setClient(serverBuildClient);
-    buildTargetService.setClient(serverBuildClient);
+        Launcher.createLauncher(serverOut, serverIn, threadPool);
     // client
     TestClient client = new TestClient();
     org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher =

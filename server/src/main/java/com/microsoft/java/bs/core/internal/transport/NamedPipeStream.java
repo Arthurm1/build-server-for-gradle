@@ -11,34 +11,31 @@ import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.WritableByteChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 /**
  * A named pipe stream implementation.
  */
 public class NamedPipeStream {
-  private String pipeName;
+  private final String pipeName;
   private StreamProvider provider;
 
   public NamedPipeStream(String pipeName) {
     this.pipeName = pipeName;
   }
 
-  interface StreamProvider {
-    InputStream getInputStream() throws IOException;
+  private interface StreamProvider {
+    InputStream getInputStream();
 
-    OutputStream getOutputStream() throws IOException;
+    OutputStream getOutputStream();
   }
 
   /**
    * getSelectedStream.
    */
-  public StreamProvider getSelectedStream() {
+  private StreamProvider getSelectedStream() {
     if (provider == null) {
       provider = createProvider();
     }
@@ -47,15 +44,15 @@ public class NamedPipeStream {
 
   private StreamProvider createProvider() {
     PipeStreamProvider pipeStreamProvider = new PipeStreamProvider();
-    pipeStreamProvider.initializeNamedPipe();
+    pipeStreamProvider.initializeNamedPipe(pipeName);
     return pipeStreamProvider;
   }
 
-  public InputStream getInputStream() throws IOException {
+  public InputStream getInputStream() {
     return getSelectedStream().getInputStream();
   }
 
-  public OutputStream getOutputStream() throws IOException {
+  public OutputStream getOutputStream() {
     return getSelectedStream().getOutputStream();
   }
 
@@ -66,63 +63,81 @@ public class NamedPipeStream {
   /**
    * PipeStreamProvider.
    */
-  protected final class PipeStreamProvider implements StreamProvider {
+  private static class PipeStreamProvider implements StreamProvider {
 
     private InputStream input;
     private OutputStream output;
-    private String pipeName = NamedPipeStream.this.pipeName;
 
     @Override
-    public InputStream getInputStream() throws IOException {
+    public InputStream getInputStream() {
       return input;
     }
 
     @Override
-    public OutputStream getOutputStream() throws IOException {
+    public OutputStream getOutputStream() {
       return output;
     }
 
-    private void initializeNamedPipe() {
-      File pipeFile = new File(this.pipeName);
+    private void initializeNamedPipe(final String pipeName) {
+      File pipeFile = new File(pipeName);
       try {
-        attemptConnection(pipeFile);
+        if (isWindows()) {
+          attemptWindowsConnection(pipeFile);
+        } else {
+          attemptUnixConnection(pipeFile);
+        }
       } catch (IOException e) {
         throw new IllegalStateException("Error initializing the named pipe", e);
       }
     }
 
-    private void attemptConnection(File pipeFile) throws IOException {
-      if (isWindows()) {
-        AsynchronousFileChannel channel = AsynchronousFileChannel.open(pipeFile.toPath(),
-            StandardOpenOption.READ, StandardOpenOption.WRITE);
-        input = new NamedPipeInputStream(channel);
-        output = new NamedPipeOutputStream(channel);
-      } else {
-        UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(pipeFile.toPath());
-        SocketChannel channel = SocketChannel.open(StandardProtocolFamily.UNIX);
-        channel.connect(socketAddress);
-        input = new NamedPipeInputStream(channel);
-        output = new NamedPipeOutputStream(channel);
-      }
+    private void attemptWindowsConnection(File pipeFile) throws IOException {
+      AsynchronousFileChannel channel = AsynchronousFileChannel.open(pipeFile.toPath(),
+              StandardOpenOption.READ, StandardOpenOption.WRITE);
+
+      PipeReader reader = buffer -> {
+        try {
+          return channel.read(buffer, 0).get();
+        } catch (InterruptedException | ExecutionException e) {
+          throw new IOException("Error in reading from Windows pipe", e);
+        }
+      };
+      PipeWriter writer = buffer -> {
+        try {
+          return channel.write(buffer, 0).get();
+        } catch (InterruptedException | ExecutionException e) {
+          throw new IOException("Error in writing to Windows pipe", e);
+        }
+      };
+      input = new NamedPipeInputStream(reader);
+      output = new NamedPipeOutputStream(writer);
     }
+
+    private void attemptUnixConnection(File pipeFile) throws IOException {
+      UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(pipeFile.toPath());
+      SocketChannel channel = SocketChannel.open(StandardProtocolFamily.UNIX);
+      channel.connect(socketAddress);
+      input = new NamedPipeInputStream(channel::read);
+      output = new NamedPipeOutputStream(channel::write);
+    }
+  }
+
+  @FunctionalInterface
+  private interface PipeReader {
+    int read(ByteBuffer byteBuffer) throws IOException;
   }
 
   /**
    * NamedPipeInputStream.
    */
-  public class NamedPipeInputStream extends InputStream {
+  private static class NamedPipeInputStream extends InputStream {
 
-    private ReadableByteChannel unixChannel;
-    private AsynchronousFileChannel winChannel;
-    private ByteBuffer buffer = ByteBuffer.allocate(1024);
+    private final PipeReader reader;
+    private final ByteBuffer buffer = ByteBuffer.allocate(1024);
     private int readyBytes = 0;
 
-    public NamedPipeInputStream(ReadableByteChannel channel) {
-      this.unixChannel = channel;
-    }
-
-    public NamedPipeInputStream(AsynchronousFileChannel channel) {
-      this.winChannel = channel;
+    private NamedPipeInputStream(PipeReader reader) {
+      this.reader = reader;
     }
 
     @Override
@@ -130,38 +145,31 @@ public class NamedPipeStream {
       if (buffer.position() < readyBytes) {
         return buffer.get() & 0xFF;
       }
-      try {
-        buffer.clear();
-        if (winChannel != null) {
-          readyBytes = winChannel.read(buffer, 0).get();
-        } else {
-          readyBytes = unixChannel.read(buffer);
-        }
-        if (readyBytes == -1) {
-          return -1; // EOF
-        }
-        buffer.flip();
-        return buffer.get() & 0xFF;
-      } catch (InterruptedException | ExecutionException e) {
-        throw new IOException(e);
+      buffer.clear();
+      readyBytes = reader.read(buffer);
+      if (readyBytes == -1) {
+        return -1; // EOF
       }
+      buffer.flip();
+      return buffer.get() & 0xFF;
     }
+  }
+
+  @FunctionalInterface
+  private interface PipeWriter {
+    int write(ByteBuffer byteBuffer) throws IOException;
   }
 
   /**
    * NamedPipeOutputStream.
    */
-  public class NamedPipeOutputStream extends OutputStream {
-    private WritableByteChannel unixChannel;
-    private AsynchronousFileChannel winChannel;
-    private ByteBuffer buffer = ByteBuffer.allocate(1);
+  private static class NamedPipeOutputStream extends OutputStream {
 
-    public NamedPipeOutputStream(WritableByteChannel channel) {
-      this.unixChannel = channel;
-    }
+    private final PipeWriter writer;
+    private final ByteBuffer buffer = ByteBuffer.allocate(1);
 
-    public NamedPipeOutputStream(AsynchronousFileChannel channel) {
-      this.winChannel = channel;
+    private NamedPipeOutputStream(PipeWriter writer) {
+      this.writer = writer;
     }
 
     @Override
@@ -169,16 +177,7 @@ public class NamedPipeStream {
       buffer.clear();
       buffer.put((byte) b);
       buffer.position(0);
-      if (winChannel != null) {
-        Future<Integer> result = winChannel.write(buffer, 0);
-        try {
-          result.get();
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
-      } else {
-        unixChannel.write(buffer);
-      }
+      writer.write(buffer);
     }
 
     @Override
@@ -193,17 +192,8 @@ public class NamedPipeStream {
           break;
         }
         writeBytes += length;
-        ByteBuffer buffer = ByteBuffer.wrap(b, offset, length);
-        if (winChannel != null) {
-          Future<Integer> result = winChannel.write(buffer, 0);
-          try {
-            result.get();
-          } catch (Exception e) {
-            throw new IOException(e);
-          }
-        } else {
-          unixChannel.write(buffer);
-        }
+        ByteBuffer localBuffer = ByteBuffer.wrap(b, offset, length);
+        writer.write(localBuffer);
       }
     }
   }

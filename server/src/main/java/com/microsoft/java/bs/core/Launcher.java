@@ -5,10 +5,10 @@ package com.microsoft.java.bs.core;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -61,7 +61,7 @@ public class Launcher {
     NamedPipeStream pipeStream = new NamedPipeStream(pipePath);
     try {
       return createLauncher(pipeStream.getOutputStream(), pipeStream.getInputStream());
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw new IllegalStateException("Error initializing the named pipe", e);
     }
   }
@@ -72,6 +72,14 @@ public class Launcher {
 
   private static org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient>
       createLauncher(OutputStream outputStream, InputStream inputStream) {
+    return createLauncher(outputStream, inputStream, Executors.newCachedThreadPool());
+  }
+
+  /**
+   * create a rpc server launcher.
+   */
+  public static org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> createLauncher(
+      OutputStream outputStream, InputStream inputStream, ExecutorService threadPool) {
     BuildTargetManager buildTargetManager = new BuildTargetManager();
     PreferenceManager preferenceManager = new PreferenceManager();
     GradleApiConnector connector = new GradleApiConnector(preferenceManager);
@@ -86,7 +94,7 @@ public class Launcher {
         .setInput(inputStream)
         .setLocalService(gradleBuildServer)
         .setRemoteInterface(BuildClient.class)
-        .setExecutorService(Executors.newCachedThreadPool())
+        .setExecutorService(threadPool)
         .create();
     BuildClient client = launcher.getRemoteProxy();
     lifecycleService.setClient(client);
