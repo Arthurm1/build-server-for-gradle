@@ -649,4 +649,30 @@ class GradleBuildServerPluginTest {
       }
     });
   }
+
+  @ParameterizedTest(name = "testNebulaPlugin_11_10 {0}")
+  @MethodSource("versionProvider")
+  void testNebulaPlugin_11_10(GradleVersion gradleVersion) throws IOException {
+    assumeTrue(gradleVersion.compareTo(GradleVersion.version("7.4")) >= 0);
+    withSourceSets("nebula-plugin-11-10", gradleVersion, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
+        assertNotNull(javaExtension);
+      }
+    });
+  }
+
+  @ParameterizedTest(name = "testNebulaPlugin_11_5 {0}")
+  @MethodSource("versionProvider")
+  void testNebulaPlugin_11_5(GradleVersion gradleVersion) throws IOException {
+    assumeTrue(gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0);
+    withSourceSets("nebula-plugin-11-5", gradleVersion, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
+        assertNotNull(javaExtension);
+      }
+    });
+  }
 }
