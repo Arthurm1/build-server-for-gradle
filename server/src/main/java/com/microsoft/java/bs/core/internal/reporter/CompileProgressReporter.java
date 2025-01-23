@@ -12,10 +12,11 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.CompileReport;
 import ch.epfl.scala.bsp4j.CompileTask;
 import ch.epfl.scala.bsp4j.StatusCode;
-import ch.epfl.scala.bsp4j.TaskDataKind;
+import ch.epfl.scala.bsp4j.TaskFinishDataKind;
 import ch.epfl.scala.bsp4j.TaskFinishParams;
 import ch.epfl.scala.bsp4j.TaskId;
 import ch.epfl.scala.bsp4j.TaskProgressParams;
+import ch.epfl.scala.bsp4j.TaskStartDataKind;
 import ch.epfl.scala.bsp4j.TaskStartParams;
 
 import org.gradle.tooling.events.FailureResult;
@@ -84,7 +85,7 @@ public class CompileProgressReporter extends ProgressReporter {
       TaskStartParams startParam = new TaskStartParams(taskId);
       startParam.setEventTime(eventTime);
       startParam.setMessage(message);
-      startParam.setDataKind(TaskDataKind.COMPILE_TASK);
+      startParam.setDataKind(TaskStartDataKind.COMPILE_TASK);
       startParam.setData(new CompileTask(btId));
       client.onBuildTaskStart(startParam);
     });
@@ -96,8 +97,6 @@ public class CompileProgressReporter extends ProgressReporter {
       TaskProgressParams progressParam = new TaskProgressParams(taskId);
       progressParam.setEventTime(eventTime);
       progressParam.setMessage(message);
-      progressParam.setDataKind(TaskDataKind.COMPILE_TASK);
-      progressParam.setData(new CompileTask(btId));
       client.onBuildTaskProgress(progressParam);
     });
   }
@@ -109,7 +108,7 @@ public class CompileProgressReporter extends ProgressReporter {
       TaskFinishParams endParam = new TaskFinishParams(taskId, statusCode);
       endParam.setEventTime(eventTime);
       endParam.setMessage(message);
-      endParam.setDataKind(TaskDataKind.COMPILE_REPORT);
+      endParam.setDataKind(TaskFinishDataKind.COMPILE_REPORT);
       // TODO Gradle > 8.8 Problems API will allow errors/warnings to be reported on
       CompileReport compileReport = new CompileReport(btId, 0, 0);
       compileReport.setNoOp(noOp);

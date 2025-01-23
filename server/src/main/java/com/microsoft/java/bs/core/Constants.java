@@ -18,8 +18,9 @@ public class Constants {
       .getImplementationVersion();
   /**
    * The version of the BSP specification.
+   * Keep in sync with server:build.gradle dependency
    */
-  public static final String BSP_VERSION = "2.1.0-M4";
+  public static final String BSP_VERSION = "2.2.0-M2";
 
   private Constants() {}
 }

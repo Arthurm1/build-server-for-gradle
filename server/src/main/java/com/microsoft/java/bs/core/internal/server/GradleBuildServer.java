@@ -43,6 +43,7 @@ import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
 import ch.epfl.scala.bsp4j.OutputPathsParams;
 import ch.epfl.scala.bsp4j.OutputPathsResult;
+import ch.epfl.scala.bsp4j.ReadParams;
 import ch.epfl.scala.bsp4j.ResourcesParams;
 import ch.epfl.scala.bsp4j.ResourcesResult;
 import ch.epfl.scala.bsp4j.RunParams;
@@ -162,6 +163,12 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   public CompletableFuture<DebugSessionAddress> debugSessionStart(DebugSessionParams params) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'debugSessionStart'");
+  }
+
+  @Override
+  public void onRunReadStdin(ReadParams params) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'onRunReadStdin'");
   }
 
   @Override

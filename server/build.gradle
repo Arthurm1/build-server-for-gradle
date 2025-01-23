@@ -4,7 +4,8 @@ plugins {
 
 dependencies {
     implementation project(':model')
-    implementation 'ch.epfl.scala:bsp4j:2.1.0-M4'
+    // keep bsp version in sync with com.microsoft.java.bs.core.Constants.BSP_VERSION
+    implementation 'ch.epfl.scala:bsp4j:2.2.0-M2'
     implementation 'org.apache.commons:commons-lang3:3.17.0'
 
     testImplementation(platform('org.junit:junit-bom:5.11.4'))

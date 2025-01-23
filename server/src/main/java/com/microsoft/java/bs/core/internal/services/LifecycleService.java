@@ -164,7 +164,7 @@ public class LifecycleService {
       preferenceManager.getPreferences().setGradleJavaHome(jdk.getAbsolutePath());
       if (client != null) {
         ShowMessageParams messageParams = new ShowMessageParams(
-            MessageType.INFORMATION,
+            MessageType.INFO,
             String.format(
                 "Default JDK wasn't compatible with current gradle version (" + gradleVersion + ")."
                 + "Using \"%s\" instead.", jdk.getAbsolutePath()

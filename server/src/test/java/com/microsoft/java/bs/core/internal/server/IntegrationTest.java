@@ -12,6 +12,7 @@ import ch.epfl.scala.bsp4j.InitializeBuildParams;
 import ch.epfl.scala.bsp4j.JavaBuildServer;
 import ch.epfl.scala.bsp4j.JvmBuildServer;
 import ch.epfl.scala.bsp4j.LogMessageParams;
+import ch.epfl.scala.bsp4j.PrintParams;
 import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import ch.epfl.scala.bsp4j.StatusCode;
@@ -201,6 +202,16 @@ abstract class IntegrationTest {
 
     @Override
     public void onBuildTargetDidChange(DidChangeBuildTarget params) {
+      // do nothing
+    }
+
+    @Override
+    public void onRunPrintStdout(PrintParams params) {
+      // do nothing
+    }
+
+    @Override
+    public void onRunPrintStderr(PrintParams params) {
       // do nothing
     }
   }
