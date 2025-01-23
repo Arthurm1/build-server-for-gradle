@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -31,6 +32,7 @@ import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.StatusCode;
 
+import org.gradle.tooling.model.build.BuildEnvironment;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -51,8 +53,12 @@ class GradleApiConnectorTest {
   }
 
   private <A> A withConnector(Function<GradleApiConnector, A> function) {
+    return withConnector(function, new Preferences());
+  }
+
+  private <A> A withConnector(Function<GradleApiConnector, A> function, Preferences preferences) {
     PreferenceManager preferenceManager = new PreferenceManager();
-    preferenceManager.setPreferences(new Preferences());
+    preferenceManager.setPreferences(preferences);
     preferenceManager.setClientSupportedLanguages(SupportedLanguages.allBspNames);
     GradleApiConnector connector = new GradleApiConnector(preferenceManager);
     try {
@@ -360,5 +366,25 @@ class GradleApiConnectorTest {
       assertEquals(StatusCode.ERROR, failingTest);
       return null;
     });
+  }
+
+  @Test
+  void testGradleProperties() {
+    File projectDir = projectPath.resolve("gradle-properties").toFile();
+    withConnector(connector -> {
+      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI());
+      assertTrue(buildEnv.getJava().getJvmArguments().stream()
+          .anyMatch(arg -> arg.contains("-Xmx1234m")));
+      return null;
+    });
+    // check supplying args doesn't wipe the gradle.properties ones
+    Preferences preferences = new Preferences();
+    preferences.setGradleJvmArguments(new ArrayList<>());
+    withConnector(connector -> {
+      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI());
+      assertTrue(buildEnv.getJava().getJvmArguments().stream()
+          .anyMatch(arg -> arg.contains("-Xmx1234m")));
+      return null;
+    }, preferences);
   }
 }
