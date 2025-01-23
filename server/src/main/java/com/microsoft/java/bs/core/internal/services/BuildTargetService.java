@@ -366,7 +366,7 @@ public class BuildTargetService {
   public CleanCacheResult cleanCache(CleanCacheParams params) {
     ProgressReporter reporter = new DefaultProgressReporter(client);
     StatusCode code = runTasks(params.getTargets(), this::getCleanTaskName, reporter);
-    return new CleanCacheResult(null, code == StatusCode.OK);
+    return new CleanCacheResult(code == StatusCode.OK);
   }
 
   /**

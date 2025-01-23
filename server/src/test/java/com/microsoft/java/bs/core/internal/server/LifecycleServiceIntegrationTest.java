@@ -102,7 +102,7 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
         testServer.buildInitialize(initParams).join();
         client.waitOnShowMessages(1);
         ShowMessageParams param = client.showMessages.get(0);
-        assertEquals(MessageType.INFORMATION, param.getType());
+        assertEquals(MessageType.INFO, param.getType());
         assertTrue(param.getMessage()
             .startsWith("Default JDK wasn't compatible with current gradle version"));
         testServer.onBuildInitialized();

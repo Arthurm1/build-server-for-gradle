@@ -80,7 +80,7 @@ class BuildTargetServiceTest {
     BuildTarget target = mock(BuildTarget.class);
     when(target.getBaseDirectory()).thenReturn("foo/bar");
     when(target.getDataKind()).thenReturn("jvm");
-    when(target.getData()).thenReturn(new JvmBuildTarget(null, null));
+    when(target.getData()).thenReturn(new JvmBuildTarget());
     GradleBuildTarget gradleBuildTarget = new GradleBuildTarget(target,
         mock(GradleSourceSet.class));
     when(buildTargetManager.getAllGradleBuildTargets())
