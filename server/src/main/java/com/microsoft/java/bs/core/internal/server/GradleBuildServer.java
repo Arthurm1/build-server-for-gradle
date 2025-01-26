@@ -155,8 +155,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<RunResult> buildTargetRun(RunParams params) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'buildTargetRun'");
+    return handleRequest("buildTarget/run", cc -> buildTargetService.buildTargetRun(params));
   }
 
   @Override
@@ -168,6 +167,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public void onRunReadStdin(ReadParams params) {
     // TODO Auto-generated method stub
+    // TODO how does BSP indicate which running main class or test should receive this?
     throw new UnsupportedOperationException("Unimplemented method 'onRunReadStdin'");
   }
 

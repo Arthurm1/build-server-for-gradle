@@ -5,7 +5,9 @@ package com.microsoft.java.bs.core.internal.gradle;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -311,5 +313,25 @@ public class Utils {
     }
 
     return GradleBuildKind.TAPI;
+  }
+
+  /**
+   * Create a temporary init.gradle script.
+   * Caller is responsible for file deletion.
+   *
+   * @param contents contents of script.
+   * @return the init.gradle file.
+   */
+  public static File createInitScriptFile(String contents) {
+    try {
+      File initScriptFile = File.createTempFile("init", ".gradle");
+      if (!initScriptFile.getParentFile().exists()) {
+        initScriptFile.getParentFile().mkdirs();
+      }
+      Files.write(initScriptFile.toPath(), contents.getBytes());
+      return initScriptFile;
+    } catch (IOException e) {
+      throw new IllegalStateException("Error creating init file", e);
+    }
   }
 }

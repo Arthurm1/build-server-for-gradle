@@ -58,6 +58,8 @@ abstract class IntegrationTest {
     protected final List<TaskFinishParams> finishReports = new ArrayList<>();
     protected final List<CompileReport> compileReports = new ArrayList<>();
     protected final List<CompileTask> compileTasks = new ArrayList<>();
+    protected final List<PrintParams> stdOut = new ArrayList<>();
+    protected final List<PrintParams> stdErr = new ArrayList<>();
     protected final List<LogMessageParams> logMessages = new ArrayList<>();
     protected final List<ShowMessageParams> showMessages = new ArrayList<>();
     protected final List<TestReport> testReports = new ArrayList<>();
@@ -70,6 +72,8 @@ abstract class IntegrationTest {
       compileReports.clear();
       compileTasks.clear();
       logMessages.clear();
+      stdOut.clear();
+      stdErr.clear();
       showMessages.clear();
       testReports.clear();
       testStarts.clear();
@@ -94,6 +98,14 @@ abstract class IntegrationTest {
 
     protected void waitOnLogMessages(int size) {
       waitOnMessages("Log Messages", size, logMessages::size);
+    }
+
+    protected void waitOnStdOut(int size) {
+      waitOnMessages("Std Out", size, stdOut::size);
+    }
+
+    protected void waitOnStdErr(int size) {
+      waitOnMessages("Std Err", size, stdErr::size);
     }
 
     protected void waitOnShowMessages(int size) {
@@ -207,12 +219,20 @@ abstract class IntegrationTest {
 
     @Override
     public void onRunPrintStdout(PrintParams params) {
-      // do nothing
+      System.out.print(params.getMessage());
+      stdOut.add(params);
+      synchronized (this) {
+        notify();
+      }
     }
 
     @Override
     public void onRunPrintStderr(PrintParams params) {
-      // do nothing
+      System.err.print(params.getMessage());
+      stdErr.add(params);
+      synchronized (this) {
+        notify();
+      }
     }
   }
 

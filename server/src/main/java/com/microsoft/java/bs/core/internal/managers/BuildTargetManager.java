@@ -64,6 +64,7 @@ public class BuildTargetManager {
       BuildTargetCapabilities buildTargetCapabilities = new BuildTargetCapabilities();
       buildTargetCapabilities.setCanCompile(true);
       buildTargetCapabilities.setCanTest(true);
+      buildTargetCapabilities.setCanRun(true);
       BuildTarget bt = new BuildTarget(
           btId,
           tags,

@@ -17,6 +17,10 @@ import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
 import ch.epfl.scala.bsp4j.MessageType;
+import ch.epfl.scala.bsp4j.RunParams;
+import ch.epfl.scala.bsp4j.RunParamsDataKind;
+import ch.epfl.scala.bsp4j.RunResult;
+import ch.epfl.scala.bsp4j.ScalaMainClass;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
 import ch.epfl.scala.bsp4j.ScalaTestSuites;
@@ -37,6 +41,8 @@ import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -1046,6 +1052,64 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
+      client.clearMessages();
+    });
+  }
+
+  @Test
+  void testCleanStraightToRun() {
+    withNewTestServer("junit5-jupiter-starter-gradle", (gradleBuildServer, client) -> {
+      // get targets
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+          .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+          .map(BuildTarget::getId)
+          .collect(Collectors.toList());
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      gradleBuildServer.buildTargetCleanCache(cleanCacheParams).join();
+      client.clearMessages();
+
+      // a request to run mainClass straight after a clean should produce compile results/reports
+      // run main
+      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+            "junit5-jupiter-starter-gradle [main]");
+      RunParams runParams = new RunParams(btId);
+      HashMap<String, String> envVars = new HashMap<>();
+      envVars.put("testEnv", "testing");
+      runParams.setEnvironmentVariables(envVars);
+      runParams.setOriginId("originId");
+      runParams.setDataKind(RunParamsDataKind.SCALA_MAIN_CLASS);
+      List<String> args = new ArrayList<>();
+      args.add("firstArg");
+      ScalaMainClass mainClass = new ScalaMainClass("com.example.project.Calculator",
+          args, Collections.emptyList());
+      runParams.setData(mainClass);
+      RunResult runResult = gradleBuildServer.buildTargetRun(runParams).join();
+      assertEquals("originId", runResult.getOriginId());
+      client.waitOnStartReports(2);
+      client.waitOnFinishReports(2);
+      client.waitOnCompileTasks(1);
+      client.waitOnCompileReports(1);
+      client.waitOnStdOut(20);
+      client.waitOnStdErr(2);
+      client.waitOnTestStarts(0);
+      client.waitOnTestFinishes(0);
+      client.waitOnTestReports(0);
+      assertTrue(client.stdErr.stream().anyMatch(message ->
+          message.getMessage().equals("Syserr test")));
+      assertTrue(client.stdOut.stream().anyMatch(message ->
+          message.getMessage().equals("Sysout test")));
+      for (CompileReport message : client.compileReports) {
+        assertFalse(message.getNoOp());
+      }
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      assertEquals(StatusCode.OK, runResult.getStatusCode(),
+          () -> client.finishReports.stream().map(TaskFinishParams::getMessage)
+                    .collect(Collectors.joining("\n")));
       client.clearMessages();
     });
   }

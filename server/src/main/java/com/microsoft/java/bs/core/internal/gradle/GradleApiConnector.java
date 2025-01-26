@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -32,6 +33,7 @@ import org.gradle.tooling.model.gradle.GradleBuild;
 import org.gradle.util.GradleVersion;
 
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.reporter.AppRunReporter;
 import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
@@ -303,6 +305,76 @@ public class GradleApiConnector {
     } catch (GradleConnectionException | IllegalStateException e) {
       reporter.sendError("Error running test classes: " + e.getMessage());
       statusCode = StatusCode.ERROR;
+    }
+
+    return statusCode;
+  }
+
+  /**
+   * request Gradle to run main class.
+   */
+  public StatusCode runMainClass(URI projectUri, String projectPath, String sourceSetName,
+      String className, Map<String, String> environmentVariables, List<String> jvmOptions,
+      List<String> arguments, BuildClient client, String originId,
+      CompileProgressReporter compileProgressReporter) {
+
+    StatusCode statusCode = StatusCode.OK;
+    String taskName = "buildServerRunApp";
+    try (AppRunReporter reporter = new AppRunReporter(client, originId, taskName)) {
+      try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
+        String execTask = "gradle.projectsEvaluated {\n"
+            + "  def proj = rootProject.findProject('" + projectPath + "')\n"
+            + "  if (proj != null) {\n"
+            + "    proj.getTasks().create('" + taskName + "', JavaExec.class, {\n"
+            + "      classpath = proj.sourceSets." + sourceSetName + ".runtimeClasspath\n"
+            + "      mainClass = '" + className + "'\n";
+        if (arguments != null && !arguments.isEmpty()) {
+          String args = arguments.stream().collect(Collectors.joining("','", "['", "']"));
+          execTask += "      args = " + args + "\n";
+        }
+        if (environmentVariables != null && !environmentVariables.isEmpty()) {
+          String envVars = environmentVariables.entrySet().stream()
+              .map(entry -> "'" + entry.getKey() + "':'" + entry.getValue() + "'")
+              .collect(Collectors.joining(",", "[", "]"));
+          execTask += "      environment = " + envVars + "\n";
+        }
+        if (jvmOptions != null && !jvmOptions.isEmpty()) {
+          String jvmArgs = jvmOptions.stream().collect(Collectors.joining("','", "['", "']"));
+          execTask += "      jvmArgs = " + jvmArgs + "\n";
+        }
+        execTask += "    })\n"
+            + "  }\n"
+            + "}\n";
+        File initScript = Utils.createInitScriptFile(execTask);
+        try {
+          BuildLauncher launcher = Utils
+              .getBuildLauncher(connection, preferenceManager.getPreferences())
+              .forTasks(taskName)
+              // TODO this is needed to feedback the main class stdOut/Err but it will also feedback
+              // Gradle stdOut/Err so reporter will report on any compile messages etc.
+              // Unsure how to filter those out.
+              .setStandardOutput(reporter.getStdOut())
+              .setStandardError(reporter.getStdErr())
+              // TODO BSP `run/readStdin` - how to link which running task gets which StdIn data?
+              //    .setStandardInput(reporter.getStdIn())
+              .addArguments("--init-script", initScript.getAbsolutePath())
+              .addProgressListener(reporter, OperationType.TASK);
+          if (compileProgressReporter != null) {
+            launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
+          }
+          // run method is blocking
+          launcher.run();
+        } finally {
+          initScript.delete();
+        }
+      } catch (GradleConnectionException | IllegalStateException e) {
+        String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
+        reporter.sendError("Error running main class: " + message);
+        statusCode = StatusCode.ERROR;
+      }
+    } catch (IOException e) {
+      // caused by close the output stream, just simply log the error.
+      LOGGER.severe(e.getMessage());
     }
 
     return statusCode;

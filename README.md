@@ -24,6 +24,7 @@ Following BSP requests are supported in the current implementation:
 - `buildTarget/javacOptions`
 - `buildTarget/scalacOptions`
 - `buildTarget/test`
+- `buildTarget/run`
 - `workspace/buildTargets`
 - `workspace/reload`
 
