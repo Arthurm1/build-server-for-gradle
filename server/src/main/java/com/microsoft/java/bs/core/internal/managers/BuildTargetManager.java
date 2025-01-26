@@ -57,7 +57,7 @@ public class BuildTargetManager {
     List<BuildTargetIdentifier> changedTargets = new LinkedList<>();
     for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
       String sourceSetName = sourceSet.getSourceSetName();
-      URI uri = getBuildTargetUri(sourceSet.getProjectDir().toURI(), sourceSetName);
+      URI uri = getBuildTargetUri(sourceSet.getProjectDir().toPath().toUri(), sourceSetName);
       List<String> tags = getBuildTargetTags(sourceSet.hasTests());
       BuildTargetIdentifier btId = new BuildTargetIdentifier(uri.toString());
       List<String> languages = new LinkedList<>(sourceSet.getExtensions().keySet());
@@ -72,7 +72,7 @@ public class BuildTargetManager {
           Collections.emptyList(),
           buildTargetCapabilities
       );
-      bt.setBaseDirectory(sourceSet.getRootDir().toURI().toString());
+      bt.setBaseDirectory(sourceSet.getRootDir().toPath().toUri().toString());
 
       setBuildTarget(sourceSet, bt);
 
@@ -163,7 +163,8 @@ public class BuildTargetManager {
   private JvmBuildTarget getJvmBuildTarget(GradleSourceSet sourceSet, JavaExtension javaExtension) {
     // See: https://build-server-protocol.github.io/docs/extensions/jvm#jvmbuildtarget
     return new JvmBuildTargetEx(
-        javaExtension.getJavaHome() == null ? "" : javaExtension.getJavaHome().toURI().toString(),
+        javaExtension.getJavaHome() == null ? "" : javaExtension.getJavaHome()
+            .toPath().toUri().toString(),
         javaExtension.getJavaVersion() == null ? "" : javaExtension.getJavaVersion(),
         sourceSet.getGradleVersion() == null ? "" : sourceSet.getGradleVersion(),
         javaExtension.getSourceCompatibility() == null ? ""
@@ -184,7 +185,7 @@ public class BuildTargetManager {
     // See: https://build-server-protocol.github.io/docs/extensions/scala#scalabuildtarget
     JvmBuildTarget jvmBuildTarget = getJvmBuildTarget(sourceSet, javaExtension);
     List<String> scalaJars = scalaExtension.getScalaJars().stream()
-          .map(file -> file.toURI().toString())
+          .map(file -> file.toPath().toUri().toString())
           .collect(Collectors.toList());
     ScalaBuildTarget scalaBuildTarget = new ScalaBuildTarget(
         scalaExtension.getScalaOrganization() == null ? "" : scalaExtension.getScalaOrganization(),

@@ -143,18 +143,18 @@ public class DependencyCollector {
 
     List<Artifact> artifacts = new LinkedList<>();
     if (resolvedArtifactFile != null) {
-      artifacts.add(new DefaultArtifact(resolvedArtifactFile.toURI(), null));
+      artifacts.add(new DefaultArtifact(resolvedArtifactFile.toPath().toUri(), null));
     }
 
     Set<ComponentArtifactsResult> resolvedComponents = resolutionResult.getResolvedComponents();
     File sourceJar = getNonClassesArtifact(resolvedComponents, SourcesArtifact.class);
     if (sourceJar != null) {
-      artifacts.add(new DefaultArtifact(sourceJar.toURI(), "sources"));
+      artifacts.add(new DefaultArtifact(sourceJar.toPath().toUri(), "sources"));
     }
 
     File javaDocJar = getNonClassesArtifact(resolvedComponents, JavadocArtifact.class);
     if (javaDocJar != null) {
-      artifacts.add(new DefaultArtifact(javaDocJar.toURI(), "javadoc"));
+      artifacts.add(new DefaultArtifact(javaDocJar.toPath().toUri(), "javadoc"));
     }
 
     return new DefaultGradleModuleDependency(
@@ -206,7 +206,7 @@ public class DependencyCollector {
       File resolvedArtifactFile) {
     List<Artifact> artifacts = new LinkedList<>();
     if (resolvedArtifactFile != null) {
-      artifacts.add(new DefaultArtifact(resolvedArtifactFile.toURI(), null));
+      artifacts.add(new DefaultArtifact(resolvedArtifactFile.toPath().toUri(), null));
     }
   
     return new DefaultGradleModuleDependency(

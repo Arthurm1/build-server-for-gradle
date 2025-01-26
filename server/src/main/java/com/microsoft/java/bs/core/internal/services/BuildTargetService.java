@@ -190,11 +190,11 @@ public class BuildTargetService {
       GradleSourceSet sourceSet = target.getSourceSet();
       List<SourceItem> sources = new ArrayList<>();
       for (File sourceDir : sourceSet.getSourceDirs()) {
-        sources.add(new SourceItem(sourceDir.toURI().toString(), SourceItemKind.DIRECTORY,
+        sources.add(new SourceItem(sourceDir.toPath().toUri().toString(), SourceItemKind.DIRECTORY,
             false /* generated */));
       }
       for (File sourceDir : sourceSet.getGeneratedSourceDirs()) {
-        sources.add(new SourceItem(sourceDir.toURI().toString(), SourceItemKind.DIRECTORY,
+        sources.add(new SourceItem(sourceDir.toPath().toUri().toString(), SourceItemKind.DIRECTORY,
             true /* generated */));
       }
       SourcesItem item = new SourcesItem(btId, sources);
@@ -219,7 +219,7 @@ public class BuildTargetService {
       GradleSourceSet sourceSet = target.getSourceSet();
       List<String> resources = new ArrayList<>();
       for (File resourceDir : sourceSet.getResourceDirs()) {
-        resources.add(resourceDir.toURI().toString());
+        resources.add(resourceDir.toPath().toUri().toString());
       }
       ResourcesItem item = new ResourcesItem(btId, resources);
       items.add(item);
@@ -251,7 +251,7 @@ public class BuildTargetService {
       if (sourceOutputDirs != null) {
         for (File sourceOutputDir : sourceOutputDirs) {
           outputPaths.add(new OutputPathItem(
-              sourceOutputDir.toURI() + "?kind=source",
+              sourceOutputDir.toPath().toUri() + "?kind=source",
               OutputPathItemKind.DIRECTORY
           ));
         }
@@ -261,7 +261,7 @@ public class BuildTargetService {
       if (resourceOutputDirs != null) {
         for (File resourceOutputDir : resourceOutputDirs) {
           outputPaths.add(new OutputPathItem(
-              resourceOutputDir.toURI() + "?kind=resource",
+              resourceOutputDir.toPath().toUri() + "?kind=resource",
               OutputPathItemKind.DIRECTORY
           ));
         }
@@ -430,11 +430,11 @@ public class BuildTargetService {
         continue;
       }
       List<String> classpath = sourceSet.getCompileClasspath().stream()
-          .map(file -> file.toURI().toString())
+          .map(file -> file.toPath().toUri().toString())
           .collect(Collectors.toList());
       String classesDir;
       if (javaExtension.getClassesDir() != null) {
-        classesDir = javaExtension.getClassesDir().toURI().toString();
+        classesDir = javaExtension.getClassesDir().toPath().toUri().toString();
       } else {
         classesDir = "";
       }
@@ -469,11 +469,11 @@ public class BuildTargetService {
         continue;
       }
       List<String> classpath = sourceSet.getCompileClasspath().stream()
-          .map(file -> file.toURI().toString())
+          .map(file -> file.toPath().toUri().toString())
           .collect(Collectors.toList());
       String classesDir;
       if (scalaExtension.getClassesDir() != null) {
-        classesDir = scalaExtension.getClassesDir().toURI().toString();
+        classesDir = scalaExtension.getClassesDir().toPath().toUri().toString();
       } else {
         classesDir = "";
       }

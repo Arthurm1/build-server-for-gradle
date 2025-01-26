@@ -242,7 +242,7 @@ public class AndroidUtils {
           List<File> sdkClasspath =
               bootClasspathFiles.stream().map(RegularFile::getAsFile).collect(Collectors.toList());
           for (File file : sdkClasspath) {
-            moduleDependencies.add(mockModuleDependency(file.toURI()));
+            moduleDependencies.add(mockModuleDependency(file.toPath().toUri()));
           }
         } catch (IllegalStateException | InvocationTargetException e) {
           // failed to retrieve android sdk classpath
@@ -257,7 +257,7 @@ public class AndroidUtils {
         RegularFile file = Utils.invokeMethod(output, "get");
         File jarFile = file.getAsFile();
         if (jarFile.exists()) {
-          moduleDependencies.add(mockModuleDependency(jarFile.toURI()));
+          moduleDependencies.add(mockModuleDependency(jarFile.toPath().toUri()));
         }
       }
     } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
