@@ -353,9 +353,6 @@ class GradleApiConnectorTest {
   void testBuildTargetTest() {
     File projectDir = projectPath.resolve("java-tests").toFile();
     withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(), null);
-      GradleSourceSet testSourceSet =
-          findSourceSet(gradleSourceSets, "java-tests", "test");
       Map<BuildTargetIdentifier, Map<String, Set<String>>> testClassesMap = new HashMap<>();
       BuildTargetIdentifier fakeBt = new BuildTargetIdentifier("fake");
       Map<String, Set<String>> classes = new HashMap<>();
