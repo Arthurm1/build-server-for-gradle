@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
+import org.gradle.tooling.CancellationToken;
+
 import com.microsoft.java.bs.core.Constants;
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.gradle.GradleBuildKind;
@@ -59,8 +61,9 @@ public class LifecycleService {
   /**
    * Initialize the build server.
    */
-  public InitializeBuildResult initializeServer(InitializeBuildParams params) {
-    initializePreferenceManager(params);
+  public InitializeBuildResult initializeServer(InitializeBuildParams params,
+      CancellationToken cancelToken) {
+    initializePreferenceManager(params, cancelToken);
 
     BuildServerCapabilities capabilities = initializeServerCapabilities();
     return new InitializeBuildResult(
@@ -75,7 +78,7 @@ public class LifecycleService {
     this.client = client;
   }
 
-  void initializePreferenceManager(InitializeBuildParams params) {
+  void initializePreferenceManager(InitializeBuildParams params, CancellationToken cancelToken) {
     URI rootUri = UriUtils.getUriFromString(params.getRootUri());
     preferenceManager.setRootUri(rootUri);
     preferenceManager.setClientSupportedLanguages(params.getCapabilities().getLanguageIds());
@@ -88,7 +91,7 @@ public class LifecycleService {
 
     preferenceManager.setPreferences(preferences);
 
-    setGradleJavaHome(rootUri);
+    setGradleJavaHome(rootUri, cancelToken);
 
   }
 
@@ -137,15 +140,15 @@ public class LifecycleService {
   /**
    * Finds and stores the compatible JDK path for executing gradle operations.
    */
-  private void setGradleJavaHome(URI rootUri) {
+  private void setGradleJavaHome(URI rootUri, CancellationToken cancelToken) {
 
-    boolean isCompatible = connector.checkCompatibilityWithProbeBuild(rootUri);
+    boolean isCompatible = connector.checkCompatibilityWithProbeBuild(rootUri, cancelToken);
     if (isCompatible) {
       // Default configuration is compatible, no need for extra work
       return;
     }
 
-    BuildEnvironment buildEnv = connector.getBuildEnvironment(rootUri);
+    BuildEnvironment buildEnv = connector.getBuildEnvironment(rootUri, cancelToken);
 
     String gradleVersion = getGradleVersion(rootUri, buildEnv);
     if (gradleVersion == null) {

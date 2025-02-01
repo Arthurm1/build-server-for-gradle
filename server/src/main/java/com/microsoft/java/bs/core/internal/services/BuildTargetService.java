@@ -86,6 +86,7 @@ import ch.epfl.scala.bsp4j.TestParamsDataKind;
 import ch.epfl.scala.bsp4j.TestResult;
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
 import org.apache.commons.lang3.StringUtils;
+import org.gradle.tooling.CancellationToken;
 
 /**
  * Service to handle build target related BSP requests.
@@ -118,15 +119,15 @@ public class BuildTargetService {
     this.firstTime = true;
   }
 
-  private List<BuildTargetIdentifier> updateBuildTargets() {
+  private List<BuildTargetIdentifier> updateBuildTargets(CancellationToken cancelToken) {
     GradleSourceSets sourceSets = connector.getGradleSourceSets(
-        preferenceManager.getRootUri(), client);
+        preferenceManager.getRootUri(), client, cancelToken);
     return buildTargetManager.store(sourceSets);
   }
 
-  private BuildTargetManager getBuildTargetManager() {
+  private BuildTargetManager getBuildTargetManager(CancellationToken cancelToken) {
     if (firstTime) {
-      updateBuildTargets();
+      updateBuildTargets(cancelToken);
       firstTime = false;
       int buildTargetCount = buildTargetManager.getAllGradleBuildTargets().size();
       Map<String, String> map = TelemetryUtils.getMetadataMap("buildTargetCount",
@@ -140,8 +141,8 @@ public class BuildTargetService {
   /**
    * reload the sourcesets from scratch and notify the BSP client if they have changed.
    */
-  public void reloadWorkspace() {
-    List<BuildTargetIdentifier> changedTargets = updateBuildTargets();
+  public void reloadWorkspace(CancellationToken cancelToken) {
+    List<BuildTargetIdentifier> changedTargets = updateBuildTargets(cancelToken);
     if (!changedTargets.isEmpty()) {
       notifyBuildTargetsChanged(changedTargets);
     }
@@ -155,8 +156,9 @@ public class BuildTargetService {
     client.onBuildTargetDidChange(param);
   }
 
-  private GradleBuildTarget getGradleBuildTarget(BuildTargetIdentifier btId) {
-    return getBuildTargetManager().getGradleBuildTarget(btId);
+  private GradleBuildTarget getGradleBuildTarget(BuildTargetIdentifier btId,
+      CancellationToken cancelToken) {
+    return getBuildTargetManager(cancelToken).getGradleBuildTarget(btId);
   }
 
   public void setClient(BuildClient client) {
@@ -166,39 +168,46 @@ public class BuildTargetService {
   /**
    * Get the build targets of the workspace.
    */
-  public WorkspaceBuildTargetsResult getWorkspaceBuildTargets() {
-    List<GradleBuildTarget> allTargets = getBuildTargetManager().getAllGradleBuildTargets();
+  public WorkspaceBuildTargetsResult getWorkspaceBuildTargets(CancellationToken cancelToken) {
+    List<GradleBuildTarget> allTargets = getBuildTargetManager(cancelToken)
+        .getAllGradleBuildTargets();
     List<BuildTarget> targets = allTargets.stream()
         .map(GradleBuildTarget::getBuildTarget)
         .collect(Collectors.toList());
     return new WorkspaceBuildTargetsResult(targets);
   }
 
+  private boolean isCancelled(CancellationToken cancelToken) {
+    return cancelToken != null && cancelToken.isCancellationRequested();
+  }
+
   /**
    * Get the sources.
    */
-  public SourcesResult getBuildTargetSources(SourcesParams params) {
+  public SourcesResult getBuildTargetSources(SourcesParams params, CancellationToken cancelToken) {
     List<SourcesItem> sourceItems = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip sources collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
-        continue;
-      }
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip sources collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
+        }
 
-      GradleSourceSet sourceSet = target.getSourceSet();
-      List<SourceItem> sources = new ArrayList<>();
-      for (File sourceDir : sourceSet.getSourceDirs()) {
-        sources.add(new SourceItem(sourceDir.toPath().toUri().toString(), SourceItemKind.DIRECTORY,
-            false /* generated */));
+        GradleSourceSet sourceSet = target.getSourceSet();
+        List<SourceItem> sources = new ArrayList<>();
+        for (File sourceDir : sourceSet.getSourceDirs()) {
+          sources.add(new SourceItem(sourceDir.toPath().toUri().toString(),
+              SourceItemKind.DIRECTORY, false /* generated */));
+        }
+        for (File sourceDir : sourceSet.getGeneratedSourceDirs()) {
+          sources.add(new SourceItem(sourceDir.toPath().toUri().toString(),
+              SourceItemKind.DIRECTORY, true /* generated */));
+        }
+        SourcesItem item = new SourcesItem(btId, sources);
+        sourceItems.add(item);
       }
-      for (File sourceDir : sourceSet.getGeneratedSourceDirs()) {
-        sources.add(new SourceItem(sourceDir.toPath().toUri().toString(), SourceItemKind.DIRECTORY,
-            true /* generated */));
-      }
-      SourcesItem item = new SourcesItem(btId, sources);
-      sourceItems.add(item);
     }
     return new SourcesResult(sourceItems);
   }
@@ -206,23 +215,26 @@ public class BuildTargetService {
   /**
    * Get the resources.
    */
-  public ResourcesResult getBuildTargetResources(ResourcesParams params) {
+  public ResourcesResult getBuildTargetResources(ResourcesParams params,
+      CancellationToken cancelToken) {
     List<ResourcesItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip resources collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
-        continue;
-      }
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip resources collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
+        }
 
-      GradleSourceSet sourceSet = target.getSourceSet();
-      List<String> resources = new ArrayList<>();
-      for (File resourceDir : sourceSet.getResourceDirs()) {
-        resources.add(resourceDir.toPath().toUri().toString());
+        GradleSourceSet sourceSet = target.getSourceSet();
+        List<String> resources = new ArrayList<>();
+        for (File resourceDir : sourceSet.getResourceDirs()) {
+          resources.add(resourceDir.toPath().toUri().toString());
+        }
+        ResourcesItem item = new ResourcesItem(btId, resources);
+        items.add(item);
       }
-      ResourcesItem item = new ResourcesItem(btId, resources);
-      items.add(item);
     }
     return new ResourcesResult(items);
   }
@@ -230,45 +242,48 @@ public class BuildTargetService {
   /**
    * Get the output paths.
    */
-  public OutputPathsResult getBuildTargetOutputPaths(OutputPathsParams params) {
+  public OutputPathsResult getBuildTargetOutputPaths(OutputPathsParams params,
+      CancellationToken cancelToken) {
     List<OutputPathsItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
-        continue;
-      }
-
-      GradleSourceSet sourceSet = target.getSourceSet();
-      List<OutputPathItem> outputPaths = new ArrayList<>();
-      // Due to the BSP spec does not support additional flags for each output path,
-      // we will leverage the query of the uri to mark whether this is a source/resource
-      // output path.
-      // TODO: file a BSP spec issue to support additional flags for each output path.
-
-      Set<File> sourceOutputDirs = sourceSet.getSourceOutputDirs();
-      if (sourceOutputDirs != null) {
-        for (File sourceOutputDir : sourceOutputDirs) {
-          outputPaths.add(new OutputPathItem(
-              sourceOutputDir.toPath().toUri() + "?kind=source",
-              OutputPathItemKind.DIRECTORY
-          ));
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
         }
-      }
 
-      Set<File> resourceOutputDirs = sourceSet.getResourceOutputDirs();
-      if (resourceOutputDirs != null) {
-        for (File resourceOutputDir : resourceOutputDirs) {
-          outputPaths.add(new OutputPathItem(
-              resourceOutputDir.toPath().toUri() + "?kind=resource",
-              OutputPathItemKind.DIRECTORY
-          ));
+        GradleSourceSet sourceSet = target.getSourceSet();
+        List<OutputPathItem> outputPaths = new ArrayList<>();
+        // Due to the BSP spec does not support additional flags for each output path,
+        // we will leverage the query of the uri to mark whether this is a source/resource
+        // output path.
+        // TODO: file a BSP spec issue to support additional flags for each output path.
+
+        Set<File> sourceOutputDirs = sourceSet.getSourceOutputDirs();
+        if (sourceOutputDirs != null) {
+          for (File sourceOutputDir : sourceOutputDirs) {
+            outputPaths.add(new OutputPathItem(
+                sourceOutputDir.toPath().toUri() + "?kind=source",
+                OutputPathItemKind.DIRECTORY
+            ));
+          }
         }
-      }
 
-      OutputPathsItem item = new OutputPathsItem(btId, outputPaths);
-      items.add(item);
+        Set<File> resourceOutputDirs = sourceSet.getResourceOutputDirs();
+        if (resourceOutputDirs != null) {
+          for (File resourceOutputDir : resourceOutputDirs) {
+            outputPaths.add(new OutputPathItem(
+                resourceOutputDir.toPath().toUri() + "?kind=resource",
+                OutputPathItemKind.DIRECTORY
+            ));
+          }
+        }
+
+        OutputPathsItem item = new OutputPathsItem(btId, outputPaths);
+        items.add(item);
+      }
     }
     return new OutputPathsResult(items);
   }
@@ -276,27 +291,30 @@ public class BuildTargetService {
   /**
    * Get artifacts dependencies - old way.
    */
-  public DependencySourcesResult getBuildTargetDependencySources(DependencySourcesParams params) {
+  public DependencySourcesResult getBuildTargetDependencySources(DependencySourcesParams params,
+      CancellationToken cancelToken) {
     List<DependencySourcesItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
-                + ". Because it cannot be found in the cache.");
-        continue;
-      }
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
+                  + ". Because it cannot be found in the cache.");
+          continue;
+        }
 
-      GradleSourceSet sourceSet = target.getSourceSet();
-      List<String> sources = new ArrayList<>();
-      for (GradleModuleDependency dep : sourceSet.getModuleDependencies()) {
-        List<String> artifacts = dep.getArtifacts().stream()
-                .filter(a -> "sources".equals(a.getClassifier()))
-                .map(a -> a.getUri().toString())
-                .toList();
-        sources.addAll(artifacts);
-      }
+        GradleSourceSet sourceSet = target.getSourceSet();
+        List<String> sources = new ArrayList<>();
+        for (GradleModuleDependency dep : sourceSet.getModuleDependencies()) {
+          List<String> artifacts = dep.getArtifacts().stream()
+                  .filter(a -> "sources".equals(a.getClassifier()))
+                  .map(a -> a.getUri().toString())
+                  .toList();
+          sources.addAll(artifacts);
+        }
 
-      items.add(new DependencySourcesItem(btId, sources));
+        items.add(new DependencySourcesItem(btId, sources));
+      }
     }
     return new DependencySourcesResult(items);
   }
@@ -304,39 +322,42 @@ public class BuildTargetService {
   /**
    * Get artifacts dependencies.
    */
-  public DependencyModulesResult getBuildTargetDependencyModules(DependencyModulesParams params) {
+  public DependencyModulesResult getBuildTargetDependencyModules(DependencyModulesParams params,
+      CancellationToken cancelToken) {
     List<DependencyModulesItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
-        continue;
-      }
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
+        }
 
-      GradleSourceSet sourceSet = target.getSourceSet();
-      List<DependencyModule> modules = new ArrayList<>();
-      for (GradleModuleDependency dep : sourceSet.getModuleDependencies()) {
-        DependencyModule module = new DependencyModule(dep.getModule(), dep.getVersion());
-        module.setDataKind(MAVEN_DATA_KIND);
-        List<MavenDependencyModuleArtifact> artifacts = dep.getArtifacts().stream().map(a -> {
-          MavenDependencyModuleArtifact artifact = new MavenDependencyModuleArtifact(
-              a.getUri().toString());
-          artifact.setClassifier(a.getClassifier());
-          return artifact;
-        }).collect(Collectors.toList());
-        MavenDependencyModule mavenModule = new MavenDependencyModule(
-            dep.getGroup(),
-            dep.getModule(),
-            dep.getVersion(),
-            artifacts
-        );
-        module.setData(mavenModule);
-        modules.add(module);
-      }
+        GradleSourceSet sourceSet = target.getSourceSet();
+        List<DependencyModule> modules = new ArrayList<>();
+        for (GradleModuleDependency dep : sourceSet.getModuleDependencies()) {
+          DependencyModule module = new DependencyModule(dep.getModule(), dep.getVersion());
+          module.setDataKind(MAVEN_DATA_KIND);
+          List<MavenDependencyModuleArtifact> artifacts = dep.getArtifacts().stream().map(a -> {
+            MavenDependencyModuleArtifact artifact = new MavenDependencyModuleArtifact(
+                a.getUri().toString());
+            artifact.setClassifier(a.getClassifier());
+            return artifact;
+          }).collect(Collectors.toList());
+          MavenDependencyModule mavenModule = new MavenDependencyModule(
+              dep.getGroup(),
+              dep.getModule(),
+              dep.getVersion(),
+              artifacts
+          );
+          module.setData(mavenModule);
+          modules.add(module);
+        }
 
-      DependencyModulesItem item = new DependencyModulesItem(btId, modules);
-      items.add(item);
+        DependencyModulesItem item = new DependencyModulesItem(btId, modules);
+        items.add(item);
+      }
     }
     return new DependencyModulesResult(items);
   }
@@ -344,21 +365,27 @@ public class BuildTargetService {
   /**
    * Compile the build targets.
    */
-  public CompileResult compile(CompileParams params) {
+  public CompileResult compile(CompileParams params, CancellationToken cancelToken) {
     if (params.getTargets().isEmpty()) {
       return new CompileResult(StatusCode.OK);
     } else {
       ProgressReporter reporter = new CompileProgressReporter(client,
           params.getOriginId(), getFullTaskPathMap());
-      StatusCode code = runTasks(params.getTargets(), this::getBuildTaskName, reporter);
+      StatusCode code = runTasks(params.getTargets(), btId -> getBuildTaskName(btId, cancelToken),
+          reporter, cancelToken);
       CompileResult result = new CompileResult(code);
       result.setOriginId(params.getOriginId());
 
       // Schedule a task to refetch the build targets after compilation, this is to
       // auto detect the source roots changes for those code generation framework,
       // such as Protocol Buffer.
+      // This doesn't take into account compilation triggered from running main class or tests.
+      // This cannot be cancelled as it's not triggered from a BSP Client so the CompletableFuture
+      // is left in the ether.
+      // It could be shifted into the `GradleBuildServer#buildTargetCompile` and chained onto that
+      // result but that would delay the CompileResult
       if (!Boolean.getBoolean("bsp.plugin.reloadworkspace.disabled")) {
-        CompletableFuture.runAsync(this::reloadWorkspace);
+        CompletableFuture.runAsync(() -> reloadWorkspace(null));
       }
       return result;
     }
@@ -367,9 +394,10 @@ public class BuildTargetService {
   /**
    * clean the build targets.
    */
-  public CleanCacheResult cleanCache(CleanCacheParams params) {
+  public CleanCacheResult cleanCache(CleanCacheParams params, CancellationToken cancelToken) {
     ProgressReporter reporter = new DefaultProgressReporter(client);
-    StatusCode code = runTasks(params.getTargets(), this::getCleanTaskName, reporter);
+    StatusCode code = runTasks(params.getTargets(), btId -> getCleanTaskName(btId, cancelToken),
+        reporter, cancelToken);
     return new CleanCacheResult(code == StatusCode.OK);
   }
 
@@ -394,16 +422,19 @@ public class BuildTargetService {
    */
   private StatusCode runTasks(List<BuildTargetIdentifier> targets,
       Function<BuildTargetIdentifier, String> taskNameCreator,
-      ProgressReporter reporter) {
-    Map<URI, Set<BuildTargetIdentifier>> groupedTargets = groupBuildTargetsByRootDir(targets);
+      ProgressReporter reporter, CancellationToken cancelToken) {
+    Map<URI, Set<BuildTargetIdentifier>> groupedTargets =
+        groupBuildTargetsByRootDir(targets, cancelToken);
     StatusCode code = StatusCode.OK;
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
-      // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
-      String[] tasks = entry.getValue().stream().map(taskNameCreator).distinct()
-        .toArray(String[]::new);
-      code = connector.runTasks(entry.getKey(), reporter, tasks);
-      if (code == StatusCode.ERROR) {
-        break;
+      if (!isCancelled(cancelToken)) {
+        // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
+        String[] tasks = entry.getValue().stream().map(taskNameCreator).distinct()
+          .toArray(String[]::new);
+        code = connector.runTasks(entry.getKey(), reporter, tasks, cancelToken);
+        if (code == StatusCode.ERROR) {
+          break;
+        }
       }
     }
     return code;
@@ -412,38 +443,41 @@ public class BuildTargetService {
   /**
    * Get the Java compiler options.
    */
-  public JavacOptionsResult getBuildTargetJavacOptions(JavacOptionsParams params) {
+  public JavacOptionsResult getBuildTargetJavacOptions(JavacOptionsParams params,
+      CancellationToken cancelToken) {
     List<JavacOptionsItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip javac options collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
-        continue;
-      }
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip javac options collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
+        }
 
-      GradleSourceSet sourceSet = target.getSourceSet();
-      JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(sourceSet);
-      if (javaExtension == null) {
-        LOGGER.warning("Skip javac options collection for the build target: " + btId.getUri()
-            + ". Because the java extension cannot be found from source set.");
-        continue;
+        GradleSourceSet sourceSet = target.getSourceSet();
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(sourceSet);
+        if (javaExtension == null) {
+          LOGGER.warning("Skip javac options collection for the build target: " + btId.getUri()
+              + ". Because the java extension cannot be found from source set.");
+          continue;
+        }
+        List<String> classpath = sourceSet.getCompileClasspath().stream()
+            .map(file -> file.toPath().toUri().toString())
+            .collect(Collectors.toList());
+        String classesDir;
+        if (javaExtension.getClassesDir() != null) {
+          classesDir = javaExtension.getClassesDir().toPath().toUri().toString();
+        } else {
+          classesDir = "";
+        }
+        items.add(new JavacOptionsItem(
+            btId,
+            javaExtension.getCompilerArgs(),
+            classpath,
+            classesDir
+        ));
       }
-      List<String> classpath = sourceSet.getCompileClasspath().stream()
-          .map(file -> file.toPath().toUri().toString())
-          .collect(Collectors.toList());
-      String classesDir;
-      if (javaExtension.getClassesDir() != null) {
-        classesDir = javaExtension.getClassesDir().toPath().toUri().toString();
-      } else {
-        classesDir = "";
-      }
-      items.add(new JavacOptionsItem(
-          btId,
-          javaExtension.getCompilerArgs(),
-          classpath,
-          classesDir
-      ));
     }
     return new JavacOptionsResult(items);
   }
@@ -451,38 +485,41 @@ public class BuildTargetService {
   /**
    * Get the Scala compiler options.
    */
-  public ScalacOptionsResult getBuildTargetScalacOptions(ScalacOptionsParams params) {
+  public ScalacOptionsResult getBuildTargetScalacOptions(ScalacOptionsParams params,
+      CancellationToken cancelToken) {
     List<ScalacOptionsItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
-      GradleBuildTarget target = getGradleBuildTarget(btId);
-      if (target == null) {
-        LOGGER.warning("Skip scalac options collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
-        continue;
-      }
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip scalac options collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
+        }
 
-      GradleSourceSet sourceSet = target.getSourceSet();
-      ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(sourceSet);
-      if (scalaExtension == null) {
-        LOGGER.warning("Skip scalac options collection for the build target: " + btId.getUri()
-                + ". Because the scalac extension cannot be found from source set.");
-        continue;
+        GradleSourceSet sourceSet = target.getSourceSet();
+        ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(sourceSet);
+        if (scalaExtension == null) {
+          LOGGER.warning("Skip scalac options collection for the build target: " + btId.getUri()
+                  + ". Because the scalac extension cannot be found from source set.");
+          continue;
+        }
+        List<String> classpath = sourceSet.getCompileClasspath().stream()
+            .map(file -> file.toPath().toUri().toString())
+            .collect(Collectors.toList());
+        String classesDir;
+        if (scalaExtension.getClassesDir() != null) {
+          classesDir = scalaExtension.getClassesDir().toPath().toUri().toString();
+        } else {
+          classesDir = "";
+        }
+        items.add(new ScalacOptionsItem(
+            btId,
+            scalaExtension.getScalaCompilerArgs(),
+            classpath,
+            classesDir
+        ));
       }
-      List<String> classpath = sourceSet.getCompileClasspath().stream()
-          .map(file -> file.toPath().toUri().toString())
-          .collect(Collectors.toList());
-      String classesDir;
-      if (scalaExtension.getClassesDir() != null) {
-        classesDir = scalaExtension.getClassesDir().toPath().toUri().toString();
-      } else {
-        classesDir = "";
-      }
-      items.add(new ScalacOptionsItem(
-          btId,
-          scalaExtension.getScalaCompilerArgs(),
-          classpath,
-          classesDir
-      ));
     }
     return new ScalacOptionsResult(items);
   }
@@ -490,26 +527,29 @@ public class BuildTargetService {
   /**
    * Run the test classes.
    */
-  public TestResult buildTargetTest(TestParams params) {
+  public TestResult buildTargetTest(TestParams params, CancellationToken cancelToken) {
     TestResult testResult = new TestResult(StatusCode.OK);
     testResult.setOriginId(params.getOriginId());
     // running tests can trigger compilation that must be reported on
     CompileProgressReporter compileProgressReporter =
         new CompileProgressReporter(client, params.getOriginId(), getFullTaskPathMap());
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets =
-        groupBuildTargetsByRootDir(params.getTargets());
-
+        groupBuildTargetsByRootDir(params.getTargets(), cancelToken);
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
-      // TODO ideally BSP would have a jvmTestEnv style testkind for executing tests, not scala.
       StatusCode statusCode;
-      if (TestParamsDataKind.SCALA_TEST.equals(params.getDataKind())) {
-        // existing logic for scala test (class level)
-        statusCode = runScalaTests(entry, params, compileProgressReporter);
-      } else if ("scala-test-suites-selection".equals(params.getDataKind())) {
-        statusCode = runScalaTestSuitesSelection(entry, params, compileProgressReporter);
+      if (!isCancelled(cancelToken)) {
+        if (TestParamsDataKind.SCALA_TEST.equals(params.getDataKind())) {
+          // existing logic for scala test (class level)
+          statusCode = runScalaTests(entry, params, compileProgressReporter, cancelToken);
+        } else if ("scala-test-suites-selection".equals(params.getDataKind())) {
+          statusCode = runScalaTestSuitesSelection(entry, params, compileProgressReporter,
+            cancelToken);
+        } else {
+          LOGGER.warning("Test Data Kind " + params.getDataKind() + " not supported");
+          statusCode = StatusCode.ERROR;
+        }
       } else {
-        LOGGER.warning("Test Data Kind " + params.getDataKind() + " not supported");
-        statusCode = StatusCode.ERROR;
+        statusCode = StatusCode.CANCELLED;
       }
 
       if (statusCode != StatusCode.OK) {
@@ -523,7 +563,8 @@ public class BuildTargetService {
   private StatusCode runScalaTests(
       Map.Entry<URI, Set<BuildTargetIdentifier>> entry,
       TestParams params,
-      CompileProgressReporter compileProgressReporter
+      CompileProgressReporter compileProgressReporter,
+      CancellationToken cancelToken
   ) {
     // ScalaTestParams is for a list of classes only
     ScalaTestParams testParams = JsonUtils.toModel(params.getData(), ScalaTestParams.class);
@@ -537,13 +578,14 @@ public class BuildTargetService {
     }
     return connector.runTests(entry.getKey(), testClasses, testParams.getJvmOptions(),
         params.getArguments(), null, client, params.getOriginId(),
-        compileProgressReporter);
+        compileProgressReporter, cancelToken);
   }
 
   private StatusCode runScalaTestSuitesSelection(
       Map.Entry<URI, Set<BuildTargetIdentifier>> entry,
       TestParams params,
-      CompileProgressReporter compileProgressReporter
+      CompileProgressReporter compileProgressReporter,
+      CancellationToken cancelToken
   ) {
     // ScalaTestSuites is for a list of classes + methods
     // Since it doesn't supply the specific BuildTarget we require a single
@@ -582,7 +624,7 @@ public class BuildTargetService {
         testClasses.put(params.getTargets().get(0), classesMethods);
         return connector.runTests(entry.getKey(), testClasses, testSuites.getJvmOptions(),
             params.getArguments(), envVars, client, params.getOriginId(),
-            compileProgressReporter);
+            compileProgressReporter, cancelToken);
       }
     }
   }
@@ -590,7 +632,7 @@ public class BuildTargetService {
   /**
    * Run the main class.
    */
-  public RunResult buildTargetRun(RunParams params) {
+  public RunResult buildTargetRun(RunParams params, CancellationToken cancelToken) {
     RunResult runResult = new RunResult(StatusCode.OK);
     runResult.setOriginId(params.getOriginId());
     if (!RunParamsDataKind.SCALA_MAIN_CLASS.equals(params.getDataKind())) {
@@ -600,13 +642,14 @@ public class BuildTargetService {
       // running tests can trigger compilation that must be reported on
       CompileProgressReporter compileProgressReporter = new CompileProgressReporter(client,
               params.getOriginId(), getFullTaskPathMap());
-      GradleBuildTarget buildTarget = getGradleBuildTarget(params.getTarget());
+      GradleBuildTarget buildTarget = getGradleBuildTarget(params.getTarget(),
+          cancelToken);
       if (buildTarget == null) {
         // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
         throw new IllegalArgumentException("The build target does not exist: "
           + params.getTarget().getUri());
       }
-      URI projectUri = getRootProjectUri(params.getTarget());
+      URI projectUri = getRootProjectUri(params.getTarget(), cancelToken);
       // ideally BSP would have a jvmRunEnv style runkind for executing tests, not scala.
       ScalaMainClass mainClass = JsonUtils.toModel(params.getData(), ScalaMainClass.class);
       // TODO BSP is not clear on which argument set takes precedence
@@ -627,7 +670,8 @@ public class BuildTargetService {
               argumentsToUse,
               client,
               params.getOriginId(),
-              compileProgressReporter);
+              compileProgressReporter,
+              cancelToken);
 
       if (statusCode != StatusCode.OK) {
         runResult.setStatusCode(statusCode);
@@ -642,15 +686,16 @@ public class BuildTargetService {
    * in one single call.
    */
   private Map<URI, Set<BuildTargetIdentifier>> groupBuildTargetsByRootDir(
-      List<BuildTargetIdentifier> targets
-  ) {
+      List<BuildTargetIdentifier> targets, CancellationToken cancelToken) {
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets = new HashMap<>();
     for (BuildTargetIdentifier btId : targets) {
-      URI projectUri = getRootProjectUri(btId);
-      if (projectUri == null) {
-        continue;
+      if (!isCancelled(cancelToken)) {
+        URI projectUri = getRootProjectUri(btId, cancelToken);
+        if (projectUri == null) {
+          continue;
+        }
+        groupedTargets.computeIfAbsent(projectUri, k -> new HashSet<>()).add(btId);
       }
-      groupedTargets.computeIfAbsent(projectUri, k -> new HashSet<>()).add(btId);
     }
     return groupedTargets;
   }
@@ -659,8 +704,8 @@ public class BuildTargetService {
    * Try to get the project root directory uri. If root directory is not available,
    * return the uri of the build target.
    */
-  private URI getRootProjectUri(BuildTargetIdentifier btId) {
-    GradleBuildTarget gradleBuildTarget = getGradleBuildTarget(btId);
+  private URI getRootProjectUri(BuildTargetIdentifier btId, CancellationToken cancelToken) {
+    GradleBuildTarget gradleBuildTarget = getGradleBuildTarget(btId, cancelToken);
     if (gradleBuildTarget == null) {
       // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
       throw new IllegalArgumentException("The build target does not exist: " + btId.getUri());
@@ -677,8 +722,8 @@ public class BuildTargetService {
    * Return a source set task name.
    */
   private String getProjectTaskName(BuildTargetIdentifier btId, String title,
-      Function<GradleSourceSet, String> creator) {
-    GradleBuildTarget gradleBuildTarget = getGradleBuildTarget(btId);
+      Function<GradleSourceSet, String> creator, CancellationToken cancelToken) {
+    GradleBuildTarget gradleBuildTarget = getGradleBuildTarget(btId, cancelToken);
     if (gradleBuildTarget == null) {
       // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
       throw new IllegalArgumentException("The build target does not exist: " + btId.getUri());
@@ -694,14 +739,14 @@ public class BuildTargetService {
   /**
    * Return the build task name - [project path]:[task].
    */
-  private String getBuildTaskName(BuildTargetIdentifier btId) {
-    return getProjectTaskName(btId, "classes", GradleSourceSet::getClassesTaskName);
+  private String getBuildTaskName(BuildTargetIdentifier btId, CancellationToken cancelToken) {
+    return getProjectTaskName(btId, "classes", GradleSourceSet::getClassesTaskName, cancelToken);
   }
 
   /**
    * Return the clean task name - [project path]:[task].
    */
-  private String getCleanTaskName(BuildTargetIdentifier btId) {
-    return getProjectTaskName(btId, "clean", GradleSourceSet::getCleanTaskName);
+  private String getCleanTaskName(BuildTargetIdentifier btId, CancellationToken cancelToken) {
+    return getProjectTaskName(btId, "clean", GradleSourceSet::getCleanTaskName, cancelToken);
   }
 }

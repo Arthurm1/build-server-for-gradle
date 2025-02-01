@@ -17,8 +17,10 @@ import org.gradle.internal.impldep.org.apache.commons.lang.StringUtils;
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.BuildLauncher;
+import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.ConfigurableLauncher;
 import org.gradle.tooling.GradleConnector;
+import org.gradle.tooling.ModelBuilder;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.TestLauncher;
 import org.gradle.util.GradleVersion;
@@ -93,10 +95,25 @@ public class Utils {
    * @param connection The project connection.
    * @param preferences The preferences.
    * @param action The build action.
+   * @param cancellationToken Gradle cancellation token.
    */
   public static <T> BuildActionExecuter<T> getBuildActionExecuter(ProjectConnection connection,
-      Preferences preferences, BuildAction<T> action) {
-    return setLauncherProperties(connection.action(action), preferences);
+      Preferences preferences, BuildAction<T> action, CancellationToken cancellationToken) {
+    return setLauncherProperties(connection.action(action), preferences, cancellationToken);
+  }
+
+  /**
+   * Get the model builder for the given project connection.
+   *
+   * @param <T> the result type
+   * @param connection The project connection.
+   * @param preferences The preferences.
+   * @param clazz The model class.
+   * @param cancellationToken Gradle cancellation token.
+   */
+  public static <T> ModelBuilder<T> getModelBuilder(ProjectConnection connection,
+      Preferences preferences, Class<T> clazz, CancellationToken cancellationToken) {
+    return setLauncherProperties(connection.model(clazz), preferences, cancellationToken);
   }
 
   /**
@@ -104,10 +121,11 @@ public class Utils {
    *
    * @param connection The project connection.
    * @param preferences The preferences.
+   * @param cancellationToken Gradle cancellation token.
    */
   public static BuildLauncher getBuildLauncher(ProjectConnection connection,
-      Preferences preferences) {
-    return setLauncherProperties(connection.newBuild(), preferences);
+      Preferences preferences, CancellationToken cancellationToken) {
+    return setLauncherProperties(connection.newBuild(), preferences, cancellationToken);
   }
 
   /**
@@ -115,10 +133,11 @@ public class Utils {
    *
    * @param connection The project connection.
    * @param preferences The preferences.
+   * @param cancellationToken Gradle cancellation token.
    */
   public static TestLauncher getTestLauncher(ProjectConnection connection,
-      Preferences preferences) {
-    return setLauncherProperties(connection.newTestLauncher(), preferences);
+      Preferences preferences, CancellationToken cancellationToken) {
+    return setLauncherProperties(connection.newTestLauncher(), preferences, cancellationToken);
   }
 
   /**
@@ -126,9 +145,10 @@ public class Utils {
    *
    * @param launcher The launcher.
    * @param preferences The preferences.
+   * @param cancellationToken Gradle cancellation token.
    */
   public static <T extends ConfigurableLauncher<T>> T setLauncherProperties(T launcher,
-      Preferences preferences) {
+      Preferences preferences, CancellationToken cancellationToken) {
 
     File gradleJavaHomeFile = getGradleJavaHomeFile(preferences.getGradleJavaHome());
     if (gradleJavaHomeFile != null && gradleJavaHomeFile.exists()) {
@@ -143,6 +163,10 @@ public class Utils {
     List<String> gradleArguments = preferences.getGradleArguments();
     if (gradleArguments != null && !gradleArguments.isEmpty()) {
       launcher.withArguments(gradleArguments);
+    }
+
+    if (cancellationToken != null) {
+      launcher.withCancellationToken(cancellationToken);
     }
     return launcher;
   }

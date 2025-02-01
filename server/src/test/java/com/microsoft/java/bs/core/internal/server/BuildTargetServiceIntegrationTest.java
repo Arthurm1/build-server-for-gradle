@@ -1813,13 +1813,44 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
     });
   }
 
+  /**
+   * This doesn't check that cancellation is successful as it may or may not be depending on timing.
+   */
+  @Test
+  void testCancellation() {
+    withNewTestServer("junit5-jupiter-starter-gradle", (gradleBuildServer, client) -> {
+      // get targets and request cancellation - can't test if it's cancelled as it may have
+      // completed before cancel or because of cancel
+      gradleBuildServer.workspaceBuildTargets().cancel(false);
+      client.clearMessages();
+
+      // get targets again but don't cancel
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+              .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+              .map(BuildTarget::getId)
+              .collect(Collectors.toList());
+      client.clearMessages();
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      gradleBuildServer.buildTargetCleanCache(cleanCacheParams).join();
+      client.clearMessages();
+
+      // compile targets and request cancellation - can't test if it's cancelled as it may have
+      // completed before cancel
+      CompileParams compileParams = new CompileParams(btIds);
+      compileParams.setOriginId("originId");
+      gradleBuildServer.buildTargetCompile(compileParams).cancel(false);
+      client.clearMessages();
+    });
+  }
+
   @Test
   void testAndroidBuildTargets() {
 
     // NOTE: Requires Android SDK to be configured via ANDROID_HOME property
-
     withNewTestServer("android-test", (buildServer, client) -> {
-
       WorkspaceBuildTargetsResult buildTargetsResult = buildServer.workspaceBuildTargets().join();
       List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
           .map(BuildTarget::getId)

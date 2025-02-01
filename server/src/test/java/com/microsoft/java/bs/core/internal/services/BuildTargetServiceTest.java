@@ -89,7 +89,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
 
-    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets();
+    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets(null);
 
     assertEquals(1, response.getTargets().size());
     assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
@@ -111,7 +111,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
             connector, preferenceManager);
 
-    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets();
+    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets(null);
 
     assertEquals(1, response.getTargets().size());
     assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
@@ -133,7 +133,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
             connector, preferenceManager);
 
-    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets();
+    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets(null);
 
     assertEquals(1, response.getTargets().size());
     assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
@@ -163,7 +163,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
     SourcesResult buildTargetSources = buildTargetService.getBuildTargetSources(new SourcesParams(
-            Arrays.asList(new BuildTargetIdentifier("test"))));
+            Arrays.asList(new BuildTargetIdentifier("test"))), null);
     buildTargetSources.getItems().forEach(item -> {
       item.getSources().forEach(sourceItem -> {
         if (sourceItem.getGenerated()) {
@@ -192,7 +192,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
     ResourcesResult buildTargetResources = buildTargetService.getBuildTargetResources(
-        new ResourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+        new ResourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
     buildTargetResources.getItems().forEach(item -> {
       item.getResources().forEach(resource -> {
         assertTrue(resource.contains("resourceDir"));
@@ -220,7 +220,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
     OutputPathsResult  outputPathsResult = buildTargetService.getBuildTargetOutputPaths(
-        new OutputPathsParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+        new OutputPathsParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
     assertEquals(1, outputPathsResult.getItems().size());
     assertEquals(2, outputPathsResult.getItems().get(0).getOutputPaths().size());
   }
@@ -239,7 +239,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
             connector, preferenceManager);
     DependencySourcesResult res = buildTargetService.getBuildTargetDependencySources(
-            new DependencySourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+            new DependencySourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
     assertEquals(1, res.getItems().size());
 
     List<String> sources = res.getItems().get(0).getSources();
@@ -260,7 +260,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
     DependencyModulesResult res = buildTargetService.getBuildTargetDependencyModules(
-        new DependencyModulesParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+        new DependencyModulesParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
     assertEquals(1, res.getItems().size());
 
     List<DependencyModule> modules = res.getItems().get(0).getModules();
@@ -335,7 +335,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
     JavacOptionsResult javacOptions = buildTargetService.getBuildTargetJavacOptions(
-        new JavacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+        new JavacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
   
     assertEquals(1, javacOptions.getItems().size());
     assertEquals(2, javacOptions.getItems().get(0).getOptions().size());
@@ -365,7 +365,7 @@ class BuildTargetServiceTest {
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
             connector, preferenceManager);
     ScalacOptionsResult scalacOptions = buildTargetService.getBuildTargetScalacOptions(
-            new ScalacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+            new ScalacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
 
     assertEquals(1, scalacOptions.getItems().size());
     assertEquals(4, scalacOptions.getItems().get(0).getOptions().size());

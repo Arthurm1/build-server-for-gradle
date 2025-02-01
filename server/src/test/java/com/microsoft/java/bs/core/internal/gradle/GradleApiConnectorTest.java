@@ -71,13 +71,15 @@ class GradleApiConnectorTest {
   }
   
   private GradleSourceSets getGradleSourceSets(File projectDir) {
-    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toURI(), null));
+    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toURI(),
+        null, null));
   }
 
   @Test
   void testGetGradleVersion() {
     File projectDir = projectPath.resolve("gradle-4.3-with-wrapper").toFile();
-    String version = withConnector(connector -> connector.getGradleVersion(projectDir.toURI()));
+    String version = withConnector(connector -> connector.getGradleVersion(projectDir.toURI(),
+        null));
     assertEquals("4.3", version);
   }
 
@@ -108,7 +110,8 @@ class GradleApiConnectorTest {
     PreferenceManager preferenceManager = new PreferenceManager();
     preferenceManager.setPreferences(new Preferences());
     GradleApiConnector connector = new GradleApiConnector(preferenceManager);
-    GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(), null);
+    GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
+        null, null);
     assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
     findSourceSet(gradleSourceSets, "app", "debug");
     findSourceSet(gradleSourceSets, "app", "debugUnitTest");
@@ -360,12 +363,12 @@ class GradleApiConnectorTest {
       Set<String> methods = new HashSet<>();
       classes.put("com.example.project.PassingTests", methods);
       StatusCode passingTest = connector.runTests(projectDir.toURI(),
-          testClassesMap, null, null, null, null, null, null);
+          testClassesMap, null, null, null, null, null, null, null);
       assertEquals(StatusCode.OK, passingTest);
       classes.clear();
       classes.put("com.example.project.FailingTests", methods);
       StatusCode failingTest = connector.runTests(projectDir.toURI(),
-          testClassesMap, null, null, null, null, null, null);
+          testClassesMap, null, null, null, null, null, null, null);
       assertEquals(StatusCode.ERROR, failingTest);
       return null;
     });
@@ -375,7 +378,8 @@ class GradleApiConnectorTest {
   void testGradleProperties() {
     File projectDir = projectPath.resolve("gradle-properties").toFile();
     withConnector(connector -> {
-      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI());
+      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI(),
+          null);
       assertTrue(buildEnv.getJava().getJvmArguments().stream()
           .anyMatch(arg -> arg.contains("-Xmx1234m")));
       return null;
@@ -384,7 +388,8 @@ class GradleApiConnectorTest {
     Preferences preferences = new Preferences();
     preferences.setGradleJvmArguments(new ArrayList<>());
     withConnector(connector -> {
-      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI());
+      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI(),
+          null);
       assertTrue(buildEnv.getJava().getJvmArguments().stream()
           .anyMatch(arg -> arg.contains("-Xmx1234m")));
       return null;

@@ -43,10 +43,10 @@ class LifecycleServiceTest {
     );
 
     LifecycleService lifecycleService = mock(LifecycleService.class);
-    doNothing().when(lifecycleService).initializePreferenceManager(any());
-    when(lifecycleService.initializeServer(any())).thenCallRealMethod();
+    doNothing().when(lifecycleService).initializePreferenceManager(any(), any());
+    when(lifecycleService.initializeServer(any(), any())).thenCallRealMethod();
 
-    InitializeBuildResult res = lifecycleService.initializeServer(params);
+    InitializeBuildResult res = lifecycleService.initializeServer(params, null);
 
     assertEquals(Constants.SERVER_NAME, res.getDisplayName());
     assertEquals(Constants.SERVER_VERSION, res.getVersion());
@@ -71,7 +71,7 @@ class LifecycleServiceTest {
     PreferenceManager preferenceManager = new PreferenceManager();
     LifecycleService lifecycleService = new LifecycleService(
         mock(GradleApiConnector.class), preferenceManager);
-    lifecycleService.initializePreferenceManager(params);
+    lifecycleService.initializePreferenceManager(params, null);
 
     assertEquals("8.1", preferenceManager.getPreferences().getGradleVersion());
   }

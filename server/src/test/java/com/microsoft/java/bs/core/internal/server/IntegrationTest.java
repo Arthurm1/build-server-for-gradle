@@ -39,8 +39,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -130,12 +132,11 @@ abstract class IntegrationTest {
           .count();
     }
 
-    private void waitOnMessages(String message, int size, IntSupplier sizeSupplier) {
+    private boolean waitOnSupplier(Supplier<Boolean> supplier) {
       // set to 5000ms because it seems reasonable
       long timeoutMs = 5000;
       long endTime = System.currentTimeMillis() + timeoutMs;
-      while (sizeSupplier.getAsInt() < size
-          && System.currentTimeMillis() < endTime) {
+      while (!supplier.get() && System.currentTimeMillis() < endTime) {
         synchronized (this) {
           long waitTime = endTime - System.currentTimeMillis();
           if (waitTime > 0) {
@@ -147,7 +148,12 @@ abstract class IntegrationTest {
           }
         }
       }
-      assertEquals(size, sizeSupplier.getAsInt(), message + " count error");
+      return supplier.get();
+    }
+
+    private void waitOnMessages(String errorMessage, int size, IntSupplier sizeSupplier) {
+      waitOnSupplier(() -> sizeSupplier.getAsInt() >= size);
+      assertEquals(size, sizeSupplier.getAsInt(), errorMessage + " count error");
     }
 
     @Override
@@ -274,9 +280,9 @@ abstract class IntegrationTest {
       PipedOutputStream serverOut,
       ExecutorService threadPool
   ) {
-    // server
+    // server - set tracer param to `new PrintWriter(System.out)` for JSON message logging.
     org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher =
-        Launcher.createLauncher(serverOut, serverIn, threadPool);
+        Launcher.createLauncher(serverOut, serverIn, threadPool, null);
     // client
     TestClient client = new TestClient();
     org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher =
@@ -318,7 +324,11 @@ abstract class IntegrationTest {
         testServer.onBuildInitialized();
         consumer.accept(testServer, client);
       } finally {
-        testServer.buildShutdown().join();
+        try {
+          testServer.buildShutdown().get(10000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+          // do nothing
+        }
         threadPool.shutdown();
       }
     } catch (IOException e) {
@@ -341,5 +351,4 @@ abstract class IntegrationTest {
     });
     return matchingTargets.get().getId();
   }
-
 }

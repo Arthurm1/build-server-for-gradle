@@ -7,21 +7,22 @@ import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.eclipse.lsp4j.jsonrpc.CancelChecker;
-import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
+import org.gradle.tooling.CancellationToken;
+import org.gradle.tooling.CancellationTokenSource;
+import org.gradle.tooling.GradleConnector;
 
 import com.microsoft.java.bs.core.internal.log.BspTraceEntity;
 import com.microsoft.java.bs.core.internal.services.BuildTargetService;
 import com.microsoft.java.bs.core.internal.services.LifecycleService;
+import com.microsoft.java.bs.core.internal.utils.concurrent.CancellableFuture;
 
 import ch.epfl.scala.bsp4j.BuildServer;
 import ch.epfl.scala.bsp4j.CleanCacheParams;
@@ -78,7 +79,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<InitializeBuildResult> buildInitialize(InitializeBuildParams params) {
-    return handleRequest("build/initialize", cc -> lifecycleService.initializeServer(params));
+    return handleRequest("build/initialize", cancelToken ->
+        lifecycleService.initializeServer(params, cancelToken));
   }
 
   @Override
@@ -88,7 +90,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<Object> buildShutdown() {
-    return handleRequest("build/shutdown", cc ->
+    return handleRequest("build/shutdown", cancelToken ->
         lifecycleService.shutdown());
   }
 
@@ -99,22 +101,22 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<WorkspaceBuildTargetsResult> workspaceBuildTargets() {
-    return handleRequest("workspace/buildTargets", cc ->
-        buildTargetService.getWorkspaceBuildTargets());
+    return handleRequest("workspace/buildTargets", cancelToken ->
+        buildTargetService.getWorkspaceBuildTargets(cancelToken));
   }
 
   @Override
   public CompletableFuture<Object> workspaceReload() {
-    return handleRequest("workspace/reload", cc -> {
-      buildTargetService.reloadWorkspace();
+    return handleRequest("workspace/reload", cancelToken -> {
+      buildTargetService.reloadWorkspace(cancelToken);
       return null;
     });
   }
 
   @Override
   public CompletableFuture<SourcesResult> buildTargetSources(SourcesParams params) {
-    return handleRequest("buildTarget/sources", cc ->
-        buildTargetService.getBuildTargetSources(params));
+    return handleRequest("buildTarget/sources", cancelToken ->
+        buildTargetService.getBuildTargetSources(params, cancelToken));
   }
 
   @Override
@@ -127,35 +129,38 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<DependencySourcesResult> buildTargetDependencySources(
       DependencySourcesParams params) {
-    return handleRequest("buildTarget/dependencySources", cc ->
-            buildTargetService.getBuildTargetDependencySources(params));
+    return handleRequest("buildTarget/dependencySources", cancelToken ->
+        buildTargetService.getBuildTargetDependencySources(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<ResourcesResult> buildTargetResources(ResourcesParams params) {
-    return handleRequest("buildTarget/resources", cc ->
-        buildTargetService.getBuildTargetResources(params));
+    return handleRequest("buildTarget/resources", cancelToken ->
+        buildTargetService.getBuildTargetResources(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<OutputPathsResult> buildTargetOutputPaths(OutputPathsParams params) {
-    return handleRequest("buildTarget/outputPaths", cc ->
-        buildTargetService.getBuildTargetOutputPaths(params));
+    return handleRequest("buildTarget/outputPaths", cancelToken ->
+        buildTargetService.getBuildTargetOutputPaths(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<CompileResult> buildTargetCompile(CompileParams params) {
-    return handleRequest("buildTarget/compile", cc -> buildTargetService.compile(params));
+    return handleRequest("buildTarget/compile", cancelToken ->
+       buildTargetService.compile(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<TestResult> buildTargetTest(TestParams params) {
-    return handleRequest("buildTarget/test", cc -> buildTargetService.buildTargetTest(params));
+    return handleRequest("buildTarget/test", cancelToken ->
+       buildTargetService.buildTargetTest(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<RunResult> buildTargetRun(RunParams params) {
-    return handleRequest("buildTarget/run", cc -> buildTargetService.buildTargetRun(params));
+    return handleRequest("buildTarget/run", cancelToken ->
+       buildTargetService.buildTargetRun(params, cancelToken));
   }
 
   @Override
@@ -173,27 +178,28 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<CleanCacheResult> buildTargetCleanCache(CleanCacheParams params) {
-    return handleRequest("buildTarget/cleanCache", cc -> buildTargetService.cleanCache(params));
+    return handleRequest("buildTarget/cleanCache", cancelToken ->
+        buildTargetService.cleanCache(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<DependencyModulesResult> buildTargetDependencyModules(
       DependencyModulesParams params) {
-    return handleRequest("buildTarget/dependencyModules", cc ->
-        buildTargetService.getBuildTargetDependencyModules(params));
+    return handleRequest("buildTarget/dependencyModules", cancelToken ->
+        buildTargetService.getBuildTargetDependencyModules(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<JavacOptionsResult> buildTargetJavacOptions(JavacOptionsParams params) {
-    return handleRequest("buildTarget/javacOptions", cc ->
-        buildTargetService.getBuildTargetJavacOptions(params));
+    return handleRequest("buildTarget/javacOptions", cancelToken ->
+        buildTargetService.getBuildTargetJavacOptions(params, cancelToken));
   }
 
   @Override
   public CompletableFuture<ScalacOptionsResult> buildTargetScalacOptions(
       ScalacOptionsParams params) {
-    return handleRequest("buildTarget/scalacOptions", cc ->
-        buildTargetService.getBuildTargetScalacOptions(params));
+    return handleRequest("buildTarget/scalacOptions", cancelToken ->
+        buildTargetService.getBuildTargetScalacOptions(params, cancelToken));
   }
 
   @Override
@@ -223,46 +229,66 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   }
 
   private <R> CompletableFuture<R> handleRequest(String methodName,
-      Function<CancelChecker, R> supplier) {
-    return runAsync(methodName, supplier);
-  }
-
-  public <T, R> CompletableFuture<R> handleRequest(String methodName,
-      BiFunction<CancelChecker, T, R> function, T arg) {
-    LOGGER.info("Received request '" + methodName + "'.");
-    return runAsync(methodName, cancelChecker -> function.apply(cancelChecker, arg));
-  }
-
-  private <T> CompletableFuture<T> runAsync(String methodName, Function<CancelChecker, T> request) {
+      Function<CancellationToken, R> request) {
     long startTime = System.nanoTime();
-    return CompletableFutures.computeAsync(request)
-        .thenApply(Either::<Throwable, T>forRight)
-        .exceptionally(Either::forLeft)
+    // create an empty future that will be completed further down
+    CompletableFuture<CancellationToken> cancelTokenFuture = new CompletableFuture<>();
+    // define async run request and handle errors
+    CompletableFuture<R> result = cancelTokenFuture
+        .thenApplyAsync(request)
+        .thenApply(Either::<Throwable, R>forRight)
         .thenCompose(either -> {
-          long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+          long elapsedTime = getElapsedTime(startTime);
           return either.isLeft()
-              ? failure(methodName, either.getLeft())
-              : success(methodName, either.getRight(), elapsedTime);
+            ? failure(methodName, either.getLeft(), elapsedTime)
+            : success(methodName, either.getRight(), elapsedTime);
         });
+    // create a Gradle cancellation token
+    CancellationTokenSource cancelTokenSource = GradleConnector.newCancellationTokenSource();
+    CancellationToken cancelToken = cancelTokenSource.token();
+    // ensure Gradle is cancelled when the very last future in the chain is cancelled.
+    Runnable cancel = () -> {
+      cancelTokenSource.cancel();
+      long elapsedTime = getElapsedTime(startTime);
+      logCancelMessage(methodName, elapsedTime);
+    };
+    CancellableFuture<R> wrappedFuture = CancellableFuture.from(result, cancel);
+    // start chain
+    cancelTokenFuture.complete(cancelToken);
+    return wrappedFuture;
+  }
+
+  private long getElapsedTime(long startTime) {
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+  }
+
+  private BspTraceEntity.Builder createMessageBuilder(String methodName, long elapsedTime) {
+    return new BspTraceEntity.Builder()
+      .operationName(escapeMethodName(methodName))
+      .duration(String.valueOf(elapsedTime));
+  }
+
+  private void logCancelMessage(String methodName, long elapsedTime) {
+    BspTraceEntity entity = createMessageBuilder(methodName, elapsedTime).build();
+    String message = String.format("Request cancelled '%s'. Processing request took %d ms.",
+        methodName, elapsedTime);
+    LOGGER.log(Level.INFO, message, entity);
   }
 
   private <T> CompletableFuture<T> success(String methodName, T response, long elapsedTime) {
-    BspTraceEntity entity = new BspTraceEntity.Builder()
-        .operationName(escapeMethodName(methodName))
-        .duration(String.valueOf(elapsedTime))
-        .build();
+    BspTraceEntity entity = createMessageBuilder(methodName, elapsedTime).build();
     String message = String.format("Sending response '%s'. Processing request took %d ms.",
         methodName, elapsedTime);
     LOGGER.log(Level.INFO, message, entity);
     return CompletableFuture.completedFuture(response);
   }
 
-  private <T> CompletableFuture<T> failure(String methodName, Throwable throwable) {
+  private <T> CompletableFuture<T> failure(String methodName, Throwable throwable,
+      long elapsedTime) {
     String stackTrace = ExceptionUtils.getStackTrace(throwable);
     Throwable rootCause = ExceptionUtils.getRootCause(throwable);
     String rootCauseMessage = rootCause != null ? rootCause.getMessage() : null;
-    BspTraceEntity entity = new BspTraceEntity.Builder()
-        .operationName(escapeMethodName(methodName))
+    BspTraceEntity entity = createMessageBuilder(methodName, elapsedTime)
         .trace(stackTrace)
         .rootCauseMessage(rootCauseMessage)
         .build();
