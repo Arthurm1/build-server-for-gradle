@@ -34,7 +34,10 @@ import ch.epfl.scala.bsp4j.CompileProvider;
 import ch.epfl.scala.bsp4j.InitializeBuildParams;
 import ch.epfl.scala.bsp4j.InitializeBuildResult;
 import ch.epfl.scala.bsp4j.MessageType;
+import ch.epfl.scala.bsp4j.RunProvider;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
+import ch.epfl.scala.bsp4j.TestProvider;
+
 import org.gradle.tooling.model.build.BuildEnvironment;
 
 /**
@@ -92,7 +95,6 @@ public class LifecycleService {
     preferenceManager.setPreferences(preferences);
 
     setGradleJavaHome(rootUri, cancelToken);
-
   }
 
   private BuildServerCapabilities initializeServerCapabilities() {
@@ -101,9 +103,17 @@ public class LifecycleService {
     capabilities.setOutputPathsProvider(true);
     capabilities.setDependencyModulesProvider(true);
     capabilities.setDependencySourcesProvider(true);
+    capabilities.setInverseSourcesProvider(false);
     capabilities.setCanReload(true);
     capabilities.setBuildTargetChangedProvider(true);
+    capabilities.setDebugProvider(null);
     capabilities.setCompileProvider(new CompileProvider(SupportedLanguages.allBspNames));
+    capabilities.setTestProvider(new TestProvider(SupportedLanguages.allBspNames));
+    capabilities.setRunProvider(new RunProvider(SupportedLanguages.allBspNames));
+    capabilities.setJvmRunEnvironmentProvider(false);
+    capabilities.setJvmTestEnvironmentProvider(false);
+    capabilities.setJvmCompileClasspathProvider(false);
+    capabilities.setCargoFeaturesProvider(false);
     return capabilities;
   }
 
