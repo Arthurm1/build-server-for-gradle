@@ -13,10 +13,13 @@ import ch.epfl.scala.bsp4j.DependencyModulesParams;
 import ch.epfl.scala.bsp4j.DependencyModulesResult;
 import ch.epfl.scala.bsp4j.DependencySourcesParams;
 import ch.epfl.scala.bsp4j.DependencySourcesResult;
+import ch.epfl.scala.bsp4j.Diagnostic;
+import ch.epfl.scala.bsp4j.DiagnosticSeverity;
 import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
 import ch.epfl.scala.bsp4j.MessageType;
+import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
 import ch.epfl.scala.bsp4j.RunParams;
 import ch.epfl.scala.bsp4j.RunParamsDataKind;
 import ch.epfl.scala.bsp4j.RunResult;
@@ -67,6 +70,98 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       return "Target not found " + btId + ". Available: " + availableTargets;
     });
     return compileReport;
+  }
+
+  private List<PublishDiagnosticsParams> findDiagnostics(TestClient client,
+      BuildTargetIdentifier btId) {
+    return client.diagnostics.stream()
+       .filter(diag -> btId.equals(diag.getBuildTarget()))
+       .collect(Collectors.toList());
+  }
+
+  private List<Diagnostic> getFileDiagnostics(TestClient client, BuildTargetIdentifier bt,
+      String filename) {
+    List<PublishDiagnosticsParams> btDiagnostics = findDiagnostics(client, bt);
+    assertFalse(btDiagnostics.isEmpty(), "No diagnostics for " + bt);
+    List<PublishDiagnosticsParams> fileDiagnostics = btDiagnostics.stream()
+            .filter(d -> d.getTextDocument().getUri().contains(filename))
+            .collect(Collectors.toList());
+    assertFalse(fileDiagnostics.isEmpty(), "No diagnostics for " + filename + " in " + bt);
+    // TODO add reset tests back in when gradle problem ordering/collation is understood
+    /*assertTrue(fileDiagnostics.getFirst().getReset(), "First diagnostic should mark as reset");
+    assertTrue(fileDiagnostics.stream().skip(1).filter(PublishDiagnosticsParams::getReset)
+            .findAny().isEmpty(), "All file diagnostics but first should not be marked as reset");*/
+    return fileDiagnostics.stream().flatMap(param -> param.getDiagnostics().stream())
+        .collect(Collectors.toList());
+  }
+
+  private String getDiagnosticsAsStr(List<Diagnostic> diagnostics) {
+    return diagnostics.stream().map(Object::toString).collect(Collectors.joining("\n"));
+  }
+
+  private List<Diagnostic> getDiagnostics(TestClient client, BuildTargetIdentifier bt,
+      String filename, int startLine, int startColumn, int endLine, int endColumn,
+      String messagePrefix) {
+    List<Diagnostic> fileDiagnostics = getFileDiagnostics(client, bt, filename);
+    List<Diagnostic> startLineDiagnostics = fileDiagnostics.stream()
+            .filter(diagnostic -> (diagnostic.getRange().getStart().getLine() == startLine))
+            .collect(Collectors.toList());
+    assertFalse(startLineDiagnostics.isEmpty(), () -> "No diagnostic found starting at line "
+        + startLine + " for " + filename + "\nDiagnostics:" + getDiagnosticsAsStr(fileDiagnostics));
+    List<Diagnostic> startColDiagnostics = startLineDiagnostics.stream()
+            .filter(diagnostic -> (diagnostic.getRange().getStart().getCharacter() == startColumn))
+            .collect(Collectors.toList());
+    assertFalse(startColDiagnostics.isEmpty(), "No diagnostic found starting at ["
+        + startLine + "," + startColumn + "] for " + filename + "\nDiagnostics:"
+        + getDiagnosticsAsStr(fileDiagnostics));
+    List<Diagnostic> endLineDiagnostics = startColDiagnostics.stream()
+            .filter(diagnostic -> (diagnostic.getRange().getEnd().getLine() == endLine))
+            .collect(Collectors.toList());
+    assertFalse(endLineDiagnostics.isEmpty(), "No diagnostic found ending at line "
+        + endLine + " for " + filename + "\nDiagnostics:" + getDiagnosticsAsStr(fileDiagnostics));
+    List<Diagnostic> endColDiagnostics = endLineDiagnostics.stream()
+            .filter(diagnostic -> (diagnostic.getRange().getEnd().getCharacter() == endColumn))
+            .collect(Collectors.toList());
+    assertFalse(endColDiagnostics.isEmpty(), "No diagnostic found ending at ["
+        + endLine + "," + endColumn + "] for " + filename + "\nDiagnostics:"
+        + getDiagnosticsAsStr(fileDiagnostics));
+    List<Diagnostic> messageDiagnostics = endColDiagnostics.stream()
+            .filter(diagnostic -> (diagnostic.getMessage().startsWith(messagePrefix)))
+            .collect(Collectors.toList());
+    assertFalse(messageDiagnostics.isEmpty(), "No diagnostic found with message ["
+        + messagePrefix + "] starting at [" + startLine + "," + startColumn + "] for "
+        + filename + "\nDiagnostics:" + getDiagnosticsAsStr(fileDiagnostics));
+    return messageDiagnostics;
+  }
+
+  private void assertWarning(TestClient client, BuildTargetIdentifier bt, String filename,
+        int startLine, int startColumn, int endLine, int endColumn, String messagePrefix) {
+    List<Diagnostic> messageDiagnostics = getDiagnostics(client, bt, filename,
+        startLine, startColumn, endLine, endColumn, messagePrefix);
+    List<Diagnostic> diagnostics = messageDiagnostics.stream()
+            .filter(diagnostic -> diagnostic.getSeverity().equals(DiagnosticSeverity.WARNING))
+            .collect(Collectors.toList());
+    assertFalse(diagnostics.isEmpty(), "No warning diagnostic found at line "
+        + startLine + " for " + filename + "\nDiagnostics:"
+        + getDiagnosticsAsStr(messageDiagnostics));
+    assertFalse(diagnostics.size() > 1, "Too many diagnostics found at line "
+        + startLine + " for " + filename + "\nDiagnostics:"
+        + getDiagnosticsAsStr(messageDiagnostics));
+  }
+
+  private void assertError(TestClient client, BuildTargetIdentifier bt, String filename,
+      int startLine, int startColumn, int endLine, int endColumn, String messagePrefix) {
+    List<Diagnostic> messageDiagnostics = getDiagnostics(client, bt, filename,
+        startLine, startColumn, endLine, endColumn, messagePrefix);
+    List<Diagnostic> diagnostics = messageDiagnostics.stream()
+            .filter(diagnostic -> diagnostic.getSeverity().equals(DiagnosticSeverity.ERROR))
+            .collect(Collectors.toList());
+    assertFalse(diagnostics.isEmpty(), "No error diagnostic found at line "
+        + startLine + " for " + filename + "\nDiagnostics:"
+        + getDiagnosticsAsStr(messageDiagnostics));
+    assertFalse(diagnostics.size() > 1, "Too many diagnostics found at line "
+        + startLine + " for " + filename + "\nDiagnostics:"
+        + getDiagnosticsAsStr(messageDiagnostics));
   }
 
   private List<String> getTestNameHierarchy(TestName testName) {
@@ -127,6 +222,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(0);
       client.waitOnCompileReports(0);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
@@ -167,6 +263,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(0);
       client.waitOnCompileReports(0);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
@@ -182,6 +279,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
@@ -239,6 +337,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(7);
       client.waitOnTestFinishes(7);
       client.waitOnTestReports(1);
@@ -405,6 +504,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);
@@ -496,6 +596,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);
@@ -594,6 +695,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);
@@ -686,6 +788,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(8);
       client.waitOnTestFinishes(8);
       client.waitOnTestReports(1);
@@ -880,6 +983,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(7);
       client.waitOnTestFinishes(7);
       client.waitOnTestReports(1);
@@ -1043,6 +1147,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(7);
       client.waitOnTestFinishes(7);
       client.waitOnTestReports(1);
@@ -1129,6 +1234,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(0);
       client.waitOnCompileReports(0);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
@@ -1144,6 +1250,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(0);
       client.waitOnCompileReports(0);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
         assertEquals(StatusCode.OK, message.getStatus());
       }
@@ -1159,6 +1266,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(1);
+      client.waitOnDiagnostics(0);
       assertEquals(1, client.finishReportErrorCount());
       for (BuildTargetIdentifier btId : btIds) {
         CompileReport compileReport = findCompileReport(client, btId);
@@ -1219,6 +1327,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(6);
       client.waitOnTestFinishes(6);
       client.waitOnTestReports(1);
@@ -1366,6 +1475,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);
@@ -1460,6 +1570,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(3);
       client.waitOnTestFinishes(3);
       client.waitOnTestReports(1);
@@ -1574,6 +1685,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);
@@ -1668,6 +1780,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(4);
       client.waitOnCompileReports(4);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);
@@ -1764,6 +1877,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
       client.waitOnTestStarts(2);
       client.waitOnTestFinishes(2);
       client.waitOnTestReports(1);

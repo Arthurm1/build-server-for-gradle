@@ -67,6 +67,7 @@ abstract class IntegrationTest {
     protected final List<TestReport> testReports = new ArrayList<>();
     protected final List<TestStartEx> testStarts = new ArrayList<>();
     protected final List<TestFinishEx> testFinishes = new ArrayList<>();
+    protected final List<PublishDiagnosticsParams> diagnostics = new ArrayList<>();
 
     protected void clearMessages() {
       startReports.clear();
@@ -80,6 +81,7 @@ abstract class IntegrationTest {
       testReports.clear();
       testStarts.clear();
       testFinishes.clear();
+      diagnostics.clear();
     }
 
     protected void waitOnStartReports(int size) {
@@ -124,6 +126,10 @@ abstract class IntegrationTest {
 
     protected void waitOnTestFinishes(int size) {
       waitOnMessages("Test Finishes", size, testFinishes::size);
+    }
+
+    void waitOnDiagnostics(int size) {
+      waitOnMessages("Diagnostics", size, diagnostics::size);
     }
 
     protected long finishReportErrorCount() {
@@ -215,7 +221,10 @@ abstract class IntegrationTest {
 
     @Override
     public void onBuildPublishDiagnostics(PublishDiagnosticsParams params) {
-      // do nothing
+      diagnostics.add(params);
+      synchronized (this) {
+        notify();
+      }
     }
 
     @Override
