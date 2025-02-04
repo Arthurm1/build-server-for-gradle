@@ -5,6 +5,8 @@ package com.microsoft.java.bs.core.internal.server;
 
 import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -50,8 +52,10 @@ import ch.epfl.scala.bsp4j.ResourcesResult;
 import ch.epfl.scala.bsp4j.RunParams;
 import ch.epfl.scala.bsp4j.RunResult;
 import ch.epfl.scala.bsp4j.ScalaBuildServer;
+import ch.epfl.scala.bsp4j.ScalaMainClassesItem;
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams;
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult;
+import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestClassesParams;
 import ch.epfl.scala.bsp4j.ScalaTestClassesResult;
 import ch.epfl.scala.bsp4j.ScalacOptionsParams;
@@ -205,15 +209,23 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<ScalaTestClassesResult> buildTargetScalaTestClasses(
       ScalaTestClassesParams params) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'buildTargetScalaTestClasses'");
+    // There is no `buildTargetScalaTestClassesProvider` flag for the client to know if this is supported
+    // Rather than sending exceptions back, just send an error message.
+    LOGGER.warning("'buildTarget/ScalaTestClasses' not supported");
+    List<ScalaTestClassesItem> items = new ArrayList<>();
+    ScalaTestClassesResult result = new ScalaTestClassesResult(items);
+    return CompletableFuture.completedFuture(result);
   }
 
   @Override
   public CompletableFuture<ScalaMainClassesResult> buildTargetScalaMainClasses(
       ScalaMainClassesParams params) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'buildTargetScalaMainClasses'");
+    // There is no `buildTargetScalaMainClassesProvider` flag for the client to know if this is supported
+    // Rather than sending exceptions back, just send an error message.
+    LOGGER.warning("'buildTarget/ScalaMainClasses' not supported");
+    List<ScalaMainClassesItem> items = new ArrayList<>();
+    ScalaMainClassesResult result = new ScalaMainClassesResult(items);
+    return CompletableFuture.completedFuture(result);
   }
 
   private void handleNotification(String methodName, Runnable runnable, boolean async) {
