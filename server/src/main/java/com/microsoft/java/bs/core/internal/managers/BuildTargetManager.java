@@ -137,6 +137,7 @@ public class BuildTargetManager {
       }
       String sourceSetName = sourceSet.getSourceSetName();
       String displayName = projectName + " [" + sourceSetName + ']';
+      displayName = displayName.replace(":", " ");
       buildTarget.getBuildTarget().setDisplayName(displayName);
     }
   }
