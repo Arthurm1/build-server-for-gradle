@@ -3,7 +3,9 @@
 
 package com.microsoft.java.bs.gradle.model.actions;
 
+import com.microsoft.java.bs.gradle.model.Artifact;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * {@link BuildAction} that retrieves {@link DefaultGradleSourceSet} from a Gradle build,
@@ -106,6 +109,7 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
         .collect(Collectors.toList());
 
     populateInterProjectInfo(sourceSets);
+    removeProjectToProjectArtifacts(sourceSets);
 
     return sourceSets;
   }
@@ -124,6 +128,42 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
     @Override
     public GradleSourceSets execute(BuildController controller) {
       return controller.getModel(model, GradleSourceSets.class);
+    }
+  }
+
+  /**
+   * In Gradle projects can directly depend on the output dir of another project.
+   * Sometimes this is used to include another project's test classes.
+   * These dirs should not appear in the artifacts.  If they do then they can make it
+   * look like the build target has changed as a path reference might go from ending
+   * in `/` to not ending in `/`.  This happens because the output dir may not exist
+   * at the time of source set retrieval (so no slash).  Then later (after compilation)
+   * it may exist.  That would trigger a BSP didChange event when nothing has changed.
+   */
+  private static void removeProjectToProjectArtifacts(List<GradleSourceSet> sourceSets) {
+    Set<File> filesToExclude = new HashSet<>();
+    for (GradleSourceSet sourceSet : sourceSets) {
+      filesToExclude.addAll(sourceSet.getSourceOutputDirs());
+      filesToExclude.addAll(sourceSet.getResourceOutputDirs());
+      for (List<File> files : sourceSet.getArchiveOutputFiles().values()) {
+        filesToExclude.addAll(files);
+      }
+    }
+    Set<String> urisToExclude = filesToExclude.stream()
+        .flatMap(file -> {
+          // uri with and without final slash
+          String uri1 = file.toPath().toUri().toString();
+          String uri2 = uri1.endsWith("/") ? uri1.substring(0, uri1.length() - 1) : uri1 + "/";
+          return Stream.of(uri1, uri2);
+        })
+        .collect(Collectors.toSet());
+    for (GradleSourceSet sourceSet : sourceSets) {
+      Set<GradleModuleDependency> modules = sourceSet.getModuleDependencies();
+      for (GradleModuleDependency module : modules) {
+        List<Artifact> artifacts = module.getArtifacts();
+        artifacts.removeIf(artifact -> urisToExclude.contains(artifact.getUri().toString()));
+      }
+      modules.removeIf(module -> module.getArtifacts().isEmpty());
     }
   }
 

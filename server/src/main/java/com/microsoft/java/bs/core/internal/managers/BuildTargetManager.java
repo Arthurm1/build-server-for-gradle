@@ -56,7 +56,6 @@ public class BuildTargetManager {
   public List<BuildTargetChangeInfo> store(GradleSourceSets gradleSourceSets) {
     Map<BuildTargetIdentifier, GradleBuildTarget> newCache = new HashMap<>();
     Map<BuildTargetDependency, BuildTargetIdentifier> dependencyToBuildTargetId = new HashMap<>();
-    List<BuildTargetChangeInfo> changedTargets = new LinkedList<>();
     for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
       String sourceSetName = sourceSet.getSourceSetName();
       URI uri = getBuildTargetUri(sourceSet.getProjectDir().toPath().toUri(), sourceSetName);
@@ -79,35 +78,58 @@ public class BuildTargetManager {
       setBuildTarget(sourceSet, bt);
 
       GradleBuildTarget buildTarget = new GradleBuildTarget(bt, sourceSet);
-      GradleBuildTarget existingTarget = cache.get(btId);
-      // only compare the source set instance, which is the result
-      // returned from the gradle plugin.
-      if (existingTarget == null) {
-        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(btId,
-            null, buildTarget.getSourceSet());
-        changedTargets.add(changeInfo);
-      } else if (!Objects.equals(existingTarget.getSourceSet(), buildTarget.getSourceSet())) {
-        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(btId,
-            existingTarget.getSourceSet(), buildTarget.getSourceSet());
-        changedTargets.add(changeInfo);
-      }
       newCache.put(btId, buildTarget);
       // Store the relationship between the project/sourceset and the build target id.
       BuildTargetDependency dependency = new DefaultBuildTargetDependency(sourceSet);
       dependencyToBuildTargetId.put(dependency, btId);
     }
+    makeDisplayNameUnique(newCache.values());
+    updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);
+
+    Map<BuildTargetIdentifier, GradleBuildTarget> oldCache = cache;
+    this.cache = newCache;
+    return calculateChanges(oldCache, newCache);
+  }
+
+  /**
+   * If the build target data has changed in any way then the BSP client needs to be told.
+   *
+   * @param oldCache all the current build target info
+   * @param newCache all the new build target info
+   * @return a list of adds/deletes/changes
+   */
+  private static List<BuildTargetChangeInfo> calculateChanges(
+      Map<BuildTargetIdentifier, GradleBuildTarget> oldCache,
+      Map<BuildTargetIdentifier, GradleBuildTarget> newCache) {
+
+    List<BuildTargetChangeInfo> changedTargets = new LinkedList<>();
+
+    // any changed or added targets?
+    for (BuildTargetIdentifier newBtId : newCache.keySet()) {
+      GradleBuildTarget newTarget = newCache.get(newBtId);
+      GradleBuildTarget oldTarget = oldCache.get(newBtId);
+      // only compare the source set instance, which is the result
+      // returned from the gradle plugin.
+      if (oldTarget == null) {
+        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(newBtId,
+            null, newTarget.getSourceSet());
+        changedTargets.add(changeInfo);
+      } else if (!Objects.equals(oldTarget.getSourceSet(), newTarget.getSourceSet())) {
+        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(newBtId,
+            oldTarget.getSourceSet(), newTarget.getSourceSet());
+        changedTargets.add(changeInfo);
+      }
+    }
+
     // any deleted targets?
-    for (BuildTargetIdentifier btId : cache.keySet()) {
-      if (!newCache.containsKey(btId)) {
-        GradleSourceSet oldSourceSet = cache.get(btId).getSourceSet();
-        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(btId,
+    for (BuildTargetIdentifier oldBtId : oldCache.keySet()) {
+      if (!newCache.containsKey(oldBtId)) {
+        GradleSourceSet oldSourceSet = oldCache.get(oldBtId).getSourceSet();
+        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(oldBtId,
             oldSourceSet, null);
         changedTargets.add(changeInfo);
       }
     }
-    makeDisplayNameUnique(newCache.values());
-    updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);
-    this.cache = newCache;
     return changedTargets;
   }
 
