@@ -11,7 +11,7 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildController;
-import org.gradle.tooling.model.gradle.BasicGradleProject;
+import org.gradle.tooling.model.Model;
 import org.gradle.tooling.model.gradle.GradleBuild;
 
 import java.io.File;
@@ -89,17 +89,18 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
   private List<GradleSourceSet> fetchModels(BuildController buildController,
                                             Collection<GradleBuild> builds) {
 
-    List<GetSourceSetAction> projectActions = new ArrayList<>();
-    for (GradleBuild build : builds) {
-      for (BasicGradleProject project : build.getProjects()) {
-        projectActions.add(new GetSourceSetAction(project));
-      }
-    }
+    // create an action per project
+    Collection<GetSourceSetAction> projectActions = builds
+        .stream()
+        .flatMap(build -> build.getProjects().stream())
+        .map(GetSourceSetAction::new)
+        .collect(Collectors.toList());
 
     // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
     // via a copy constructor so we can treat as a DefaultGradleSourceSet and
     // populate source set dependencies.
-    List<GradleSourceSet> sourceSets = buildController.run(projectActions).stream()
+    List<GradleSourceSet> sourceSets = buildController.run(projectActions)
+        .stream()
         .flatMap(ss -> ss.getGradleSourceSets().stream())
         .map(DefaultGradleSourceSet::new)
         .collect(Collectors.toList());
@@ -114,15 +115,15 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
    * This allows project models to be retrieved in parallel.
    */
   static class GetSourceSetAction implements BuildAction<GradleSourceSets> {
-    private final BasicGradleProject project;
+    private final Model model;
 
-    public GetSourceSetAction(BasicGradleProject project) {
-      this.project = project;
+    public GetSourceSetAction(Model model) {
+      this.model = model;
     }
 
     @Override
     public GradleSourceSets execute(BuildController controller) {
-      return controller.getModel(project, GradleSourceSets.class);
+      return controller.getModel(model, GradleSourceSets.class);
     }
   }
 
