@@ -19,6 +19,7 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
@@ -38,6 +39,7 @@ import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildTarget;
 import ch.epfl.scala.bsp4j.BuildTargetEvent;
+import ch.epfl.scala.bsp4j.BuildTargetEventKind;
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.CleanCacheParams;
 import ch.epfl.scala.bsp4j.CleanCacheResult;
@@ -119,7 +121,7 @@ public class BuildTargetService {
     this.firstTime = true;
   }
 
-  private List<BuildTargetIdentifier> updateBuildTargets(CancellationToken cancelToken) {
+  private List<BuildTargetChangeInfo> updateBuildTargets(CancellationToken cancelToken) {
     GradleSourceSets sourceSets = connector.getGradleSourceSets(
         preferenceManager.getRootUri(), client, cancelToken);
     return buildTargetManager.store(sourceSets);
@@ -142,15 +144,27 @@ public class BuildTargetService {
    * reload the sourcesets from scratch and notify the BSP client if they have changed.
    */
   public void reloadWorkspace(CancellationToken cancelToken) {
-    List<BuildTargetIdentifier> changedTargets = updateBuildTargets(cancelToken);
+    List<BuildTargetChangeInfo> changedTargets = updateBuildTargets(cancelToken);
     if (!changedTargets.isEmpty()) {
       notifyBuildTargetsChanged(changedTargets);
     }
   }
-  
-  private void notifyBuildTargetsChanged(List<BuildTargetIdentifier> changedTargets) {
+
+  private void notifyBuildTargetsChanged(List<BuildTargetChangeInfo> changedTargets) {
     List<BuildTargetEvent> events = changedTargets.stream()
-        .map(BuildTargetEvent::new)
+        .map(changeInfo -> {
+          BuildTargetEvent event = new BuildTargetEvent(changeInfo.getBtId());
+          if (changeInfo.hasChanged()) {
+            event.setKind(BuildTargetEventKind.CHANGED);
+          } else if (changeInfo.isAdded()) {
+            event.setKind(BuildTargetEventKind.CREATED);
+          } else if (changeInfo.isRemoved()) {
+            event.setKind(BuildTargetEventKind.DELETED);
+          }
+          event.setDataKind("SourceSetChange");
+          event.setData(changeInfo);
+          return event;
+        })
         .collect(Collectors.toList());
     DidChangeBuildTarget param = new DidChangeBuildTarget(events);
     client.onBuildTargetDidChange(param);

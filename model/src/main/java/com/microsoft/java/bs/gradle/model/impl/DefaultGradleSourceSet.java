@@ -347,4 +347,29 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
             && hasTests == other.hasTests
             && Objects.equals(extensions, other.extensions);
   }
+
+  @Override
+  public String toString() {
+    return "DefaultGradleSourceSet: GradleVersion:" + gradleVersion
+        + " ProjectName:" + projectName
+        + " projectPath:" + projectPath
+        + " projectDir:" + projectDir
+        + " rootDir:" + rootDir
+        + " sourceSetName:" + sourceSetName
+        + " classesTaskName:" + classesTaskName
+        + " cleanTaskName:" + cleanTaskName
+        + " taskNames:" + taskNames
+        + " sourceDirs:" + sourceDirs
+        + " generatedSourceDirs:" + generatedSourceDirs
+        + " sourceOutputDirs:" + sourceOutputDirs
+        + " resourceDirs:" + resourceDirs
+        + " resourceOutputDirs:" + resourceOutputDirs
+        + " archiveOutputFiles:" + archiveOutputFiles
+        + " compileClasspath:" + compileClasspath
+        + " runtimeClasspath:" + runtimeClasspath
+        + " moduleDependencies:" + moduleDependencies
+        + " buildTargetDependencies:" + buildTargetDependencies
+        + " hasTests:" + hasTests
+        + " extensions:" + extensions;
+  }
 }

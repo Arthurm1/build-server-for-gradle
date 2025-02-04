@@ -103,4 +103,12 @@ public class DefaultGradleModuleDependency implements GradleModuleDependency {
     return Objects.equals(group, other.group) && Objects.equals(module, other.module)
         && Objects.equals(version, other.version) && Objects.equals(artifacts, other.artifacts);
   }
+
+  @Override
+  public String toString() {
+    return "DefaultGradleModuleDependency: Group:" + group
+        + " Module:" + module
+        + " Version:" + version
+        + " Artifacts:" + artifacts;
+  }
 }

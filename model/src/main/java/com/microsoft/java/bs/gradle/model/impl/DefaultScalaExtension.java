@@ -148,6 +148,19 @@ public class DefaultScalaExtension implements ScalaExtension {
   }
 
   @Override
+  public String toString() {
+    return "DefaultScalaExtension: ScalaCompilerArgs:" + scalaCompilerArgs
+        + " ScalaOrganization:" + scalaOrganization
+        + " ScalaVersion:" + scalaVersion
+        + " ScalaBinaryVersion:" + scalaBinaryVersion
+        + " ScalaJars:" + scalaJars
+        + " SourceDirs:" + sourceDirs
+        + " GeneratedSourceDirs:" + generatedSourceDirs
+        + " CompileTaskName:" + compileTaskName
+        + " ClassesDir:" + classesDir;
+  }
+
+  @Override
   public boolean isJavaExtension() {
     return false;
   }

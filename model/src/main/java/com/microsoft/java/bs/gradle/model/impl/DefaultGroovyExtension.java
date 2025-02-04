@@ -84,7 +84,14 @@ public class DefaultGroovyExtension implements GroovyExtension {
             && Objects.equals(compileTaskName, other.compileTaskName)
             && Objects.equals(classesDir, other.classesDir);
   }
-  
+
+  @Override
+  public String toString() {
+    return "DefaultGroovyExtension: SourceDirs:" + sourceDirs
+        + " GeneratedSourceDirs:" + generatedSourceDirs
+        + " CompileTaskName:" + compileTaskName
+        + " ClassesDir:" + classesDir;
+  }
 
   @Override
   public boolean isJavaExtension() {

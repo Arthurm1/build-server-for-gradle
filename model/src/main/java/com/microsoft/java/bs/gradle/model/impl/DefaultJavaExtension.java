@@ -148,6 +148,19 @@ public class DefaultJavaExtension implements JavaExtension {
   }
 
   @Override
+  public String toString() {
+    return "DefaultJavaExtension: JavaHome:" + javaHome
+        + " JavaVersion:" + javaVersion
+        + " SourceCompatibility:" + sourceCompatibility
+        + " TargetCompatibility:" + targetCompatibility
+        + " CompilerArgs:" + compilerArgs
+        + " SourceDirs:" + sourceDirs
+        + " GeneratedSourceDirs:" + generatedSourceDirs
+        + " CompileTaskName:" + compileTaskName
+        + " ClassesDir:" + classesDir;
+  }
+
+  @Override
   public boolean isJavaExtension() {
     return true;
   }

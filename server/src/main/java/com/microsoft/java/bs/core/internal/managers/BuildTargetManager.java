@@ -19,6 +19,8 @@ import ch.epfl.scala.bsp4j.JvmBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaPlatform;
 import ch.epfl.scala.bsp4j.extended.KotlinBuildTarget;
+
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
@@ -51,10 +53,10 @@ public class BuildTargetManager {
    *
    * @return A list containing identifiers of changed build targets.
    */
-  public List<BuildTargetIdentifier> store(GradleSourceSets gradleSourceSets) {
+  public List<BuildTargetChangeInfo> store(GradleSourceSets gradleSourceSets) {
     Map<BuildTargetIdentifier, GradleBuildTarget> newCache = new HashMap<>();
     Map<BuildTargetDependency, BuildTargetIdentifier> dependencyToBuildTargetId = new HashMap<>();
-    List<BuildTargetIdentifier> changedTargets = new LinkedList<>();
+    List<BuildTargetChangeInfo> changedTargets = new LinkedList<>();
     for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
       String sourceSetName = sourceSet.getSourceSetName();
       URI uri = getBuildTargetUri(sourceSet.getProjectDir().toPath().toUri(), sourceSetName);
@@ -80,14 +82,28 @@ public class BuildTargetManager {
       GradleBuildTarget existingTarget = cache.get(btId);
       // only compare the source set instance, which is the result
       // returned from the gradle plugin.
-      if (existingTarget != null
-          && !Objects.equals(existingTarget.getSourceSet(), buildTarget.getSourceSet())) {
-        changedTargets.add(btId);
+      if (existingTarget == null) {
+        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(btId,
+            null, buildTarget.getSourceSet());
+        changedTargets.add(changeInfo);
+      } else if (!Objects.equals(existingTarget.getSourceSet(), buildTarget.getSourceSet())) {
+        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(btId,
+            existingTarget.getSourceSet(), buildTarget.getSourceSet());
+        changedTargets.add(changeInfo);
       }
       newCache.put(btId, buildTarget);
       // Store the relationship between the project/sourceset and the build target id.
       BuildTargetDependency dependency = new DefaultBuildTargetDependency(sourceSet);
       dependencyToBuildTargetId.put(dependency, btId);
+    }
+    // any deleted targets?
+    for (BuildTargetIdentifier btId : cache.keySet()) {
+      if (!newCache.containsKey(btId)) {
+        GradleSourceSet oldSourceSet = cache.get(btId).getSourceSet();
+        BuildTargetChangeInfo changeInfo = new BuildTargetChangeInfo(btId,
+            oldSourceSet, null);
+        changedTargets.add(changeInfo);
+      }
     }
     makeDisplayNameUnique(newCache.values());
     updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);

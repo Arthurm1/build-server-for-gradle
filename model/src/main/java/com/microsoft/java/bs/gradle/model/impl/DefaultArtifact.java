@@ -68,4 +68,10 @@ public class DefaultArtifact implements Artifact {
     DefaultArtifact other = (DefaultArtifact) obj;
     return Objects.equals(uri, other.uri) && Objects.equals(classifier, other.classifier);
   }
+
+  @Override
+  public String toString() {
+    return "DefaultArtifact: Uri:" + uri
+        + " Classifier:" + classifier;
+  }
 }

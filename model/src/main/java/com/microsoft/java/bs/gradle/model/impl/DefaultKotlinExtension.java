@@ -136,6 +136,18 @@ public class DefaultKotlinExtension implements KotlinExtension {
   }
 
   @Override
+  public String toString() {
+    return "DefaultKotlinExtension: SourceDirs:" + sourceDirs
+        + " GeneratedSourceDirs:" + generatedSourceDirs
+        + " CompileTaskName:" + compileTaskName
+        + " ClassesDir:" + classesDir
+        + " KotlinLanguageVersion:" + kotlinLanguageVersion
+        + " KotlinApiVersion:" + kotlinApiVersion
+        + " KotlincOptions:" + kotlincOptions
+        + " KotlinAssociates:" + kotlinAssociates;
+  }
+
+  @Override
   public boolean isJavaExtension() {
     return false;
   }
