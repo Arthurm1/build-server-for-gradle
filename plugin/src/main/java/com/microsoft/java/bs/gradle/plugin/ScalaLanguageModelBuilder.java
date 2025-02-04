@@ -6,7 +6,9 @@ package com.microsoft.java.bs.gradle.plugin;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -122,42 +124,53 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
     return new LinkedList<>(scalaCompile.getScalaClasspath().getFiles());
   }
 
+  private void addIfNotExists(String option, Set<String> usedArgs, List<String> args) {
+    if (!usedArgs.contains(option)) {
+      args.add(option);
+    }
+  }
+
   private List<String> getScalaCompilerArgs(ScalaCompile scalaCompile) {
     // Gradle changes internal implementation for options handling after 7.0 so manually setup
     ScalaCompileOptions options = scalaCompile.getScalaCompileOptions();
+
+    List<String> additionalArgs = new ArrayList<>();
+    if (options.getAdditionalParameters() != null) {
+      additionalArgs.addAll(options.getAdditionalParameters());
+    }
+    Set<String> usedArgs = new HashSet<>(additionalArgs);
     List<String> args = new LinkedList<>();
     if (options.isDeprecation()) {
-      args.add("-deprecation");
+      addIfNotExists("-deprecation", usedArgs, args);
     }
     if (options.isUnchecked()) {
-      args.add("-unchecked");
+      addIfNotExists("-unchecked", usedArgs, args);
     }
     if (options.getDebugLevel() != null && !options.getDebugLevel().isEmpty()) {
-      args.add("-g:" + options.getDebugLevel());
+      addIfNotExists("-g:" + options.getDebugLevel(), usedArgs, args);
     }
     if (options.isOptimize()) {
-      args.add("-optimise");
+      addIfNotExists("-optimise", usedArgs, args);
     }
     if (options.getEncoding() != null && !options.getEncoding().isEmpty()) {
-      args.add("-encoding");
-      args.add(options.getEncoding());
+      if (!usedArgs.contains("-encoding")) {
+        args.add("-encoding");
+        args.add(options.getEncoding());
+      }
     }
     if (options.getLoggingLevel() != null) {
       if ("verbose".equalsIgnoreCase(options.getLoggingLevel())) {
-        args.add("-verbose");
-
+        addIfNotExists("-verbose", usedArgs, args);
       } else if ("debug".equalsIgnoreCase(options.getLoggingLevel())) {
-        args.add("-Ydebug");
+        addIfNotExists("-Ydebug", usedArgs, args);
       }
     }
     if (options.getLoggingPhases() != null && !options.getLoggingPhases().isEmpty()) {
       for (String phase : options.getLoggingPhases()) {
-        args.add("-Ylog:" + phase);
+        addIfNotExists("-Ylog:" + phase, usedArgs, args);
       }
     }
-    if (options.getAdditionalParameters() != null) {
-      args.addAll(options.getAdditionalParameters());
-    }
+    args.addAll(additionalArgs);
 
     // scalaCompilerPlugins was added in Gradle 6.4
     try {
