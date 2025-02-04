@@ -220,7 +220,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
     BspTraceEntity entity = new BspTraceEntity.Builder()
         .operationName(escapeMethodName(methodName))
         .build();
-    LOGGER.log(Level.INFO, "Received notification '" + methodName + "'.", entity);
+    LOGGER.log(Level.FINE, "Received notification '" + methodName + "'.", entity);
     if (async) {
       CompletableFuture.runAsync(runnable);
     } else {
@@ -279,7 +279,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
     BspTraceEntity entity = createMessageBuilder(methodName, elapsedTime).build();
     String message = String.format("Sending response '%s'. Processing request took %d ms.",
         methodName, elapsedTime);
-    LOGGER.log(Level.INFO, message, entity);
+    LOGGER.log(Level.FINE, message, entity);
     return CompletableFuture.completedFuture(response);
   }
 
