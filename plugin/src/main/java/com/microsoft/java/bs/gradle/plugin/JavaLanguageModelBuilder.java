@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -57,11 +58,19 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
 
       extension.setCompileTaskName(javaCompile.getName());
 
-      extension.setSourceDirs(sourceSet.getJava().getSrcDirs());
-      Set<File> generatedSrcDirs = new HashSet<>();
+      // generated sources aren't always marked as such so work out if sources are in the build dir
+      Set<File> generatedSrcDirs = new HashSet<>(
+          sourceSet.getOutput().getGeneratedSourcesDirs().getFiles());
       addAnnotationProcessingDir(javaCompile, generatedSrcDirs);
+      Set<File> allSourceDirs = new HashSet<>(sourceSet.getJava().getSrcDirs());
+      Set<File> sourceDirsInOutputDir = getFilesWithThisParent(
+          project.getLayout().getBuildDirectory().getAsFile().get().toPath(), allSourceDirs);
+      generatedSrcDirs.addAll(sourceDirsInOutputDir);
+      allSourceDirs.removeAll(generatedSrcDirs);
+      extension.setSourceDirs(allSourceDirs);
       addGeneratedSourceDirs(javaCompile, extension.getSourceDirs(), generatedSrcDirs);
       extension.setGeneratedSourceDirs(generatedSrcDirs);
+
       extension.setClassesDir(getClassesDir(javaCompile));
 
       List<String> compilerArgs = getCompilerArgs(javaCompile);
@@ -73,6 +82,16 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
       return extension;
     }
     return null;
+  }
+
+  private Set<File> getFilesWithThisParent(Path parent, Set<File> files) {
+    Set<File> results = new HashSet<>();
+    for (File file : files) {
+      if (file.toPath().startsWith(parent)) {
+        results.add(file);
+      }
+    }
+    return results;
   }
 
   private JavaCompile getJavaCompileTask(Project project, SourceSet sourceSet) {
