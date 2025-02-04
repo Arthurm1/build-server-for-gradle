@@ -73,4 +73,10 @@ public class DefaultBuildTargetDependency implements BuildTargetDependency {
     return Objects.equals(projectDir, other.projectDir)
         && Objects.equals(sourceSetName, other.sourceSetName);
   }
+
+  @Override
+  public String toString() {
+    return "DefaultBuildTargetDependency: ProjectDir:" + projectDir
+        + " SourceSetName:" + sourceSetName;
+  }
 }
