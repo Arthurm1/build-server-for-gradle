@@ -7,6 +7,7 @@ import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,6 +57,8 @@ import ch.epfl.scala.bsp4j.JavacOptionsItem;
 import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
+import ch.epfl.scala.bsp4j.InverseSourcesParams;
+import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
 import ch.epfl.scala.bsp4j.OutputPathItem;
@@ -300,6 +303,24 @@ public class BuildTargetService {
       }
     }
     return new OutputPathsResult(items);
+  }
+
+  /**
+   * Get inverse sources.
+   */
+  public InverseSourcesResult getBuildTargetInverseSources(InverseSourcesParams params,
+      CancellationToken cancelToken) {
+    String source = params.getTextDocument().getUri();
+    URI uri = UriUtils.getUriFromString(source);
+    Path path = Path.of(uri);
+    Map<Path, BuildTargetIdentifier> sources = buildTargetManager.getSourceDirsMap();
+    List<BuildTargetIdentifier> btIds = new ArrayList<>();
+    for (Map.Entry<Path, BuildTargetIdentifier> entry : sources.entrySet()) {
+      if (path.startsWith(entry.getKey())) {
+        btIds.add(entry.getValue());
+      }
+    }
+    return new InverseSourcesResult(btIds);
   }
 
   /**

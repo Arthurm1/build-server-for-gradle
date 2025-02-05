@@ -3,7 +3,9 @@
 
 package com.microsoft.java.bs.core.internal.managers;
 
+import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,8 +46,11 @@ public class BuildTargetManager {
 
   private volatile Map<BuildTargetIdentifier, GradleBuildTarget> cache;
 
+  private volatile Map<Path, BuildTargetIdentifier> sourceDirsMap;
+
   public BuildTargetManager() {
     this.cache = new HashMap<>();
+    this.sourceDirsMap = new HashMap<>();
   }
 
   /**
@@ -85,6 +90,8 @@ public class BuildTargetManager {
     }
     makeDisplayNameUnique(newCache.values());
     updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);
+
+    this.sourceDirsMap = calculateSourceDirsMap(newCache.values());
 
     Map<BuildTargetIdentifier, GradleBuildTarget> oldCache = cache;
     this.cache = newCache;
@@ -138,7 +145,7 @@ public class BuildTargetManager {
    *
    * @param projectPath project path to operate upon
    */
-  public static String stripPathPrefix(String projectPath) {
+  private String stripPathPrefix(String projectPath) {
     if (projectPath != null && projectPath.startsWith(":")) {
       return projectPath.substring(1);
     }
@@ -150,7 +157,7 @@ public class BuildTargetManager {
    *
    * @param buildTargets all the build targets
    */
-  private static void makeDisplayNameUnique(Collection<GradleBuildTarget> buildTargets) {
+  private void makeDisplayNameUnique(Collection<GradleBuildTarget> buildTargets) {
     for (GradleBuildTarget buildTarget : buildTargets) {
       GradleSourceSet sourceSet = buildTarget.getSourceSet();
       String projectName = stripPathPrefix(sourceSet.getProjectPath());
@@ -170,6 +177,10 @@ public class BuildTargetManager {
 
   public List<GradleBuildTarget> getAllGradleBuildTargets() {
     return new ArrayList<>(cache.values());
+  }
+
+  public Map<Path, BuildTargetIdentifier> getSourceDirsMap() {
+    return new HashMap<>(sourceDirsMap);
   }
 
   private URI getBuildTargetUri(URI projectUri, String sourceSetName) {
@@ -289,5 +300,21 @@ public class BuildTargetManager {
         gradleBuildTarget.getBuildTarget().setDependencies(btDependencies);
       }
     }
+  }
+
+  /**
+   * create a map of all known sourceDirs to the build target they belong to.
+   */
+  private Map<Path, BuildTargetIdentifier> calculateSourceDirsMap(
+      Collection<GradleBuildTarget> buildTargets) {
+    Map<Path, BuildTargetIdentifier> sourceDirsMap = new HashMap<>();
+    for (GradleBuildTarget buildTarget : buildTargets) {
+      Set<File> sourceDirs = buildTarget.getSourceSet().getSourceDirs();
+      BuildTargetIdentifier btId = buildTarget.getBuildTarget().getId();
+      for (File sourceDir : sourceDirs) {
+        sourceDirsMap.put(sourceDir.toPath(), btId);
+      }
+    }
+    return sourceDirsMap;
   }
 }

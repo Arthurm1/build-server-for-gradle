@@ -126,8 +126,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<InverseSourcesResult> buildTargetInverseSources(
       InverseSourcesParams params) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'buildTargetInverseSources'");
+    return handleRequest("buildTarget/inverseSources", cancelToken ->
+        buildTargetService.getBuildTargetInverseSources(params, cancelToken));
   }
 
   @Override
@@ -209,7 +209,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<ScalaTestClassesResult> buildTargetScalaTestClasses(
       ScalaTestClassesParams params) {
-    // There is no `buildTargetScalaTestClassesProvider` flag for the client to know if this is supported
+    // There is no `buildTargetScalaTestClassesProvider` flag for the client to
+    // know if this is supported
     // Rather than sending exceptions back, just send an error message.
     LOGGER.warning("'buildTarget/ScalaTestClasses' not supported");
     List<ScalaTestClassesItem> items = new ArrayList<>();
@@ -220,7 +221,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<ScalaMainClassesResult> buildTargetScalaMainClasses(
       ScalaMainClassesParams params) {
-    // There is no `buildTargetScalaMainClassesProvider` flag for the client to know if this is supported
+    // There is no `buildTargetScalaMainClassesProvider` flag for the client to
+    // know if this is supported
     // Rather than sending exceptions back, just send an error message.
     LOGGER.warning("'buildTarget/ScalaMainClasses' not supported");
     List<ScalaMainClassesItem> items = new ArrayList<>();

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,6 +23,8 @@ import java.util.Set;
 
 import ch.epfl.scala.bsp4j.DependencySourcesParams;
 import ch.epfl.scala.bsp4j.DependencySourcesResult;
+import ch.epfl.scala.bsp4j.InverseSourcesParams;
+import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaBuildTarget;
 import ch.epfl.scala.bsp4j.ScalacOptionsParams;
@@ -58,6 +61,7 @@ import ch.epfl.scala.bsp4j.ResourcesParams;
 import ch.epfl.scala.bsp4j.ResourcesResult;
 import ch.epfl.scala.bsp4j.SourcesParams;
 import ch.epfl.scala.bsp4j.SourcesResult;
+import ch.epfl.scala.bsp4j.TextDocumentIdentifier;
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
 
 class BuildTargetServiceTest {
@@ -244,6 +248,27 @@ class BuildTargetServiceTest {
 
     List<String> sources = res.getItems().get(0).getSources();
     assertEquals(1, sources.size());
+  }
+
+  @Test
+  void testGetBuildTargetInverseSources() {
+    String tmpdir = System.getProperty("java.io.tmpdir");
+    Path tmpPath = Path.of(tmpdir);
+    Map<Path, BuildTargetIdentifier> sourceDirsMap = new HashMap<>();
+    BuildTargetIdentifier btId = new BuildTargetIdentifier(tmpPath.toString());
+    sourceDirsMap.put(tmpPath, btId);
+    when(buildTargetManager.getSourceDirsMap()).thenReturn(sourceDirsMap);
+
+    BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
+            connector, preferenceManager);
+    Path docPath = tmpPath.resolve("tempFile");
+    TextDocumentIdentifier docId = new TextDocumentIdentifier(docPath.toUri().toString());
+    InverseSourcesResult res = buildTargetService.getBuildTargetInverseSources(
+            new InverseSourcesParams(docId), null);
+    assertEquals(1, res.getTargets().size());
+
+    BuildTargetIdentifier btResult = res.getTargets().get(0);
+    assertEquals(btId, btResult);
   }
 
   @Test

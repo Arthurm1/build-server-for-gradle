@@ -3,12 +3,14 @@ package com.microsoft.java.bs.core.internal.server;
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildClientCapabilities;
 import ch.epfl.scala.bsp4j.BuildServer;
+import ch.epfl.scala.bsp4j.BuildServerCapabilities;
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.BuildTarget;
 import ch.epfl.scala.bsp4j.CompileReport;
 import ch.epfl.scala.bsp4j.CompileTask;
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
 import ch.epfl.scala.bsp4j.InitializeBuildParams;
+import ch.epfl.scala.bsp4j.InitializeBuildResult;
 import ch.epfl.scala.bsp4j.JavaBuildServer;
 import ch.epfl.scala.bsp4j.JvmBuildServer;
 import ch.epfl.scala.bsp4j.LogMessageParams;
@@ -47,6 +49,8 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 abstract class IntegrationTest {
@@ -329,7 +333,23 @@ abstract class IntegrationTest {
       TestServer testServer = pair.getRight();
       try {
         InitializeBuildParams params = getInitializeBuildParams(project);
-        testServer.buildInitialize(params).join();
+        InitializeBuildResult result = testServer.buildInitialize(params).join();
+        BuildServerCapabilities capabilities = result.getCapabilities();
+        assertFalse(capabilities.getCompileProvider().getLanguageIds().isEmpty());
+        assertFalse(capabilities.getTestProvider().getLanguageIds().isEmpty());
+        assertFalse(capabilities.getRunProvider().getLanguageIds().isEmpty());
+        assertNull(capabilities.getDebugProvider());
+        assertTrue(capabilities.getInverseSourcesProvider());
+        assertTrue(capabilities.getDependencySourcesProvider());
+        assertTrue(capabilities.getDependencyModulesProvider());
+        assertTrue(capabilities.getResourcesProvider());
+        assertTrue(capabilities.getOutputPathsProvider());
+        assertTrue(capabilities.getBuildTargetChangedProvider());
+        assertFalse(capabilities.getJvmRunEnvironmentProvider());
+        assertFalse(capabilities.getJvmTestEnvironmentProvider());
+        assertFalse(capabilities.getCargoFeaturesProvider());
+        assertTrue(capabilities.getCanReload());
+        assertFalse(capabilities.getJvmCompileClasspathProvider());
         testServer.onBuildInitialized();
         consumer.accept(testServer, client);
       } finally {

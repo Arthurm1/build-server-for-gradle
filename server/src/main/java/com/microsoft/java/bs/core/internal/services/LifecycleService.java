@@ -103,7 +103,7 @@ public class LifecycleService {
     capabilities.setOutputPathsProvider(true);
     capabilities.setDependencyModulesProvider(true);
     capabilities.setDependencySourcesProvider(true);
-    capabilities.setInverseSourcesProvider(false);
+    capabilities.setInverseSourcesProvider(true);
     capabilities.setCanReload(true);
     capabilities.setBuildTargetChangedProvider(true);
     capabilities.setDebugProvider(null);

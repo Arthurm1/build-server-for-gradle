@@ -15,6 +15,8 @@ import ch.epfl.scala.bsp4j.DependencySourcesParams;
 import ch.epfl.scala.bsp4j.DependencySourcesResult;
 import ch.epfl.scala.bsp4j.Diagnostic;
 import ch.epfl.scala.bsp4j.DiagnosticSeverity;
+import ch.epfl.scala.bsp4j.InverseSourcesParams;
+import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
@@ -27,6 +29,10 @@ import ch.epfl.scala.bsp4j.ScalaMainClass;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
 import ch.epfl.scala.bsp4j.ScalaTestSuites;
+import ch.epfl.scala.bsp4j.SourceItem;
+import ch.epfl.scala.bsp4j.SourcesItem;
+import ch.epfl.scala.bsp4j.SourcesParams;
+import ch.epfl.scala.bsp4j.SourcesResult;
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
 import ch.epfl.scala.bsp4j.StatusCode;
 import ch.epfl.scala.bsp4j.TaskFinishParams;
@@ -34,6 +40,7 @@ import ch.epfl.scala.bsp4j.TestParams;
 import ch.epfl.scala.bsp4j.TestParamsDataKind;
 import ch.epfl.scala.bsp4j.TestReport;
 import ch.epfl.scala.bsp4j.TestResult;
+import ch.epfl.scala.bsp4j.TextDocumentIdentifier;
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
 import ch.epfl.scala.bsp4j.extended.TestFinishEx;
 import ch.epfl.scala.bsp4j.extended.TestName;
@@ -41,8 +48,12 @@ import ch.epfl.scala.bsp4j.extended.TestStartEx;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
+import com.microsoft.java.bs.core.internal.utils.UriUtils;
+
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -252,6 +263,26 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           .toList();
       assertTrue(allArtifacts.stream()
           .anyMatch(artifact -> artifact.getUri().endsWith("-sources.jar")));
+
+      // check sources
+      SourcesResult sources = gradleBuildServer.buildTargetSources(new SourcesParams(btIds)).join();
+      List<SourcesItem> sourcesItems = sources.getItems();
+      assertEquals(2, sourcesItems.size());
+      SourcesItem sourcesItem = sourcesItems.get(0);
+      assertEquals(2, sourcesItem.getSources().size());
+
+      // check inverse sources
+      BuildTargetIdentifier docBtId = sourcesItem.getTarget();
+      SourceItem sourceItem = sourcesItem.getSources().get(0);
+      URI sourceUri = UriUtils.getUriFromString(sourceItem.getUri());
+      String docUri = Path.of(sourceUri).resolve("subDir").resolve("docName").toUri().toString();
+      TextDocumentIdentifier docId = new TextDocumentIdentifier(docUri);
+      InverseSourcesParams inverseSourcesParams = new InverseSourcesParams(docId);
+      InverseSourcesResult inverseModulesResult = gradleBuildServer
+          .buildTargetInverseSources(inverseSourcesParams).join();
+      assertEquals(1, inverseModulesResult.getTargets().size());
+      BuildTargetIdentifier resBtId = inverseModulesResult.getTargets().get(0);
+      assertEquals(docBtId, resBtId);
 
       // clean targets
       CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
