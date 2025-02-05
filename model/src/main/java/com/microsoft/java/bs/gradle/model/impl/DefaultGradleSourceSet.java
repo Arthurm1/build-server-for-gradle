@@ -100,19 +100,19 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   private LanguageExtension convertLanguageExtension(LanguageExtension object) {
     if (object.isJavaExtension()) {
-      return object.getAsJavaExtension();
+      return new DefaultJavaExtension(object.getAsJavaExtension());
     }
 
     if (object.isScalaExtension()) {
-      return object.getAsScalaExtension();
+      return new DefaultScalaExtension(object.getAsScalaExtension());
     }
 
     if (object.isGroovyExtension()) {
-      return object.getAsGroovyExtension();
+      return new DefaultGroovyExtension(object.getAsGroovyExtension());
     }
 
     if (object.isKotlinExtension()) {
-      return object.getAsKotlinExtension();
+      return new DefaultKotlinExtension(object.getAsKotlinExtension());
     }
 
     throw new IllegalArgumentException("No conversion methods defined for object: " + object);

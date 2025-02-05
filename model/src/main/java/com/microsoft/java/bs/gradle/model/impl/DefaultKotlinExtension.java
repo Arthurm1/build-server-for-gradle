@@ -35,6 +35,23 @@ public class DefaultKotlinExtension implements KotlinExtension {
 
   private List<String> kotlinAssociates;
 
+  public DefaultKotlinExtension() {}
+
+  /**
+   * Copy constructor.
+   *
+   * @param kotlinExtension the KotlinExtension to copy from.
+   */
+  public DefaultKotlinExtension(KotlinExtension kotlinExtension) {
+    this.sourceDirs = kotlinExtension.getSourceDirs();
+    this.generatedSourceDirs = kotlinExtension.getGeneratedSourceDirs();
+    this.compileTaskName = kotlinExtension.getCompileTaskName();
+    this.kotlinLanguageVersion = kotlinExtension.getKotlinLanguageVersion();
+    this.kotlinApiVersion = kotlinExtension.getKotlinApiVersion();
+    this.kotlincOptions = kotlinExtension.getKotlincOptions();
+    this.kotlinAssociates = kotlinExtension.getKotlinAssociates();
+  }
+
   @Override
   public Set<File> getSourceDirs() {
     return sourceDirs;

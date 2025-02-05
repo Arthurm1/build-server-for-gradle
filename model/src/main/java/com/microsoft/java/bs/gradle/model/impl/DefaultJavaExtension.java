@@ -37,6 +37,25 @@ public class DefaultJavaExtension implements JavaExtension {
 
   private File classesDir;
 
+  public DefaultJavaExtension() {}
+
+  /**
+   * Copy constructor.
+   *
+   * @param javaExtension the JavaExtension to copy from.
+   */
+  public DefaultJavaExtension(JavaExtension javaExtension) {
+    this.javaHome = javaExtension.getJavaHome();
+    this.javaVersion = javaExtension.getJavaVersion();
+    this.sourceCompatibility = javaExtension.getSourceCompatibility();
+    this.targetCompatibility = javaExtension.getTargetCompatibility();
+    this.compilerArgs = javaExtension.getCompilerArgs();
+    this.sourceDirs = javaExtension.getSourceDirs();
+    this.generatedSourceDirs = javaExtension.getGeneratedSourceDirs();
+    this.compileTaskName = javaExtension.getCompileTaskName();
+    this.classesDir = javaExtension.getClassesDir();
+  }
+
   @Override
   public File getJavaHome() {
     return javaHome;

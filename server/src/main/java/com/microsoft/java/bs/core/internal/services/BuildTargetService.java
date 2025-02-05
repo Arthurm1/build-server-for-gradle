@@ -159,13 +159,13 @@ public class BuildTargetService {
           BuildTargetEvent event = new BuildTargetEvent(changeInfo.getBtId());
           if (changeInfo.hasChanged()) {
             event.setKind(BuildTargetEventKind.CHANGED);
+            event.setDataKind("SourceSetChange");
+            event.setData(changeInfo.getDifference());
           } else if (changeInfo.isAdded()) {
             event.setKind(BuildTargetEventKind.CREATED);
           } else if (changeInfo.isRemoved()) {
             event.setKind(BuildTargetEventKind.DELETED);
           }
-          event.setDataKind("SourceSetChange");
-          event.setData(changeInfo);
           return event;
         })
         .collect(Collectors.toList());

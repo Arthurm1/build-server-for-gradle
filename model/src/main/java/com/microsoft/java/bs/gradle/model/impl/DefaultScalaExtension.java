@@ -37,6 +37,25 @@ public class DefaultScalaExtension implements ScalaExtension {
 
   private File classesDir;
 
+  public DefaultScalaExtension() {}
+
+  /**
+   * Copy constructor.
+   *
+   * @param scalaExtension the ScalaExtension to copy from.
+   */
+  public DefaultScalaExtension(ScalaExtension scalaExtension) {
+    this.scalaCompilerArgs = scalaExtension.getScalaCompilerArgs();
+    this.scalaOrganization = scalaExtension.getScalaOrganization();
+    this.scalaVersion = scalaExtension.getScalaVersion();
+    this.scalaBinaryVersion = scalaExtension.getScalaBinaryVersion();
+    this.scalaJars = scalaExtension.getScalaJars();
+    this.sourceDirs = scalaExtension.getSourceDirs();
+    this.generatedSourceDirs = scalaExtension.getGeneratedSourceDirs();
+    this.compileTaskName = scalaExtension.getCompileTaskName();
+    this.classesDir = scalaExtension.getClassesDir();
+  }
+
   @Override
   public List<String> getScalaCompilerArgs() {
     return scalaCompilerArgs;

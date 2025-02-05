@@ -5,11 +5,8 @@ package com.microsoft.java.bs.core.internal.managers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,13 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
+import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
 import org.junit.jupiter.api.Test;
 
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
@@ -36,13 +34,12 @@ class BuildTargetManagerTest {
 
   @Test
   void testStore() {
-    GradleSourceSet gradleSourceSet = getMockedTestGradleSourceSet();
-    when(gradleSourceSet.getSourceSetName()).thenReturn("test");
-    when(gradleSourceSet.getProjectName()).thenReturn("name");
-    when(gradleSourceSet.hasTests()).thenReturn(true);
-    GradleSourceSets gradleSourceSets = mock(GradleSourceSets.class);
-    when(gradleSourceSets.getGradleSourceSets()).thenReturn(Arrays.asList(gradleSourceSet));
-
+    DefaultGradleSourceSet gradleSourceSet = getTestGradleSourceSet();
+    gradleSourceSet.setSourceSetName("test");
+    gradleSourceSet.setProjectName("name");
+    gradleSourceSet.setHasTests(true);
+    DefaultGradleSourceSets gradleSourceSets =
+        new DefaultGradleSourceSets(List.of(gradleSourceSet));
     BuildTargetManager manager = new BuildTargetManager();
     manager.store(gradleSourceSets);
 
@@ -55,9 +52,9 @@ class BuildTargetManagerTest {
 
   @Test
   void testJvmExtension() {
-    GradleSourceSet gradleSourceSet = getMockedTestGradleSourceSet();
-    GradleSourceSets gradleSourceSets = mock(GradleSourceSets.class);
-    when(gradleSourceSets.getGradleSourceSets()).thenReturn(Arrays.asList(gradleSourceSet));
+    DefaultGradleSourceSet gradleSourceSet = getTestGradleSourceSet();
+    DefaultGradleSourceSets gradleSourceSets =
+        new DefaultGradleSourceSets(List.of(gradleSourceSet));
     
     BuildTargetManager manager = new BuildTargetManager();
     manager.store(gradleSourceSets);
@@ -72,9 +69,9 @@ class BuildTargetManagerTest {
 
   @Test
   void testJvmExtensionEx() {
-    GradleSourceSet gradleSourceSet = getMockedTestGradleSourceSet();
-    GradleSourceSets gradleSourceSets = mock(GradleSourceSets.class);
-    when(gradleSourceSets.getGradleSourceSets()).thenReturn(Arrays.asList(gradleSourceSet));
+    DefaultGradleSourceSet gradleSourceSet = getTestGradleSourceSet();
+    DefaultGradleSourceSets gradleSourceSets =
+        new DefaultGradleSourceSets(List.of(gradleSourceSet));
     
     BuildTargetManager manager = new BuildTargetManager();
     manager.store(gradleSourceSets);
@@ -93,23 +90,22 @@ class BuildTargetManagerTest {
   void testBuildTargetDependency() {
     File fooProjectDir = new File("foo");
     String fooSourceSetName = "main";
-    GradleSourceSet gradleSourceSetFoo = getMockedTestGradleSourceSet();
-    when(gradleSourceSetFoo.getProjectPath()).thenReturn(":foo");
-    when(gradleSourceSetFoo.getProjectDir()).thenReturn(fooProjectDir);
-    when(gradleSourceSetFoo.getSourceSetName()).thenReturn(fooSourceSetName);
+    DefaultGradleSourceSet gradleSourceSetFoo = getTestGradleSourceSet();
+    gradleSourceSetFoo.setProjectPath(":foo");
+    gradleSourceSetFoo.setProjectDir(fooProjectDir);
+    gradleSourceSetFoo.setSourceSetName(fooSourceSetName);
 
     BuildTargetDependency buildTargetDependency = new DefaultBuildTargetDependency(
         fooProjectDir.getAbsolutePath(), fooSourceSetName);
     Set<BuildTargetDependency> dependencies = new HashSet<>();
     dependencies.add(buildTargetDependency);
-    GradleSourceSet gradleSourceSetBar = getMockedTestGradleSourceSet();
-    when(gradleSourceSetBar.getProjectPath()).thenReturn(":bar");
-    when(gradleSourceSetBar.getProjectDir()).thenReturn(new File("bar"));
-    when(gradleSourceSetBar.getBuildTargetDependencies()).thenReturn(dependencies);
+    DefaultGradleSourceSet gradleSourceSetBar = getTestGradleSourceSet();
+    gradleSourceSetBar.setProjectPath(":bar");
+    gradleSourceSetBar.setProjectDir(new File("bar"));
+    gradleSourceSetBar.setBuildTargetDependencies(dependencies);
 
-    GradleSourceSets gradleSourceSets = mock(GradleSourceSets.class);
-    when(gradleSourceSets.getGradleSourceSets()).thenReturn(
-        Arrays.asList(gradleSourceSetFoo, gradleSourceSetBar));
+    DefaultGradleSourceSets gradleSourceSets = new DefaultGradleSourceSets(
+        List.of(gradleSourceSetFoo, gradleSourceSetBar));
 
     BuildTargetManager manager = new BuildTargetManager();
     manager.store(gradleSourceSets);
@@ -129,26 +125,45 @@ class BuildTargetManagerTest {
     assertTrue(buildTargetBar.getDependencies().contains(buildTargetFoo.getId()));
   }
 
-  private GradleSourceSet getMockedTestGradleSourceSet() {
-    GradleSourceSet mocked = mock(GradleSourceSet.class);
-    when(mocked.getGradleVersion()).thenReturn("8.0");
-    when(mocked.getProjectDir()).thenReturn(new File("test"));
-    when(mocked.getRootDir()).thenReturn(new File("test"));
-    when(mocked.getSourceSetName()).thenReturn("main");
-    when(mocked.getSourceDirs()).thenReturn(Collections.emptySet());
-    when(mocked.getGeneratedSourceDirs()).thenReturn(Collections.emptySet());
-    when(mocked.getResourceDirs()).thenReturn(Collections.emptySet());
-    when(mocked.getModuleDependencies()).thenReturn(Collections.emptySet());
-    when(mocked.getBuildTargetDependencies()).thenReturn(Collections.emptySet());
-    JavaExtension mockedJavaExtension = mock(JavaExtension.class);
-    when(mockedJavaExtension.isJavaExtension()).thenReturn(true);
-    when(mockedJavaExtension.getAsJavaExtension()).thenReturn(mockedJavaExtension);
-    when(mockedJavaExtension.getJavaVersion()).thenReturn("17");
-    when(mockedJavaExtension.getSourceCompatibility()).thenReturn("17");
-    when(mockedJavaExtension.getTargetCompatibility()).thenReturn("17");
-    Map<String, LanguageExtension> extensions = new HashMap<>();
-    extensions.put(SupportedLanguages.JAVA.getBspName(), mockedJavaExtension);
-    when(mocked.getExtensions()).thenReturn(extensions);
-    return mocked;
+  @Test
+  void testDidChange() {
+    DefaultGradleSourceSet sourceSet1 = getTestGradleSourceSet();
+    DefaultGradleSourceSet sourceSet2 = getTestGradleSourceSet();
+    sourceSet2.setProjectDir(new File("was test"));
+    BuildTargetChangeInfo change = new BuildTargetChangeInfo(null, sourceSet1, sourceSet2);
+    assertEquals("GradleSourceSet: (ProjectDir: (test -> was test))", change.getDifference());
+    DefaultJavaExtension javaExt2 = getTestJavaExtension();
+    javaExt2.setSourceCompatibility("9");
+    sourceSet2.getExtensions().put(SupportedLanguages.JAVA.getBspName(), javaExt2);
+    assertEquals("GradleSourceSet: (ProjectDir: (test -> was test), Extensions: (0: (key:java"
+        + " value: (SourceCompatibility: (17 -> 9)))))", change.getDifference());
   }
+
+  private DefaultJavaExtension getTestJavaExtension() {
+    DefaultJavaExtension javaExtension = new DefaultJavaExtension();
+    javaExtension.setJavaVersion("17");
+    javaExtension.setSourceCompatibility("17");
+    javaExtension.setTargetCompatibility("17");
+    return javaExtension;
+  }
+
+  private DefaultGradleSourceSet getTestGradleSourceSet() {
+    DefaultGradleSourceSet sourceSet = new DefaultGradleSourceSet();
+    sourceSet.setGradleVersion("8.0");
+    sourceSet.setProjectDir(new File("test"));
+    sourceSet.setRootDir(new File("test"));
+    sourceSet.setSourceSetName("main");
+    sourceSet.setSourceDirs(Collections.emptySet());
+    sourceSet.setGeneratedSourceDirs(Collections.emptySet());
+    sourceSet.setResourceDirs(Collections.emptySet());
+    sourceSet.setModuleDependencies(Collections.emptySet());
+    sourceSet.setBuildTargetDependencies(Collections.emptySet());
+    DefaultJavaExtension javaExtension = getTestJavaExtension();
+    Map<String, LanguageExtension> extensions = new HashMap<>();
+    extensions.put(SupportedLanguages.JAVA.getBspName(), javaExtension);
+    sourceSet.setExtensions(extensions);
+    return sourceSet;
+  }
+
+
 }

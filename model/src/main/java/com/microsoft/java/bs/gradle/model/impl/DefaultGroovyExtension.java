@@ -26,6 +26,20 @@ public class DefaultGroovyExtension implements GroovyExtension {
 
   private File classesDir;
 
+  public DefaultGroovyExtension() {}
+
+  /**
+   * Copy constructor.
+   *
+   * @param groovyExtension the GroovyExtension to copy from.
+   */
+  public DefaultGroovyExtension(GroovyExtension groovyExtension) {
+    this.sourceDirs = groovyExtension.getSourceDirs();
+    this.generatedSourceDirs = groovyExtension.getGeneratedSourceDirs();
+    this.compileTaskName = groovyExtension.getCompileTaskName();
+    this.classesDir = groovyExtension.getClassesDir();
+  }
+
   @Override
   public Set<File> getSourceDirs() {
     return sourceDirs;
