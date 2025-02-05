@@ -14,8 +14,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
-import org.gradle.tooling.CancellationToken;
-
 import com.microsoft.java.bs.core.Constants;
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.gradle.GradleBuildKind;
@@ -38,6 +36,9 @@ import ch.epfl.scala.bsp4j.RunProvider;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import ch.epfl.scala.bsp4j.TestProvider;
 
+import com.google.gson.JsonSyntaxException;
+
+import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.model.build.BuildEnvironment;
 
 /**
@@ -69,12 +70,15 @@ public class LifecycleService {
     initializePreferenceManager(params, cancelToken);
 
     BuildServerCapabilities capabilities = initializeServerCapabilities();
-    return new InitializeBuildResult(
+    InitializeBuildResult buildResult = new InitializeBuildResult(
         Constants.SERVER_NAME,
         Constants.SERVER_VERSION,
         Constants.BSP_VERSION,
         capabilities
     );
+    buildResult.setDataKind("BSP-Preferences");
+    buildResult.setData(preferenceManager.getPreferences());
+    return buildResult;
   }
 
   public void setClient(BuildClient client) {
@@ -86,9 +90,16 @@ public class LifecycleService {
     preferenceManager.setRootUri(rootUri);
     preferenceManager.setClientSupportedLanguages(params.getCapabilities().getLanguageIds());
 
-    Preferences preferences = JsonUtils.toModel(params.getData(), Preferences.class);
-    if (preferences == null) {
-      // If no preferences are provided, use an empty preferences.
+    Preferences preferences;
+    if (params.getData() != null) {
+      // no client seems to use DataKind so just attempt to translate
+      try {
+        preferences = JsonUtils.toModel(params.getData(), Preferences.class);
+      } catch (JsonSyntaxException e) {
+        // do nothing - unspecified or unhandled datakind
+        preferences = new Preferences();
+      }
+    } else {
       preferences = new Preferences();
     }
 
@@ -269,7 +280,7 @@ public class LifecycleService {
     Map<String, String> userJdks = preferences.getJdks();
     if (userJdks != null && !userJdks.isEmpty()) {
       return getLatestCompatibleJdk(
-          preferences.getJdks(),
+          userJdks,
           oldestCompatibleVersion,
           latestCompatibleVersion
       );

@@ -1,9 +1,12 @@
 package com.microsoft.java.bs.core.internal.server;
 
 import ch.epfl.scala.bsp4j.InitializeBuildParams;
+import ch.epfl.scala.bsp4j.InitializeBuildResult;
 import ch.epfl.scala.bsp4j.MessageType;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.core.internal.utils.JsonUtils;
+
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -14,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LifecycleServiceIntegrationTest extends IntegrationTest {
@@ -56,7 +60,13 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
       try {
 
         InitializeBuildParams initParams = getInitializeBuildParams("legacy-gradle");
-        testServer.buildInitialize(initParams).join();
+        Preferences preferences = new Preferences();
+        initParams.setData(preferences);
+        InitializeBuildResult initResult = testServer.buildInitialize(initParams).join();
+        assertEquals("BSP-Preferences", initResult.getDataKind());
+        assertNotNull(initResult.getData());
+        Preferences resultPrefs = JsonUtils.toModel(initResult.getData(), Preferences.class);
+        assertNotNull(resultPrefs);
 
         // Wait for the configuration logics to complete
         synchronized (this) {

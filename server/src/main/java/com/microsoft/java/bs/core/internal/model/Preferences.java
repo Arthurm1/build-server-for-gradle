@@ -3,7 +3,6 @@
 
 package com.microsoft.java.bs.core.internal.model;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -62,9 +61,6 @@ public class Preferences {
    */
   public Preferences() {
     isWrapperEnabled = true;
-    gradleArguments = Collections.emptyList();
-    gradleJvmArguments = Collections.emptyList();
-    jdks = Collections.emptyMap();
   }
 
   public String getGradleJavaHome() {
