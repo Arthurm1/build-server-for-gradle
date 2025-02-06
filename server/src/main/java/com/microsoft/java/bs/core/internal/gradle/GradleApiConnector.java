@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -172,8 +171,11 @@ public class GradleApiConnector {
     ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     try (ProjectConnection connection = getGradleConnector(projectUri).connect();
          errorOut) {
-      String initScriptContents = Utils.createPluginScript();
-      File initScript = Utils.createInitScriptFile("sourcesets", initScriptContents);
+      File workspaceDir = new File(projectUri);
+      String pluginInitScript = Utils.createPluginScript(workspaceDir,
+          preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+          preferenceManager.getPreferences().getScalaSemanticdbVersion());
+      File initScript = Utils.createInitScriptFile("sourcesets", pluginInitScript);
       try {
         BuildActionExecuter<GradleSourceSets> buildExecutor =
             Utils.getBuildActionExecuter(connection, preferenceManager.getPreferences(),
@@ -223,13 +225,27 @@ public class GradleApiConnector {
     try (ProjectConnection connection = getGradleConnector(projectUri).connect();
          errorOut
     ) {
-      BuildLauncher launcher = Utils.getBuildLauncher(connection,
-          preferenceManager.getPreferences(), cancellationToken);
-      // TODO: consider to use outputstream to capture the output.
-      launcher.addProgressListener(reporter, OperationType.TASK)
-          .setStandardError(errorOut)
-          .forTasks(tasks)
-          .run();
+      File workspaceDir = new File(projectUri);
+      String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
+              preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+              preferenceManager.getPreferences().getScalaSemanticdbVersion());
+      File initScript = Utils.createInitScriptFile("runTask", compilerOptionsScript);
+      try {
+        BuildLauncher launcher = Utils.getBuildLauncher(connection,
+            preferenceManager.getPreferences(), cancellationToken);
+        if (initScript != null) {
+          launcher.addArguments("--init-script", initScript.getAbsolutePath());
+        }
+        // TODO: consider to use outputstream to capture the output.
+        launcher.addProgressListener(reporter, OperationType.TASK)
+            .setStandardError(errorOut)
+            .forTasks(tasks)
+            .run();
+      } finally {
+        if (initScript != null) {
+          initScript.delete();
+        }
+      }
     } catch (IOException e) {
       // caused by close the output stream, just simply log the error.
       LOGGER.severe(e.getMessage());
@@ -276,33 +292,48 @@ public class GradleApiConnector {
               client, originId);
           final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
           try (errorOut) {
-            TestLauncher launcher = Utils
-                .getTestLauncher(connection, preferenceManager.getPreferences(), cancellationToken)
-                .setStandardError(errorOut)
-                .addProgressListener(testReportReporter, OperationType.TEST);
-            if (compileProgressReporter != null) {
-              launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
-            }
-            for (Map.Entry<String, Set<String>> classesMethods : entry.getValue().entrySet()) {
-              if (classesMethods.getValue() != null && !classesMethods.getValue().isEmpty()) {
-                launcher.withJvmTestMethods(classesMethods.getKey() + '*',
-                    classesMethods.getValue());
-              } else {
-                launcher.withJvmTestClasses(classesMethods.getKey() + '*');
+            File workspaceDir = new File(projectUri);
+            String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
+                    preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+                    preferenceManager.getPreferences().getScalaSemanticdbVersion());
+            File initScript = Utils.createInitScriptFile("runTest", compilerOptionsScript);
+            try {
+              TestLauncher launcher = Utils
+                  .getTestLauncher(connection,
+                     preferenceManager.getPreferences(), cancellationToken)
+                  .setStandardError(errorOut)
+                  .addProgressListener(testReportReporter, OperationType.TEST);
+              if (initScript != null) {
+                launcher.addArguments("--init-script", initScript.getAbsolutePath());
+              }
+              if (compileProgressReporter != null) {
+                launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
+              }
+              for (Map.Entry<String, Set<String>> classesMethods : entry.getValue().entrySet()) {
+                if (classesMethods.getValue() != null && !classesMethods.getValue().isEmpty()) {
+                  launcher.withJvmTestMethods(classesMethods.getKey() + '*',
+                      classesMethods.getValue());
+                } else {
+                  launcher.withJvmTestClasses(classesMethods.getKey() + '*');
+                }
+              }
+              launcher.withArguments(args);
+              launcher.setJvmArguments(jvmOptions);
+              // env vars requires Gradle >= 3.5
+              if (envVars != null) {
+                // Running Gradle tests on Windows seems to require the `SystemRoot` env var
+                // Otherwise Windows complains "Unrecognized Windows Sockets error: 10106"
+                // Assumption is that current env vars plus specified env vars are all wanted.
+                Map<String, String> allEnvVars = new HashMap<>(System.getenv());
+                allEnvVars.putAll(envVars);
+                launcher.setEnvironmentVariables(allEnvVars);
+              }
+              launcher.run();
+            } finally {
+              if (initScript != null) {
+                initScript.delete();
               }
             }
-            launcher.withArguments(args);
-            launcher.setJvmArguments(jvmOptions);
-            // env vars requires Gradle >= 3.5
-            if (envVars != null) {
-              // Running Gradle tests on Windows seems to require the `SystemRoot` env var
-              // Otherwise Windows complains "Unrecognized Windows Sockets error: 10106"
-              // Assumption is that current env vars plus specified env vars are all wanted.
-              Map<String, String> allEnvVars = new HashMap<>(System.getenv());
-              allEnvVars.putAll(envVars);
-              launcher.setEnvironmentVariables(allEnvVars);
-            }
-            launcher.run();
           } catch (IOException e) {
             // caused by close the output stream, just simply log the error.
             LOGGER.severe(e.getMessage());
@@ -338,30 +369,16 @@ public class GradleApiConnector {
     String taskName = "buildServerRunApp";
     try (AppRunReporter reporter = new AppRunReporter(client, originId, taskName)) {
       try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-        String execTask = "gradle.projectsEvaluated {\n"
-            + "  def proj = rootProject.findProject('" + projectPath + "')\n"
-            + "  if (proj != null) {\n"
-            + "    proj.getTasks().create('" + taskName + "', JavaExec.class, {\n"
-            + "      classpath = proj.sourceSets." + sourceSetName + ".runtimeClasspath\n"
-            + "      mainClass = '" + className + "'\n";
-        if (arguments != null && !arguments.isEmpty()) {
-          String args = arguments.stream().collect(Collectors.joining("','", "['", "']"));
-          execTask += "      args = " + args + "\n";
-        }
-        if (environmentVariables != null && !environmentVariables.isEmpty()) {
-          String envVars = environmentVariables.entrySet().stream()
-              .map(entry -> "'" + entry.getKey() + "':'" + entry.getValue() + "'")
-              .collect(Collectors.joining(",", "[", "]"));
-          execTask += "      environment = " + envVars + "\n";
-        }
-        if (jvmOptions != null && !jvmOptions.isEmpty()) {
-          String jvmArgs = jvmOptions.stream().collect(Collectors.joining("','", "['", "']"));
-          execTask += "      jvmArgs = " + jvmArgs + "\n";
-        }
-        execTask += "    })\n"
-            + "  }\n"
-            + "}\n";
-        File initScript = Utils.createInitScriptFile("runMain", execTask);
+        // task can trigger compilation so add compiler options as well as
+        // script to create a JavaExec task to run the main class
+        String execScript = Utils.createJavaExecTaskScript(projectPath, sourceSetName, taskName,
+            className, arguments, environmentVariables, jvmOptions);
+        File workspaceDir = new File(projectUri);
+        String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
+            preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+            preferenceManager.getPreferences().getScalaSemanticdbVersion());
+        String script = execScript + '\n' + compilerOptionsScript;
+        File initScript = Utils.createInitScriptFile("runMain", script);
         try {
           BuildLauncher launcher = Utils
               .getBuildLauncher(connection,

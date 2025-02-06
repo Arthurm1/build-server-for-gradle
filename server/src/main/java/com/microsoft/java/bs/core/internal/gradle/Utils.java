@@ -9,8 +9,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.gradle.internal.impldep.org.apache.commons.lang.StringUtils;
 import org.gradle.tooling.BuildAction;
@@ -344,11 +347,141 @@ public class Utils {
   }
 
   /**
-   * Create a Gradle init script to apply plugin.
+   * create a script for creating a Gradle JavaExec task to run a Java mainclass.
    *
+   * @param projectPath path to Gradle project
+   * @param sourceSetName source set of project - for classpath
+   * @param taskName new task name (must be unique to the project)
+   * @param className java class to run
+   * @param arguments arguments to pass to main class
+   * @param environmentVariables additional environment variables to set
+   * @param jvmOptions jvm options for running main class
+   * @return init script contents to create task
+   */
+  public static String createJavaExecTaskScript(String projectPath,
+        String sourceSetName, String taskName, String className,
+        Collection<String> arguments, Map<String, String> environmentVariables,
+        Collection<String> jvmOptions) {
+
+    String argsSetup;
+    if (arguments != null && !arguments.isEmpty()) {
+      String args = arguments.stream().collect(Collectors.joining("','", "['", "']"));
+      argsSetup = "      args = " + args;
+    } else {
+      argsSetup = "";
+    }
+
+    String envVarSetup;
+    if (environmentVariables != null && !environmentVariables.isEmpty()) {
+      String envVars = environmentVariables.entrySet().stream()
+              .map(entry -> "'" + entry.getKey() + "':'" + entry.getValue() + "'")
+              .collect(Collectors.joining(",", "[", "]"));
+      envVarSetup = "      environment = " + envVars;
+    } else {
+      envVarSetup = "";
+    }
+
+    String jvmOptionSetup;
+    if (jvmOptions != null && !jvmOptions.isEmpty()) {
+      String jvmArgs = jvmOptions.stream().collect(Collectors.joining("','", "['", "']"));
+      jvmOptionSetup = "      jvmArgs = " + jvmArgs;
+    } else {
+      jvmOptionSetup = "";
+    }
+    return """
+        gradle.projectsEvaluated {
+          Project proj = rootProject.findProject('$projectPath')
+          if (proj != null) {
+            proj.getTasks().create('$taskName', JavaExec.class, {
+              classpath = proj.sourceSets.$sourceSetName.runtimeClasspath
+              mainClass = '$className'
+              $argsSetup
+              $envVarSetup
+              $jvmOptionSetup
+            })
+          }
+        }"""
+        .replace("$projectPath", projectPath)
+        .replace("$taskName", taskName)
+        .replace("$sourceSetName", sourceSetName)
+        .replace("$className", className)
+        .replace("$argsSetup", argsSetup)
+        .replace("$envVarSetup", envVarSetup)
+        .replace("$jvmOptionSetup", jvmOptionSetup);
+  }
+
+  /**
+   * Create a Gradle init script to apply the BSP plugin to all projects.
+   *
+   * @return the text for an init script to apply the BSP plugin.
+   */
+  public static String createPluginScript(File workspaceDir, String javaSemanticDbVersion,
+        String scalaSemanticDbVersion) {
+    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, true);
+  }
+
+  /**
+   * Create a Gradle init script to alter the javac and scalac compiler options to
+   * include the semantic db plugins.
+   *
+   * @return the text for an init script to alter the compiler options.
+   */
+  public static String createCompilerOptionsScript(File workspaceDir, String javaSemanticDbVersion,
+        String scalaSemanticDbVersion) {
+    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, false);
+  }
+
+  /**
+   * Create a Gradle init script to apply plugins and settings.
+   *
+   * @param workspaceDir the root dir of all the projects
+   * @param javaSemanticDbVersion version of the java semanticdb jar
+   * @param scalaSemanticDbVersion version of the scala semanticdb jar
+   * @param includeBspPlugin whether or not to apply the BSP plugin
    * @return the text for the init script.
    */
-  public static String createPluginScript() {
+  private static String createInitScript(File workspaceDir, String javaSemanticDbVersion,
+        String scalaSemanticDbVersion, boolean includeBspPlugin) {
+    if (javaSemanticDbVersion == null && scalaSemanticDbVersion == null
+        && !includeBspPlugin) {
+      return null;
+    }
+    String bspPluginSetup;
+    if (includeBspPlugin) {
+      bspPluginSetup = """
+          // apply plugin so config can be extracted
+          apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
+          
+          """;
+    } else {
+      bspPluginSetup = "";
+    }
+    String workspace = workspaceDir.toString().replace("\\", "\\\\").replace("'", "\\'");
+    String javaSemanticDbSetup = javaSemanticDbVersion != null
+        && !javaSemanticDbVersion.isEmpty()
+        ? "    javaSemanticDbVersion = '" + javaSemanticDbVersion + "'\n" : "";
+    String scalaSemanticDbSetup = scalaSemanticDbVersion != null
+        && !scalaSemanticDbVersion.isEmpty()
+        ? "    scalaSemanticDbVersion = '" + scalaSemanticDbVersion + "'\n" : "";
+    String semanticDbPluginSetup;
+    if (!javaSemanticDbSetup.isEmpty() || !scalaSemanticDbSetup.isEmpty()) {
+      semanticDbPluginSetup = """
+          // apply plugin to setup semanticdb info
+          apply plugin: com.microsoft.java.bs.gradle.plugin.MetalsBspPlugin
+
+          MetalsBspPlugin {
+            sourceRoot = file('$workspace')
+            $javaSemanticDbSetup
+            $scalaSemanticDbSetup
+          }
+        """
+        .replace("$workspace", workspace)
+        .replace("$javaSemanticDbSetup", javaSemanticDbSetup)
+        .replace("$scalaSemanticDbSetup", scalaSemanticDbSetup);
+    } else {
+      semanticDbPluginSetup = "";
+    }
+
     return """
         initscript {
           repositories {
@@ -363,10 +496,14 @@ public class Utils {
           }
         }
         allprojects { proj ->
-          apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
+          $bspPluginSetup
+
+          $semanticDbPluginSetup
         }"""
         .replace("$group", BuildInfo.groupId)
         .replace("$artifact", BuildInfo.pluginArtifactId)
-        .replace("$version", BuildInfo.version);
+        .replace("$version", BuildInfo.version)
+        .replace("$bspPluginSetup", bspPluginSetup)
+        .replace("$semanticDbPluginSetup", semanticDbPluginSetup);
   }
 }

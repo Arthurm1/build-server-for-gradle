@@ -4,10 +4,7 @@
 package com.microsoft.java.bs.core.internal.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.net.URI;
@@ -30,22 +27,26 @@ import ch.epfl.scala.bsp4j.InitializeBuildResult;
 
 class LifecycleServiceTest {
 
+  private InitializeBuildParams getBuildParams() {
+    BuildClientCapabilities capabilities =
+            new BuildClientCapabilities(SupportedLanguages.allBspNames);
+    return new InitializeBuildParams(
+            "test-client",
+            "0.1.0",
+            "0.1.0",
+            Paths.get(System.getProperty("java.io.tmpdir")).toUri().toString(),
+            capabilities
+    );
+  }
+
   @Test
   void testInitializeServer() {
-    BuildClientCapabilities capabilities =
-        new BuildClientCapabilities(SupportedLanguages.allBspNames);
-    InitializeBuildParams params = new InitializeBuildParams(
-        "test-client",
-        "0.1.0",
-        "0.1.0",
-        Paths.get(System.getProperty("java.io.tmpdir")).toUri().toString(),
-        capabilities
-    );
-
-    LifecycleService lifecycleService = mock(LifecycleService.class);
-    doNothing().when(lifecycleService).initializePreferenceManager(any(), any());
-    when(lifecycleService.initializeServer(any(), any())).thenCallRealMethod();
-
+    InitializeBuildParams params = getBuildParams();
+    PreferenceManager preferenceManager = new PreferenceManager();
+    // mock connector so Gradle calls aren't made - that's not what's being tested here
+    GradleApiConnector gradleApiConnector = mock(GradleApiConnector.class);
+    LifecycleService lifecycleService = new LifecycleService(gradleApiConnector,
+            preferenceManager);
     InitializeBuildResult res = lifecycleService.initializeServer(params, null);
 
     assertEquals(BuildInfo.serverName, res.getDisplayName());
@@ -55,23 +56,18 @@ class LifecycleServiceTest {
 
   @Test
   void testInitializePreferenceManager() {
-    BuildClientCapabilities capabilities =
-        new BuildClientCapabilities(SupportedLanguages.allBspNames);
-    InitializeBuildParams params = new InitializeBuildParams(
-        "test-client",
-        "0.1.0",
-        "0.1.0",
-        Paths.get(System.getProperty("java.io.tmpdir")).toUri().toString(),
-        capabilities
-    );
+    InitializeBuildParams params = getBuildParams();
+    // test setting Gradle version from BSP client
     Preferences preferences = new Preferences();
     preferences.setGradleVersion("8.1");
     params.setData(preferences);
 
     PreferenceManager preferenceManager = new PreferenceManager();
-    LifecycleService lifecycleService = new LifecycleService(
-        mock(GradleApiConnector.class), preferenceManager);
-    lifecycleService.initializePreferenceManager(params, null);
+    // mock connector so Gradle calls aren't made - that's not what's being tested here
+    GradleApiConnector gradleApiConnector = mock(GradleApiConnector.class);
+    LifecycleService lifecycleService = new LifecycleService(gradleApiConnector,
+            preferenceManager);
+    lifecycleService.initializeServer(params, null);
 
     assertEquals("8.1", preferenceManager.getPreferences().getGradleVersion());
   }

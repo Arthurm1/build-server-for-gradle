@@ -57,6 +57,16 @@ public class Preferences {
   private Map<String, String> jdks;
 
   /**
+   * Java semanticdb plugin version to use.
+   */
+  private String javaSemanticdbVersion;
+
+  /**
+   * Scala semanticdb plugin version to use.
+   */
+  private String semanticdbVersion;
+
+  /**
    * Initialize the preferences.
    */
   public Preferences() {
@@ -125,5 +135,25 @@ public class Preferences {
 
   public void setJdks(Map<String, String> jdks) {
     this.jdks = jdks;
+  }
+
+  public String getJavaSemanticdbVersion() {
+    return javaSemanticdbVersion;
+  }
+
+  public void setJavaSemanticdbVersion(String javaSemanticdbVersion) {
+    this.javaSemanticdbVersion = javaSemanticdbVersion;
+  }
+
+  public String getSemanticdbVersion() {
+    return semanticdbVersion;
+  }
+
+  public String getScalaSemanticdbVersion() {
+    return semanticdbVersion;
+  }
+
+  public void setSemanticdbVersion(String semanticdbVersion) {
+    this.semanticdbVersion = semanticdbVersion;
   }
 }

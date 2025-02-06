@@ -61,12 +61,16 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
 
         InitializeBuildParams initParams = getInitializeBuildParams("legacy-gradle");
         Preferences preferences = new Preferences();
+        preferences.setSemanticdbVersion("1.0");
+        preferences.setJavaSemanticdbVersion("2.0");
         initParams.setData(preferences);
         InitializeBuildResult initResult = testServer.buildInitialize(initParams).join();
         assertEquals("BSP-Preferences", initResult.getDataKind());
         assertNotNull(initResult.getData());
         Preferences resultPrefs = JsonUtils.toModel(initResult.getData(), Preferences.class);
         assertNotNull(resultPrefs);
+        assertEquals("1.0", resultPrefs.getSemanticdbVersion());
+        assertEquals("2.0", resultPrefs.getJavaSemanticdbVersion());
 
         // Wait for the configuration logics to complete
         synchronized (this) {
