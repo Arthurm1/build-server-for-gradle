@@ -50,16 +50,26 @@ class GradleBuildServerPluginTest {
 
   private GradleSourceSets getGradleSourceSets(ProjectConnection connect) throws IOException {
     BuildActionExecuter<GradleSourceSets> action = connect.action(new GetSourceSetsAction());
-    File initScript = PluginHelper.getInitScript();
-    action
-        .addArguments("--init-script", initScript.getAbsolutePath())
-        .addArguments("-Dorg.gradle.daemon.idletimeout=10")
-        .addArguments("-Dorg.gradle.vfs.watch=false")
-        .addArguments("-Dorg.gradle.logging.level=quiet")
-        .addJvmArguments("-Dbsp.gradle.supportedLanguages="
+    String initScriptContents = PluginHelper.getInitScriptContents();
+    File initScript = PluginHelper.getInitScript(initScriptContents);
+    try {
+      action
+          .addArguments("--init-script", initScript.getAbsolutePath())
+          .addArguments("-Dorg.gradle.daemon.idletimeout=10")
+          .addArguments("-Dorg.gradle.vfs.watch=false")
+          .addArguments("-Dorg.gradle.logging.level=quiet")
+          .addJvmArguments("-Dbsp.gradle.supportedLanguages="
             + String.join(",", SupportedLanguages.allBspNames));
 
-    return new DefaultGradleSourceSets(action.run());
+      return new DefaultGradleSourceSets(action.run());
+    } catch (Exception e) {
+      throw new IllegalStateException("Error retrieving source sets with script "
+          + initScriptContents, e);
+    } finally {
+      if (initScript != null) {
+        initScript.delete();
+      }
+    }
   }
 
   private interface ConnectionConsumer {

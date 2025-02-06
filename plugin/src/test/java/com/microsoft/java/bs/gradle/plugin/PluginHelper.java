@@ -6,6 +6,7 @@ package com.microsoft.java.bs.gradle.plugin;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
@@ -15,31 +16,54 @@ public class PluginHelper {
   private PluginHelper() {}
 
   /**
-   * Returns the init script file.
+   * Returns the init script contents for applying the plugin.
    */
-  public static File getInitScript() throws IOException {
-    File pluginFolder = Paths.get(System.getProperty("user.dir"),
-        "build", "libs").toFile();
-    File pluginJarFile = pluginFolder.listFiles()[0];
-    String pluginJarUnixPath = pluginJarFile.getAbsolutePath().replace("\\", "/");
-    String initScriptContent =
-        "initscript {\n"
+  public static String getInitScriptContents() {
+    Path pluginProjectPath = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+    if (!pluginProjectPath.endsWith("plugin")) {
+      throw new IllegalStateException("Tests not run from plugin folder " + pluginProjectPath);
+    }
+    Path modelProjectPath = pluginProjectPath.getParent().resolve("model");
+
+    Path classesPath = Paths.get("build", "classes", "java", "main");
+    Path pluginClassesPath = pluginProjectPath.resolve(classesPath);
+    Path modelClassesPath = modelProjectPath.resolve(classesPath);
+
+    if (!Files.exists(pluginClassesPath)) {
+      throw new IllegalStateException("Plugin classes path doesn't exist.  Ensure project is built "
+          + pluginClassesPath);
+    }
+    if (!Files.exists(modelClassesPath)) {
+      throw new IllegalStateException("Model classes path doesn't exist.  Ensure project is built "
+          + modelClassesPath);
+    }
+
+    String pluginPath = pluginClassesPath.toString().replace("\\", "/");
+    String modelPath = modelClassesPath.toString().replace("\\", "/");
+
+    String initScript = "initscript {\n"
         + "  dependencies {\n"
-        + "    classpath files('%s')\n"
+        + "    classpath files('$pluginPath', '$modelPath')\n"
         + "  }\n"
         + "}\n"
         + "allprojects {\n"
         + "  apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin\n"
         + "}\n";
-    initScriptContent = String.format(initScriptContent, pluginJarUnixPath);
+    return initScript
+        .replace("$pluginPath", pluginPath)
+        .replace("$modelPath", modelPath);
+  }
 
-    byte[] initScriptBytes = initScriptContent.getBytes();
+  /**
+   * Returns the init script file.
+   * Caller responsible for deletion
+   */
+  public static File getInitScript(String contents) throws IOException {
     File initScriptFile = File.createTempFile("init", ".gradle");
     if (!initScriptFile.getParentFile().exists()) {
       initScriptFile.getParentFile().mkdirs();
     }
-    Files.write(initScriptFile.toPath(), initScriptBytes);
-    initScriptFile.deleteOnExit();
+    Files.write(initScriptFile.toPath(), contents.getBytes());
     return initScriptFile;
   }
 }
