@@ -1,17 +1,48 @@
 plugins {
-    id 'application'
+  id 'application'
+  id 'maven-publish'
+  id 'com.opencastsoftware.gradle.buildinfo' version '0.3.1'
+}
+
+// Sourcecode generation.  Gradle properties can now be referenced by java code
+buildInfo {
+  packageName = 'com.microsoft.java.bs.core'
+  className = 'BuildInfo'
+  properties = [
+                bspVersion: project['bspVersion'],
+                serverName: "gradle-build-server",
+                groupId: project['group'],
+                pluginArtifactId: project['pluginArtifactId'],
+                version: project['version']
+               ]
+}
+
+// use `gradlew server:publishToLocalMaven` to publish local and test
+publishing {
+  repositories {
+    mavenLocal()
+  }
+  publications {
+    maven(MavenPublication) {
+      groupId = project['group']
+      artifactId = project['serverArtifactId']
+      version = project['version']
+
+      from components.java
+    }
+  }
 }
 
 dependencies {
-    implementation project(':model')
-    // keep bsp version in sync with com.microsoft.java.bs.core.Constants.BSP_VERSION
-    implementation 'ch.epfl.scala:bsp4j:2.2.0-M2'
-    implementation 'org.apache.commons:commons-lang3:3.17.0'
+  implementation project(':model')
+  implementation "ch.epfl.scala:bsp4j:${project['bspVersion']}"
+  implementation 'org.apache.commons:commons-lang3:3.17.0'
+  implementation 'org.gradle:gradle-tooling-api:8.12'
 
-    testImplementation(platform('org.junit:junit-bom:5.11.4'))
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.mockito:mockito-core:5.15.2'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.15.2'
+  testImplementation(platform('org.junit:junit-bom:5.11.4'))
+  testImplementation 'org.junit.jupiter:junit-jupiter'
+  testImplementation 'org.mockito:mockito-core:5.15.2'
+  testImplementation 'org.mockito:mockito-junit-jupiter:5.15.2'
 }
 
 java {
@@ -25,53 +56,13 @@ tasks.withType(JavaCompile) {
 }
 
 application {
-    mainClass = 'com.microsoft.java.bs.core.Launcher'
-}
-
-jar {
-  archiveFileName = "server.jar"
-  metaInf {
-    from 'src/main/resources/NOTICE.txt'
-  }
-  manifest {
-    attributes 'Implementation-Version': version
-  }
+  mainClass = 'com.microsoft.java.bs.core.Launcher'
 }
 
 test {
-    useJUnitPlatform()
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat "full"
-    }
-}
-
-task generateInitScript() {
-  doLast {
-    def initScript = file("$buildDir/libs/plugins/init.gradle")
-    initScript.parentFile.mkdirs()
-    initScript.write """
-initscript {
-  dependencies {
-    classpath files('plugin-${version}.jar')
+  useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    exceptionFormat "full"
   }
-}
-  allprojects {
-    apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
-  }
-"""
-  }
-}
-
-task copyRuntimeLibs(type: Copy) {
-  from configurations.runtimeClasspath
-  into "$buildDir/libs/runtime"
-}
-
-processResources {
-  dependsOn(':plugin:copyJar')
-  dependsOn copyRuntimeLibs
-  dependsOn(':server:generateInitScript')
-  duplicatesStrategy = 'include'
-  exclude 'NOTICE.txt'
 }

@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.microsoft.java.bs.core.Launcher;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
@@ -49,9 +48,6 @@ class GradleApiConnectorTest {
         "..",
         "testProjects"
     ).normalize();
-    String pluginDir = Paths.get(System.getProperty("user.dir"),
-        "build", "libs", "plugins").toString();
-    System.setProperty(Launcher.PROP_PLUGIN_DIR, pluginDir);
   }
 
   private <A> A withConnector(Function<GradleApiConnector, A> function) {

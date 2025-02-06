@@ -1,5 +1,22 @@
 plugins {
-    id 'java-library'
+  id 'java-library'
+  id 'maven-publish'
+}
+
+// use `gradlew model:publishToLocalMaven` to publish local and test
+publishing {
+  repositories {
+    mavenLocal()
+  }
+  publications {
+    maven(MavenPublication) {
+      groupId = project['group']
+      artifactId = project['modelArtifactId']
+      version = project['version']
+
+      from components.java
+    }
+  }
 }
 
 java {
@@ -13,5 +30,5 @@ tasks.withType(JavaCompile) {
 }
 
 dependencies {
-    api 'org.gradle:gradle-tooling-api:8.12'
+  implementation 'org.gradle:gradle-tooling-api:8.12'
 }

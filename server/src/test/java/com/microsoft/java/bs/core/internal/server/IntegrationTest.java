@@ -257,15 +257,11 @@ abstract class IntegrationTest {
 
   @BeforeAll
   static void beforeClass() {
-    String pluginDir = Paths.get(System.getProperty("user.dir"),
-        "build", "libs", "plugins").toString();
-    System.setProperty(Launcher.PROP_PLUGIN_DIR, pluginDir);
     System.setProperty("bsp.plugin.reloadworkspace.disabled", "true");
   }
 
   @AfterAll
   static void afterClass() {
-    System.clearProperty(Launcher.PROP_PLUGIN_DIR);
     System.clearProperty("bsp.plugin.reloadworkspace.disabled");
   }
 

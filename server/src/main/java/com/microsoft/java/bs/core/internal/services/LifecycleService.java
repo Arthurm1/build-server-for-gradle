@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
-import com.microsoft.java.bs.core.Constants;
+import com.microsoft.java.bs.core.BuildInfo;
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.gradle.GradleBuildKind;
 import com.microsoft.java.bs.core.internal.gradle.Utils;
@@ -71,9 +71,9 @@ public class LifecycleService {
 
     BuildServerCapabilities capabilities = initializeServerCapabilities();
     InitializeBuildResult buildResult = new InitializeBuildResult(
-        Constants.SERVER_NAME,
-        Constants.SERVER_VERSION,
-        Constants.BSP_VERSION,
+        BuildInfo.serverName,
+        BuildInfo.version,
+        BuildInfo.bspVersion,
         capabilities
     );
     buildResult.setDataKind("BSP-Preferences");

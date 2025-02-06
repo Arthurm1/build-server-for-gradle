@@ -168,30 +168,36 @@ public class GradleApiConnector {
    */
   public GradleSourceSets getGradleSourceSets(URI projectUri, BuildClient client,
       CancellationToken cancellationToken) {
-    File initScript = Utils.getInitScriptFile();
-    if (!initScript.exists()) {
-      throw new IllegalStateException("Failed to get init script file.");
-    }
     ProgressReporter reporter = new DefaultProgressReporter(client);
     ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     try (ProjectConnection connection = getGradleConnector(projectUri).connect();
          errorOut) {
-      BuildActionExecuter<GradleSourceSets> buildExecutor =
-          Utils.getBuildActionExecuter(connection, preferenceManager.getPreferences(),
-            new GetSourceSetsAction(), cancellationToken)
-          .addProgressListener(reporter,
-              OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION)
-          .setStandardError(errorOut)
-          .addArguments("--init-script", initScript.getAbsolutePath());
-      if (Boolean.getBoolean("bsp.plugin.debug.enabled")) {
-        buildExecutor.addJvmArguments(
-            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
+      String initScriptContents = Utils.createPluginScript();
+      File initScript = Utils.createInitScriptFile("sourcesets", initScriptContents);
+      try {
+        BuildActionExecuter<GradleSourceSets> buildExecutor =
+            Utils.getBuildActionExecuter(connection, preferenceManager.getPreferences(),
+              new GetSourceSetsAction(), cancellationToken)
+            .addProgressListener(reporter,
+                OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION)
+            .setStandardError(errorOut);
+        if (Boolean.getBoolean("bsp.plugin.debug.enabled")) {
+          buildExecutor.addJvmArguments(
+              "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
+        }
+        if (initScript != null) {
+          buildExecutor.addArguments("--init-script", initScript.getAbsolutePath());
+        }
+        buildExecutor.addJvmArguments("-Dbsp.gradle.supportedLanguages="
+            + String.join(",", preferenceManager.getClientSupportedLanguages()));
+        // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
+        // via a copy constructor and return as a POJO.
+        return new DefaultGradleSourceSets(buildExecutor.run());
+      } finally {
+        if (initScript != null) {
+          initScript.delete();
+        }
       }
-      buildExecutor.addJvmArguments("-Dbsp.gradle.supportedLanguages="
-          + String.join(",", preferenceManager.getClientSupportedLanguages()));
-      // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
-      // via a copy constructor and return as a POJO.
-      return new DefaultGradleSourceSets(buildExecutor.run());
     } catch (GradleConnectionException | IllegalStateException | IOException e) {
       String summary = e.getMessage();
       if (errorOut.size() > 0) {
@@ -355,7 +361,7 @@ public class GradleApiConnector {
         execTask += "    })\n"
             + "  }\n"
             + "}\n";
-        File initScript = Utils.createInitScriptFile(execTask);
+        File initScript = Utils.createInitScriptFile("runMain", execTask);
         try {
           BuildLauncher launcher = Utils
               .getBuildLauncher(connection,
@@ -368,15 +374,19 @@ public class GradleApiConnector {
               .setStandardError(reporter.getStdErr())
               // TODO BSP `run/readStdin` - how to link which running task gets which StdIn data?
               //    .setStandardInput(reporter.getStdIn())
-              .addArguments("--init-script", initScript.getAbsolutePath())
               .addProgressListener(reporter, OperationType.TASK);
+          if (initScript != null) {
+            launcher.addArguments("--init-script", initScript.getAbsolutePath());
+          }
           if (compileProgressReporter != null) {
             launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
           }
           // run method is blocking
           launcher.run();
         } finally {
-          initScript.delete();
+          if (initScript != null) {
+            initScript.delete();
+          }
         }
       } catch (GradleConnectionException | IllegalStateException e) {
         String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));

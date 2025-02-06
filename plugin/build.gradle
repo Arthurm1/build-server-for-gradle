@@ -1,17 +1,32 @@
 plugins {
   id 'java-gradle-plugin'
+  id 'maven-publish'
+  id 'java'
 }
 
-configurations {
-  bundled
+// disable the plugin publishing so maven & plugin don't clash on publish
+gradlePlugin {
+  automatedPublishing = false
+}
+
+// use `gradlew plugin:publishToLocalMaven` to publish local and test
+publishing {
+  repositories {
+    mavenLocal()
+  }
+  publications {
+    maven(MavenPublication) {
+      groupId = project['group']
+      artifactId = project['pluginArtifactId']
+      version = project['version']
+
+      from components.java
+    }
+  }
 }
 
 dependencies {
   implementation project(":model")
-  bundled(project(":model")) {
-    transitive = false
-  }
-
   testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 }
 
@@ -25,29 +40,10 @@ tasks.withType(JavaCompile) {
   options.compilerArgs += ['-Xlint']
 }
 
-jar {
-  dependsOn ':model:jar'
-  from {
-    configurations.bundled.collect {
-      it.isDirectory() ? it : zipTree(it)
-    }
-  }
-  archiveFileName = "plugin-${version}.jar"
-}
-
 test {
-  dependsOn(':plugin:assemble')
   useJUnitPlatform()
   testLogging {
-      events "passed", "skipped", "failed"
-      exceptionFormat "full"
+    events "passed", "skipped", "failed"
+    exceptionFormat "full"
   }
-}
-
-task copyJar(type: Copy) {
-  dependsOn(':plugin:jar')
-  from ("build/libs") {
-    include "*.jar"
-  }
-  into "../server/build/libs/plugins"
 }

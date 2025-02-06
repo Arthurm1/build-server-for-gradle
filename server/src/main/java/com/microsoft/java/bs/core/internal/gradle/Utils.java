@@ -6,7 +6,6 @@ package com.microsoft.java.bs.core.internal.gradle;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -25,7 +24,7 @@ import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.TestLauncher;
 import org.gradle.util.GradleVersion;
 
-import com.microsoft.java.bs.core.Launcher;
+import com.microsoft.java.bs.core.BuildInfo;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 
 /**
@@ -33,11 +32,6 @@ import com.microsoft.java.bs.core.internal.model.Preferences;
  */
 public class Utils {
   private Utils() {}
-
-  /**
-   * The file name of the init script.
-   */
-  private static final String INIT_GRADLE_SCRIPT = "init.gradle";
 
   /**
    * The environment variable for Gradle home.
@@ -48,16 +42,6 @@ public class Utils {
    * The environment variable for Gradle user home.
    */
   private static final String GRADLE_USER_HOME = "GRADLE_USER_HOME";
-
-  /**
-   * Get the Gradle connector for the project.
-   *
-   * @param projectUri The project uri.
-   */
-  public static GradleConnector getProjectConnector(URI projectUri,
-      Preferences preferences) {
-    return getProjectConnector(new File(projectUri), preferences);
-  }
 
   /**
    * Get the Gradle connector for the project.
@@ -224,10 +208,6 @@ public class Utils {
     return "1.8";
   }
 
-  public static File getInitScriptFile() {
-    return Paths.get(System.getProperty(Launcher.PROP_PLUGIN_DIR), INIT_GRADLE_SCRIPT).toFile();
-  }
-
   static File getGradleUserHomeFile(String gradleUserHome) {
     if (StringUtils.isNotBlank(gradleUserHome)) {
       return new File(gradleUserHome);
@@ -340,15 +320,19 @@ public class Utils {
   }
 
   /**
-   * Create a temporary init.gradle script.
+   * Create a temporary init.gradle script.  If contents is null then file isn't created.
    * Caller is responsible for file deletion.
    *
+   * @param prefix filename prefix
    * @param contents contents of script.
-   * @return the init.gradle file.
+   * @return the init.gradle file or null if contents are empty.
    */
-  public static File createInitScriptFile(String contents) {
+  public static File createInitScriptFile(String prefix, String contents) {
+    if (contents == null || contents.isEmpty()) {
+      return null;
+    }
     try {
-      File initScriptFile = File.createTempFile("init", ".gradle");
+      File initScriptFile = File.createTempFile(prefix, ".gradle");
       if (!initScriptFile.getParentFile().exists()) {
         initScriptFile.getParentFile().mkdirs();
       }
@@ -357,5 +341,32 @@ public class Utils {
     } catch (IOException e) {
       throw new IllegalStateException("Error creating init file", e);
     }
+  }
+
+  /**
+   * Create a Gradle init script to apply plugin.
+   *
+   * @return the text for the init script.
+   */
+  public static String createPluginScript() {
+    return """
+        initscript {
+          repositories {
+            mavenLocal() // included so tests run and users can publish their own version
+            maven {
+              url = 'https://repo.gradle.org/gradle/libs-releases'
+            }
+          }
+
+          dependencies {
+            classpath '$group:$artifact:$version'
+          }
+        }
+        allprojects { proj ->
+          apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
+        }"""
+        .replace("$group", BuildInfo.groupId)
+        .replace("$artifact", BuildInfo.pluginArtifactId)
+        .replace("$version", BuildInfo.version);
   }
 }

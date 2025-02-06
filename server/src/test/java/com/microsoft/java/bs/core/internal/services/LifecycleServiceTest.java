@@ -18,7 +18,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.microsoft.java.bs.core.Constants;
+import com.microsoft.java.bs.core.BuildInfo;
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.Preferences;
@@ -48,9 +48,9 @@ class LifecycleServiceTest {
 
     InitializeBuildResult res = lifecycleService.initializeServer(params, null);
 
-    assertEquals(Constants.SERVER_NAME, res.getDisplayName());
-    assertEquals(Constants.SERVER_VERSION, res.getVersion());
-    assertEquals(Constants.BSP_VERSION, res.getBspVersion());
+    assertEquals(BuildInfo.serverName, res.getDisplayName());
+    assertEquals(BuildInfo.version, res.getVersion());
+    assertEquals(BuildInfo.bspVersion, res.getBspVersion());
   }
 
   @Test

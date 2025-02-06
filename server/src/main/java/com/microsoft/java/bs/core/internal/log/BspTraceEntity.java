@@ -3,7 +3,7 @@
 
 package com.microsoft.java.bs.core.internal.log;
 
-import com.microsoft.java.bs.core.Constants;
+import com.microsoft.java.bs.core.BuildInfo;
 
 /**
  * The Object passed to the logger.
@@ -20,7 +20,7 @@ public class BspTraceEntity {
   private BspTraceEntity(Builder builder) {
     this.kind = "bsptrace";
     this.schemaVersion = "1.0";
-    this.buildServerVersion = Constants.SERVER_VERSION;
+    this.buildServerVersion = BuildInfo.version;
     this.operationName = builder.operationName;
     this.duration = builder.duration;
     this.trace = builder.trace;

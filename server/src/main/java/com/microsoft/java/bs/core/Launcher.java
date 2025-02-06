@@ -34,15 +34,9 @@ public class Launcher {
   public static final Logger LOGGER = Logger.getLogger("GradleBuildServerLogger");
 
   /**
-   * The property name for the directory location storing the plugin and init script.
-   */
-  public static final String PROP_PLUGIN_DIR = "plugin.dir";
-
-  /**
    * Main entry point.
    */
   public static void main(String[] args) {
-    checkRequiredProperties();
 
     org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> launcher;
     Map<String, String> params = parseArgs(args);
@@ -109,12 +103,6 @@ public class Launcher {
     lifecycleService.setClient(client);
     buildTargetService.setClient(client);
     return launcher;
-  }
-
-  private static void checkRequiredProperties() {
-    if (System.getProperty(PROP_PLUGIN_DIR) == null) {
-      throw new IllegalStateException("The property '" + PROP_PLUGIN_DIR + "' is not set");
-    }
   }
 
   private static void setupLoggers(BuildClient client) {
