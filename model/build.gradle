@@ -8,6 +8,10 @@ java {
   }
 }
 
+tasks.withType(JavaCompile) {
+  options.compilerArgs += ['-Xlint']
+}
+
 dependencies {
     api 'org.gradle:gradle-tooling-api:8.12'
 }

@@ -20,6 +20,10 @@ java {
   }
 }
 
+tasks.withType(JavaCompile) {
+  options.compilerArgs += ['-Xlint']
+}
+
 application {
     mainClass = 'com.microsoft.java.bs.core.Launcher'
 }

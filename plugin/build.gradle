@@ -21,6 +21,10 @@ java {
   }
 }
 
+tasks.withType(JavaCompile) {
+  options.compilerArgs += ['-Xlint']
+}
+
 jar {
   dependsOn ':model:jar'
   from {

@@ -212,16 +212,20 @@ public class BuildTargetManager {
 
   private JvmBuildTarget getJvmBuildTarget(GradleSourceSet sourceSet, JavaExtension javaExtension) {
     // See: https://build-server-protocol.github.io/docs/extensions/jvm#jvmbuildtarget
-    return new JvmBuildTargetEx(
-        javaExtension.getJavaHome() == null ? "" : javaExtension.getJavaHome()
-            .toPath().toUri().toString(),
-        javaExtension.getJavaVersion() == null ? "" : javaExtension.getJavaVersion(),
-        sourceSet.getGradleVersion() == null ? "" : sourceSet.getGradleVersion(),
-        javaExtension.getSourceCompatibility() == null ? ""
-            : javaExtension.getSourceCompatibility(),
-        javaExtension.getTargetCompatibility() == null ? ""
-            : javaExtension.getTargetCompatibility()
-    );
+    JvmBuildTargetEx buildTarget = new JvmBuildTargetEx();
+
+    buildTarget.setJavaHome(javaExtension.getJavaHome() == null ? ""
+        : javaExtension.getJavaHome().toPath().toUri().toString());
+    buildTarget.setJavaVersion(javaExtension.getJavaVersion() == null ? ""
+        : javaExtension.getJavaVersion());
+    buildTarget.setGradleVersion(sourceSet.getGradleVersion() == null ? ""
+        : sourceSet.getGradleVersion());
+    buildTarget.setSourceCompatibility(javaExtension.getSourceCompatibility() == null ? ""
+        : javaExtension.getSourceCompatibility());
+    buildTarget.setTargetCompatibility(javaExtension.getTargetCompatibility() == null ? ""
+        : javaExtension.getTargetCompatibility());
+
+    return buildTarget;
   }
 
   private void setJvmBuildTarget(GradleSourceSet sourceSet, JavaExtension javaExtension,

@@ -32,6 +32,7 @@ import java.util.stream.Stream;
  * handling both normal and composite builds.
  */
 public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
+  private static final long serialVersionUID = 1L;
 
   /**
    * Executes the build action and retrieves source sets from the Gradle build.
@@ -119,6 +120,8 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
    * This allows project models to be retrieved in parallel.
    */
   static class GetSourceSetAction implements BuildAction<GradleSourceSets> {
+    private static final long serialVersionUID = 1L;
+
     private final Model model;
 
     public GetSourceSetAction(Model model) {

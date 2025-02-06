@@ -20,14 +20,8 @@ public class JvmBuildTargetEx extends JvmBuildTarget {
   /**
    * Create a new instance of {@link JvmBuildTargetEx}.
    */
-  public JvmBuildTargetEx(String javaHome, String javaVersion,
-      String gradleVersion, String sourceCompatibility, String targetCompatibility) {
+  public JvmBuildTargetEx() {
     super();
-    this.gradleVersion = gradleVersion;
-    this.sourceCompatibility = sourceCompatibility;
-    this.targetCompatibility = targetCompatibility;
-    setJavaHome(javaHome);
-    setJavaVersion(javaVersion);
   }
 
   public String getGradleVersion() {
