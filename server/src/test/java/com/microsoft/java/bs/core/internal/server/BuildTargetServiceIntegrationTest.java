@@ -17,6 +17,10 @@ import ch.epfl.scala.bsp4j.Diagnostic;
 import ch.epfl.scala.bsp4j.DiagnosticSeverity;
 import ch.epfl.scala.bsp4j.InverseSourcesParams;
 import ch.epfl.scala.bsp4j.InverseSourcesResult;
+import ch.epfl.scala.bsp4j.JvmEnvironmentItem;
+import ch.epfl.scala.bsp4j.JvmMainClass;
+import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams;
+import ch.epfl.scala.bsp4j.JvmTestEnvironmentResult;
 import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
@@ -60,6 +64,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -323,6 +328,86 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       }
       client.clearMessages();
     });
+  }
+  
+
+  @Test
+  void testRetrievingJunitTestNames() {
+    withNewTestServer("java-tests", (gradleBuildServer, client) -> {
+      // get targets
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+          .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+          .map(BuildTarget::getId)
+          .collect(Collectors.toList());
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      gradleBuildServer.buildTargetCleanCache(cleanCacheParams).join();
+
+      // compile targets
+      CompileParams compileParams = new CompileParams(btIds);
+      compileParams.setOriginId("originId");
+      gradleBuildServer.buildTargetCompile(compileParams).join();
+      client.clearMessages();
+
+      // retrieve test names
+      JvmTestEnvironmentParams testEnvParams = new JvmTestEnvironmentParams(btIds);
+      JvmTestEnvironmentResult testEnvResult =
+              gradleBuildServer.buildTargetJvmTestEnvironment(testEnvParams).join();
+      Optional<JvmEnvironmentItem> testItemOpt = testEnvResult.getItems().stream()
+          .filter(f -> f.getTarget().toString().contains("sourceset=test"))
+          .findAny();
+      assertTrue(testItemOpt.isPresent());
+
+      Optional<JvmEnvironmentItem> extraTestItemOpt = testEnvResult.getItems().stream()
+          .filter(f -> f.getTarget().toString().contains("sourceset=extraTest"))
+          .findAny();
+      assertTrue(extraTestItemOpt.isPresent());
+
+      JvmEnvironmentItem testItem = testItemOpt.get();
+      assertTestExists(testItem, "com.example.project.TestFactoryTests");
+      assertTestExists(testItem, "com.example.project.NestedTests$NestedClassA");
+      assertTestExists(testItem, "com.example.project.NestedTests$NestedClassB");
+      assertTestExists(testItem, "com.example.project.NestedTests$NestedClassB$ADeeperClass");
+      assertTestExists(testItem, "com.example.project.EnvVarTests");
+      assertTestExists(testItem, "com.example.project.ExceptionInBefore");
+      assertTestExists(testItem, "com.example.project.PassingTests");
+      assertTestExists(testItem, "com.example.project.FailingTests");
+      assertTestExists(testItem, "com.example.project.NestedTests");
+      JvmEnvironmentItem extraTestItem = extraTestItemOpt.get();
+      assertTestExists(extraTestItem, "com.example.project.ExtraTests");
+
+      client.waitOnStartReports(18);
+      client.waitOnFinishReports(18);
+      client.waitOnCompileTasks(4);
+      client.waitOnCompileReports(4);
+      client.waitOnLogMessages(0);
+      client.waitOnTestStarts(0);
+      client.waitOnTestFinishes(0);
+      client.waitOnTestReports(0);
+      for (CompileReport message : client.compileReports) {
+        assertTrue(message.getNoOp());
+      }
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      client.clearMessages();
+    });
+  }
+
+  private void assertTestExists(JvmEnvironmentItem testItem, String mainClass) {
+    Optional<JvmMainClass> mainClassOpt = testItem.getMainClasses().stream()
+        .filter(main -> main.getClassName().equals(mainClass))
+        .findAny();
+    assertTrue(mainClassOpt.isPresent(), () -> {
+      List<String> classes = testItem.getMainClasses().stream()
+            .map(JvmMainClass::getClassName)
+            .collect(Collectors.toList());
+      return "Test " + mainClass + " not found in " + classes;
+    });
+
+    assertFalse(testItem.getClasspath().isEmpty());
   }
 
   @Test

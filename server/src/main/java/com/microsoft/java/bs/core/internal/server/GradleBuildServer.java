@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.logging.Level;
 
+import ch.epfl.scala.bsp4j.JvmCompileClasspathParams;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathResult;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -44,6 +46,11 @@ import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.JavaBuildServer;
 import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
+import ch.epfl.scala.bsp4j.JvmBuildServer;
+import ch.epfl.scala.bsp4j.JvmRunEnvironmentParams;
+import ch.epfl.scala.bsp4j.JvmRunEnvironmentResult;
+import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams;
+import ch.epfl.scala.bsp4j.JvmTestEnvironmentResult;
 import ch.epfl.scala.bsp4j.OutputPathsParams;
 import ch.epfl.scala.bsp4j.OutputPathsResult;
 import ch.epfl.scala.bsp4j.ReadParams;
@@ -69,7 +76,8 @@ import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
 /**
  * The implementation of the Build Server Protocol.
  */
-public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBuildServer {
+public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBuildServer,
+    JvmBuildServer {
 
   private final LifecycleService lifecycleService;
 
@@ -153,6 +161,28 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   public CompletableFuture<CompileResult> buildTargetCompile(CompileParams params) {
     return handleRequest("buildTarget/compile", cancelToken ->
        buildTargetService.compile(params, cancelToken));
+  }
+
+  @Override
+  public CompletableFuture<JvmRunEnvironmentResult> buildTargetJvmRunEnvironment(
+      JvmRunEnvironmentParams params) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'buildTarget/jvmRunEnvironment'");
+  }
+
+  @Override
+  public CompletableFuture<JvmTestEnvironmentResult> buildTargetJvmTestEnvironment(
+      JvmTestEnvironmentParams params) {
+    return handleRequest("buildTarget/jvmTestEnvironment", cancelToken ->
+        buildTargetService.getBuildTargetJvmTestEnvironment(params, cancelToken));
+  }
+
+  @Override
+  public CompletableFuture<JvmCompileClasspathResult> buildTargetJvmCompileClasspath(
+      JvmCompileClasspathParams params) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException(
+        "Unimplemented method 'buildTarget/jvmCompileClasspath'");
   }
 
   @Override

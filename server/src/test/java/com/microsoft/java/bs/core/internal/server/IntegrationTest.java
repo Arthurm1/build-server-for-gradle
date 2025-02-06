@@ -342,7 +342,7 @@ abstract class IntegrationTest {
         assertTrue(capabilities.getOutputPathsProvider());
         assertTrue(capabilities.getBuildTargetChangedProvider());
         assertFalse(capabilities.getJvmRunEnvironmentProvider());
-        assertFalse(capabilities.getJvmTestEnvironmentProvider());
+        assertTrue(capabilities.getJvmTestEnvironmentProvider());
         assertFalse(capabilities.getCargoFeaturesProvider());
         assertTrue(capabilities.getCanReload());
         assertFalse(capabilities.getJvmCompileClasspathProvider());

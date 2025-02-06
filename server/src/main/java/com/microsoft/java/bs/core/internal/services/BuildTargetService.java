@@ -9,6 +9,7 @@ import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +25,7 @@ import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
+import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
@@ -33,6 +35,7 @@ import com.microsoft.java.bs.core.internal.utils.UriUtils;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
@@ -56,6 +59,10 @@ import ch.epfl.scala.bsp4j.DependencySourcesResult;
 import ch.epfl.scala.bsp4j.JavacOptionsItem;
 import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
+import ch.epfl.scala.bsp4j.JvmEnvironmentItem;
+import ch.epfl.scala.bsp4j.JvmMainClass;
+import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams;
+import ch.epfl.scala.bsp4j.JvmTestEnvironmentResult;
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
 import ch.epfl.scala.bsp4j.InverseSourcesParams;
 import ch.epfl.scala.bsp4j.InverseSourcesResult;
@@ -662,6 +669,59 @@ public class BuildTargetService {
             compileProgressReporter, cancelToken);
       }
     }
+  }
+
+  /**
+   * get the test classes.
+   */
+  public JvmTestEnvironmentResult getBuildTargetJvmTestEnvironment(
+      JvmTestEnvironmentParams params, CancellationToken cancelToken) {
+    Map<BuildTargetIdentifier, List<GradleTestEntity>> mainClassesMap = new HashMap<>();
+    Map<URI, Set<BuildTargetIdentifier>> groupedTargets =
+        groupBuildTargetsByRootDir(params.getTargets(), cancelToken);
+    // retrieving tests can trigger compilation that must be reported on
+    CompileProgressReporter compileProgressReporter = new CompileProgressReporter(client,
+            params.getOriginId(), getFullTaskPathMap());
+    for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
+      Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
+      for (BuildTargetIdentifier btId : entry.getValue()) {
+        GradleBuildTarget target = buildTargetManager.getGradleBuildTarget(btId);
+        if (target == null) {
+          LOGGER.warning("Skip test collection for the build target: " + btId.getUri()
+              + ". Because it cannot be found in the cache.");
+          continue;
+        }
+        testTaskMap.put(btId, target.getSourceSet().getTestTasks());
+      }
+      URI projectUri = entry.getKey();
+      Map<BuildTargetIdentifier, List<GradleTestEntity>> partialMainClassesMap =
+          connector.getTestClasses(projectUri, testTaskMap, client,
+              compileProgressReporter, cancelToken);
+      mainClassesMap.putAll(partialMainClassesMap);
+    }
+    List<JvmEnvironmentItem> items = new ArrayList<>();
+    for (Map.Entry<BuildTargetIdentifier, List<GradleTestEntity>> entry :
+        mainClassesMap.entrySet()) {
+      for (GradleTestEntity gradleTestEntity : entry.getValue()) {
+        GradleTestTask gradleTestTask = gradleTestEntity.getGradleTestTask();
+        List<String> classpath = gradleTestTask.getClasspath()
+            .stream()
+            .map(file -> file.toURI().toString())
+            .collect(Collectors.toList());
+        List<String> jvmOptions = gradleTestTask.getJvmOptions();
+        String workingDirectory = gradleTestTask.getWorkingDirectory().toURI().toString();
+        Map<String, String> environmentVariables = gradleTestTask.getEnvironmentVariables();
+        List<JvmMainClass> mainClasses = gradleTestEntity.getTestClasses()
+            .stream()
+            .map(mainClass -> new JvmMainClass(mainClass, Collections.emptyList()))
+            .collect(Collectors.toList());
+        JvmEnvironmentItem item = new JvmEnvironmentItem(entry.getKey(),
+            classpath, jvmOptions, workingDirectory, environmentVariables);
+        item.setMainClasses(mainClasses);
+        items.add(item);
+      }
+    }
+    return new JvmTestEnvironmentResult(items);
   }
 
   /**

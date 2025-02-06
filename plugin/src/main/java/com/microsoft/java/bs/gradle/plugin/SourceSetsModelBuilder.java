@@ -34,9 +34,11 @@ import org.gradle.util.GradleVersion;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 
@@ -149,41 +151,66 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     gradleSourceSet.setArchiveOutputFiles(archiveOutputFiles);
 
     // tests
-    if (!sourceOutputDirs.isEmpty()) {
-      Set<Test> testTasks = tasksWithType(project, Test.class);
-      for (Test testTask : testTasks) {
-        if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) >= 0) {
-          FileCollection files = testTask.getTestClassesDirs();
-          for (File sourceOutputDir : sourceOutputDirs) {
-            if (files.contains(sourceOutputDir)) {
-              gradleSourceSet.setHasTests(true);
-              break;
-            }
-          }
-          if (gradleSourceSet.hasTests()) {
-            break;
-          }
-        } else {
-          Object testClassesDir = Utils.invokeMethodIgnoreFail(testTask, "getTestClassesDir");
-          if (testClassesDir != null) {
-            for (File sourceOutputDir : sourceOutputDirs) {
-              if (sourceOutputDir.equals(testClassesDir)) {
-                gradleSourceSet.setHasTests(true);
-                break;
-              }
-            }
-            if (gradleSourceSet.hasTests()) {
-              break;
-            }
-          }
-        }
-      }
-    }
+    gradleSourceSet.setTestTasks(getTestTasks(project, sourceOutputDirs));
 
     return gradleSourceSet;
   }
 
-  private <T extends Task> Set<T> tasksWithType(Project project, Class<T> clazz) {
+  /**
+   * find test tasks associated with the source set.
+   *
+   * @param project Gradle project
+   * @param sourceOutputDirs output dirs of the source set
+   * @return a set of GradleTestTask with info on test setup
+   */
+  public static Set<GradleTestTask> getTestTasks(Project project, Set<File> sourceOutputDirs) {
+    Set<GradleTestTask> testTasks = new HashSet<>();
+    if (!sourceOutputDirs.isEmpty()) {
+      Set<Test> tasks = tasksWithType(project, Test.class);
+      for (Test task : tasks) {
+        boolean isForThisSourceSet = false;
+        if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) >= 0) {
+          FileCollection files = task.getTestClassesDirs();
+          for (File sourceOutputDir : sourceOutputDirs) {
+            if (files.contains(sourceOutputDir)) {
+              isForThisSourceSet = true;
+              break;
+            }
+          }
+        } else {
+          Object testClassesDir = Utils.invokeMethodIgnoreFail(task, "getTestClassesDir");
+          if (testClassesDir != null) {
+            for (File sourceOutputDir : sourceOutputDirs) {
+              if (sourceOutputDir.equals(testClassesDir)) {
+                isForThisSourceSet = true;
+                break;
+              }
+            }
+          }
+        }
+        if (isForThisSourceSet) {
+          String taskPath = task.getPath();
+          List<File> classpath = new LinkedList<>();
+          try {
+            classpath.addAll(task.getClasspath().getFiles());
+          } catch (GradleException e) {
+            // ignore
+          }
+          List<String> jvmOptions = task.getAllJvmArgs();
+          File workingDirectory = task.getWorkingDir();
+          Map<String, String> environmentVariables = task.getEnvironment().entrySet()
+              .stream()
+              .collect(Collectors.toMap(Map.Entry::getKey, Object::toString));
+          GradleTestTask testTask = new DefaultGradleTestTask(taskPath, classpath,
+              jvmOptions, workingDirectory, environmentVariables);
+          testTasks.add(testTask);
+        }
+      }
+    }
+    return testTasks;
+  }
+
+  private static <T extends Task> Set<T> tasksWithType(Project project, Class<T> clazz) {
     // Gradle gives concurrentmodification exceptions if multiple threads resolve
     // the tasks concurrently, which happens on multi-project builds
     synchronized (project.getRootProject()) {

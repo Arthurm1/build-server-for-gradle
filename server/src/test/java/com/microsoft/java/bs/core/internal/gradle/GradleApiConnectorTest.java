@@ -15,6 +15,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -24,10 +25,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
@@ -110,15 +113,32 @@ class GradleApiConnectorTest {
         null, null);
     assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
     findSourceSet(gradleSourceSets, "app", "debug");
-    findSourceSet(gradleSourceSets, "app", "debugUnitTest");
+    GradleSourceSet appDebugUnitTest =
+        findSourceSet(gradleSourceSets, "app", "debugUnitTest");
+    assertTrue(appDebugUnitTest.hasTests());
+    assertEquals(1, appDebugUnitTest.getTestTasks().size());
+    assertHasTaskPath(appDebugUnitTest.getTestTasks(), ":app:testDebugUnitTest");
     findSourceSet(gradleSourceSets, "app", "debugAndroidTest");
     findSourceSet(gradleSourceSets, "app", "release");
-    findSourceSet(gradleSourceSets, "app", "releaseUnitTest");
+    GradleSourceSet appReleaseUnitTest =
+        findSourceSet(gradleSourceSets, "app", "releaseUnitTest");
+    assertTrue(appReleaseUnitTest.hasTests());
+    assertEquals(1, appReleaseUnitTest.getTestTasks().size());
+    assertHasTaskPath(appReleaseUnitTest.getTestTasks(), ":app:testReleaseUnitTest");
     findSourceSet(gradleSourceSets, "mylibrary", "debug");
-    findSourceSet(gradleSourceSets, "mylibrary", "debugUnitTest");
+    GradleSourceSet libraryDebugUnitTest =
+        findSourceSet(gradleSourceSets, "mylibrary", "debugUnitTest");
+    assertTrue(libraryDebugUnitTest.hasTests());
+    assertEquals(1, libraryDebugUnitTest.getTestTasks().size());
+    assertHasTaskPath(libraryDebugUnitTest.getTestTasks(), ":mylibrary:testDebugUnitTest");
     findSourceSet(gradleSourceSets, "mylibrary", "debugAndroidTest");
     findSourceSet(gradleSourceSets, "mylibrary", "release");
-    findSourceSet(gradleSourceSets, "mylibrary", "releaseUnitTest");
+    GradleSourceSet libraryReleaseUnitTest =
+        findSourceSet(gradleSourceSets, "mylibrary", "releaseUnitTest");
+    assertTrue(libraryReleaseUnitTest.hasTests());
+    assertEquals(1, libraryReleaseUnitTest.getTestTasks().size());
+    assertHasTaskPath(libraryReleaseUnitTest.getTestTasks(), ":mylibrary:testReleaseUnitTest");
+
     Set<GradleModuleDependency> combinedModuleDependencies = new HashSet<>();
     for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
       combinedModuleDependencies.addAll(sourceSet.getModuleDependencies());
@@ -168,16 +188,33 @@ class GradleApiConnectorTest {
     findSourceSet(gradleSourceSets, "e", "test");
   }
 
+  private void assertHasTaskPath(Set<GradleTestTask> paths, String path) {
+    assertTrue(paths.stream().anyMatch(task -> task.getTaskPath().equals(path)), () -> {
+      String pathsAsStr = paths.stream().map(task -> task.getTaskPath())
+          .collect(Collectors.joining(", "));
+      return "Task path not found [" + path + "] in [" + pathsAsStr + ']';
+    });
+  }
+
   @Test
   void testGetGradleHasTests() {
     File projectDir = projectPath.resolve("test-tag").toFile();
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(5, gradleSourceSets.getGradleSourceSets().size());
-    assertFalse(findSourceSet(gradleSourceSets, "test-tag", "main").hasTests());
-    assertTrue(findSourceSet(gradleSourceSets, "test-tag", "test").hasTests());
-    assertFalse(findSourceSet(gradleSourceSets, "test-tag", "noTests").hasTests());
-    assertTrue(findSourceSet(gradleSourceSets, "test-tag", "intTest").hasTests());
-    assertFalse(findSourceSet(gradleSourceSets, "test-tag", "testFixtures").hasTests());
+    GradleSourceSet main = findSourceSet(gradleSourceSets, "test-tag", "main");
+    assertFalse(main.hasTests());
+    GradleSourceSet test = findSourceSet(gradleSourceSets, "test-tag", "test");
+    assertTrue(test.hasTests());
+    assertEquals(1, test.getTestTasks().size());
+    assertHasTaskPath(test.getTestTasks(), ":test");
+    GradleSourceSet noTests = findSourceSet(gradleSourceSets, "test-tag", "noTests");
+    assertFalse(noTests.hasTests());
+    GradleSourceSet intTest = findSourceSet(gradleSourceSets, "test-tag", "intTest");
+    assertTrue(intTest.hasTests());
+    assertEquals(1, intTest.getTestTasks().size());
+    assertHasTaskPath(intTest.getTestTasks(), ":integrationTest");
+    GradleSourceSet testFixtures = findSourceSet(gradleSourceSets, "test-tag", "testFixtures");
+    assertFalse(testFixtures.hasTests());
   }
 
   @Test
@@ -410,5 +447,45 @@ class GradleApiConnectorTest {
             .anyMatch(arg -> arg.equals("-opt-in=org.mylibrary.OptInAnnotation")));
 
     // TODO test getKotlinAssociates
+  }
+
+  @Test
+  void testGetJvmTestEnvironment() {
+    File projectDir = projectPath.resolve("junit5-jupiter-starter-gradle").toFile();
+    withConnector(connector -> {
+      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
+          null, null);
+
+      Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        BuildTargetIdentifier fakeBt = new BuildTargetIdentifier("Fake");
+        testTaskMap.put(fakeBt, gradleSourceSet.getTestTasks());
+      }
+      Map<BuildTargetIdentifier, List<GradleTestEntity>> tests =
+            connector.getTestClasses(projectDir.toURI(), testTaskMap, null, null, null);
+      assertHasTestClass(tests, "Fake",
+          "com.example.project.CalculatorTests");
+      return null;
+    });
+  }
+
+  private void assertHasTestClass(Map<BuildTargetIdentifier, List<GradleTestEntity>> tests,
+      String btUri, String className) {
+    List<GradleTestEntity> btTests = tests.entrySet().stream()
+        .filter(entry -> entry.getKey().getUri().equals(btUri))
+        .flatMap(entry -> entry.getValue().stream())
+        .collect(Collectors.toList());
+    assertFalse(btTests.isEmpty(),
+        () -> "Build Target " + btUri + " not found in "
+        + tests.keySet().stream()
+          .map(BuildTargetIdentifier::getUri)
+          .collect(Collectors.joining(", ")));
+
+    List<String> btTestClasses = btTests.stream()
+        .flatMap(entity -> entity.getTestClasses().stream())
+        .collect(Collectors.toList());
+    assertTrue(btTestClasses.contains(className),
+        () -> "Test class " + className + " not found in "
+        + String.join(", ", btTestClasses));
   }
 }

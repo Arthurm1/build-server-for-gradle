@@ -10,6 +10,7 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
+import com.microsoft.java.bs.gradle.plugin.SourceSetsModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -188,8 +189,9 @@ public class AndroidUtils {
       // Archive output dirs (not relevant in case of android build variants)
       gradleSourceSet.setArchiveOutputFiles(new HashMap<>());
 
-      // has tests
-      gradleSourceSet.setHasTests(hasProperty(variant, "testedVariant"));
+      // tests
+      gradleSourceSet.setTestTasks(SourceSetsModelBuilder.getTestTasks(project,
+          gradleSourceSet.getSourceOutputDirs()));
 
       // extensions
       addExtensions(gradleSourceSet, compilerArgs);

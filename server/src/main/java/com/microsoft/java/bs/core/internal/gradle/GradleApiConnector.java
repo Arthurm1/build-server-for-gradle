@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,12 +35,15 @@ import org.gradle.tooling.model.gradle.GradleBuild;
 import org.gradle.util.GradleVersion;
 
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.reporter.AppRunReporter;
 import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
+import com.microsoft.java.bs.core.internal.reporter.TestNameRecorder;
 import com.microsoft.java.bs.core.internal.reporter.TestReportReporter;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
 
 import ch.epfl.scala.bsp4j.BuildClient;
@@ -355,6 +359,75 @@ public class GradleApiConnector {
     }
 
     return statusCode;
+  }
+
+  /**
+   * request Gradle to return test classes.
+   */
+  public Map<BuildTargetIdentifier, List<GradleTestEntity>> getTestClasses(URI projectUri,
+      Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap, BuildClient client,
+      CompileProgressReporter compileProgressReporter, CancellationToken cancellationToken) {
+ 
+    Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
+    DefaultProgressReporter reporter = new DefaultProgressReporter(client);
+
+    try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
+      String gradleVersion = getGradleVersion(connection, cancellationToken);
+      // use --test-dry-run to discover tests.  Gradle version must be 8.3 or higher.
+      if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("8.3")) < 0) {
+        reporter.sendError("Error searching for test classes: Gradle version "
+            + gradleVersion + " must be >= 8.3");
+      } else {
+        for (Map.Entry<BuildTargetIdentifier, Set<GradleTestTask>> entry :
+            testTaskMap.entrySet()) {
+          List<GradleTestEntity> gradleTestEntities = new LinkedList<>();
+          for (GradleTestTask gradleTestTask : entry.getValue()) {
+            // task can trigger compilation so add compiler options as well as
+            // script to alter test task to execute dry-run
+            String testScript = Utils.createTestTaskScript(gradleTestTask.getTaskPath());
+            File workspaceDir = new File(projectUri);
+            String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
+                preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+                preferenceManager.getPreferences().getScalaSemanticdbVersion());
+            String script = testScript + '\n' + compilerOptionsScript;
+            File initScript = Utils.createInitScriptFile("testTask", script);
+            try {
+              TestNameRecorder testNameRecorder = new TestNameRecorder();
+              try {
+                TestLauncher launcher = Utils
+                    .getTestLauncher(connection,
+                        preferenceManager.getPreferences(), cancellationToken)
+                    .forTasks(gradleTestTask.getTaskPath())
+                    .addArguments("--init-script", initScript.getAbsolutePath())
+                    .addProgressListener(testNameRecorder, OperationType.TEST)
+                    .addProgressListener(reporter, OperationType.TASK);
+                if (compileProgressReporter != null) {
+                  launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
+                }
+                launcher.run();
+              } catch (GradleConnectionException | IllegalStateException e) {
+                String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
+                reporter.sendError("Error searching for test classes in " 
+                    + gradleTestTask.getTaskPath() + " " + message);
+              }
+              Set<String> mainClasses = testNameRecorder.getMainClasses();
+              GradleTestEntity gradleTestEntity = new GradleTestEntity(gradleTestTask, mainClasses);
+              gradleTestEntities.add(gradleTestEntity);
+            } finally {
+              if (initScript != null) {
+                initScript.delete();
+              }
+            }
+          }
+
+          results.put(entry.getKey(), gradleTestEntities);
+        }
+      }
+    } catch (GradleConnectionException | IllegalStateException e) {
+      reporter.sendError("Error searching for test classes: " + e.getMessage());
+    }
+
+    return results;
   }
 
   /**

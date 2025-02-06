@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 
 /**
@@ -59,7 +60,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   private Set<BuildTargetDependency> buildTargetDependencies;
 
-  private boolean hasTests;
+  private Set<GradleTestTask> testTasks;
 
   private Map<String, LanguageExtension> extensions;
 
@@ -92,7 +93,8 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
             .map(DefaultGradleModuleDependency::new).collect(Collectors.toSet());
     this.buildTargetDependencies = gradleSourceSet.getBuildTargetDependencies().stream()
             .map(DefaultBuildTargetDependency::new).collect(Collectors.toSet());
-    this.hasTests = gradleSourceSet.hasTests();
+    this.testTasks = gradleSourceSet.getTestTasks().stream()
+            .map(DefaultGradleTestTask::new).collect(Collectors.toSet());
     this.extensions = gradleSourceSet.getExtensions().entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey,
                     e -> convertLanguageExtension(e.getValue())));
@@ -288,11 +290,16 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   @Override
   public boolean hasTests() {
-    return hasTests;
+    return testTasks != null && !testTasks.isEmpty();
   }
 
-  public void setHasTests(boolean hasTests) {
-    this.hasTests = hasTests;
+  @Override
+  public Set<GradleTestTask> getTestTasks() {
+    return testTasks;
+  }
+
+  public void setTestTasks(Set<GradleTestTask> testTasks) {
+    this.testTasks = testTasks;
   }
 
   @Override
@@ -310,7 +317,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
         projectDir, rootDir, sourceSetName, classesTaskName, cleanTaskName, taskNames, sourceDirs,
         generatedSourceDirs, sourceOutputDirs, resourceDirs, resourceOutputDirs, archiveOutputFiles,
         compileClasspath, runtimeClasspath, moduleDependencies, buildTargetDependencies,
-        hasTests, extensions);
+        testTasks, extensions);
   }
 
   @Override
@@ -344,7 +351,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
             && Objects.equals(runtimeClasspath, other.runtimeClasspath)
             && Objects.equals(moduleDependencies, other.moduleDependencies)
             && Objects.equals(buildTargetDependencies, other.buildTargetDependencies)
-            && hasTests == other.hasTests
+            && Objects.equals(testTasks, other.testTasks)
             && Objects.equals(extensions, other.extensions);
   }
 
@@ -369,7 +376,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
         + " runtimeClasspath:" + runtimeClasspath
         + " moduleDependencies:" + moduleDependencies
         + " buildTargetDependencies:" + buildTargetDependencies
-        + " hasTests:" + hasTests
+        + " testTasks:" + testTasks
         + " extensions:" + extensions;
   }
 }

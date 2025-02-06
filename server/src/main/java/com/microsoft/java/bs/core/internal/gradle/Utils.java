@@ -347,6 +347,24 @@ public class Utils {
   }
 
   /**
+   * create a script for changing a Gradle test task to execute a dry run.
+   *
+   * @param taskPath path of tesk task.
+   * @return init script contents to setup dry run
+   */
+  public static String createTestTaskScript(String taskPath) {
+    // can't pass arguments to tasks e.g. "--test-dry-run"
+    // so manipulate test task using init script.
+    return """
+        gradle.projectsLoaded {
+          rootProject {
+            tasks.getByPath('$taskPath')?.setDryRun(true)
+          }
+        }"""
+        .replace("$taskPath", taskPath);
+  }
+
+  /**
    * create a script for creating a Gradle JavaExec task to run a Java mainclass.
    *
    * @param projectPath path to Gradle project

@@ -16,12 +16,14 @@ import java.util.Set;
 
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
 import org.junit.jupiter.api.Test;
 
 import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
@@ -37,7 +39,8 @@ class BuildTargetManagerTest {
     DefaultGradleSourceSet gradleSourceSet = getTestGradleSourceSet();
     gradleSourceSet.setSourceSetName("test");
     gradleSourceSet.setProjectName("name");
-    gradleSourceSet.setHasTests(true);
+    GradleTestTask testTask = new DefaultGradleTestTask(null, null, null, null, null);
+    gradleSourceSet.setTestTasks(Set.of(testTask));
     DefaultGradleSourceSets gradleSourceSets =
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     BuildTargetManager manager = new BuildTargetManager();
