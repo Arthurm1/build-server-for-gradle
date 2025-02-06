@@ -46,6 +46,7 @@ public class DefaultKotlinExtension implements KotlinExtension {
     this.sourceDirs = kotlinExtension.getSourceDirs();
     this.generatedSourceDirs = kotlinExtension.getGeneratedSourceDirs();
     this.compileTaskName = kotlinExtension.getCompileTaskName();
+    this.classesDir = kotlinExtension.getClassesDir();
     this.kotlinLanguageVersion = kotlinExtension.getKotlinLanguageVersion();
     this.kotlinApiVersion = kotlinExtension.getKotlinApiVersion();
     this.kotlincOptions = kotlinExtension.getKotlincOptions();

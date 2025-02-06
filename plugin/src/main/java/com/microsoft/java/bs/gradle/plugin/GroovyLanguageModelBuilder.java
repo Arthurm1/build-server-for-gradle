@@ -12,6 +12,7 @@ import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGroovyExtension;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
@@ -76,7 +77,7 @@ public class GroovyLanguageModelBuilder extends LanguageModelBuilder {
     if (GradleVersion.current().compareTo(GradleVersion.version("6.1")) >= 0) {
       return compile.getDestinationDirectory().get().getAsFile();
     } else {
-      return compile.getDestinationDir();
+      return Utils.invokeMethodIgnoreFail(compile, "getDestinationDir");
     }
   }
 }

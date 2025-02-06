@@ -5,7 +5,6 @@ package com.microsoft.java.bs.gradle.plugin;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -15,6 +14,8 @@ import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinExtension;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
+
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.SourceDirectorySet;
@@ -83,26 +84,20 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/dsl/KotlinCommonCompilerOptions.kt
     try {
-      Method getCompilerOptionsMethod = kotlinCompile.getClass().getMethod("getCompilerOptions");
-      Object compilerOptions = getCompilerOptionsMethod.invoke(kotlinCompile);
-      Method getApiVersionMethod = compilerOptions.getClass().getMethod("getApiVersion");
-      Object apiVersionProviderObject = getApiVersionMethod.invoke(compilerOptions);
-      if (apiVersionProviderObject instanceof Provider) {
-        Provider<?> apiVersionProvider = (Provider<?>) apiVersionProviderObject;
-        if (apiVersionProvider.isPresent()) {
-          Object apiVersion = apiVersionProvider.get();
-          if (apiVersion != null) {
-            Method versionMethod = apiVersion.getClass().getMethod("getVersion");
-            Object versionMethodObject = versionMethod.invoke(apiVersion);
-            if (versionMethodObject != null) {
-              return versionMethodObject.toString();
-            }
+      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+      Provider<?> apiVersionProvider = Utils.invokeMethod(compilerOptions, "getApiVersion");
+      if (apiVersionProvider.isPresent()) {
+        Object apiVersion = apiVersionProvider.get();
+        if (apiVersion != null) {
+          Object versionMethodObject = Utils.invokeMethod(apiVersion, "getVersion");
+          if (versionMethodObject != null) {
+            return versionMethodObject.toString();
           }
         }
       }
     } catch (NoSuchMethodException | SecurityException | IllegalAccessException
              | IllegalArgumentException | InvocationTargetException e) {
-      // ignore
+      throw new IllegalStateException("Error in retrieving Kotlin info", e);
     }
     return "";
   }
@@ -111,26 +106,21 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/dsl/KotlinCommonCompilerOptions.kt
     try {
-      Method getCompilerOptionsMethod = kotlinCompile.getClass().getMethod("getCompilerOptions");
-      Object compilerOptions = getCompilerOptionsMethod.invoke(kotlinCompile);
-      Method getLanguageVersionMethod = compilerOptions.getClass().getMethod("getLanguageVersion");
-      Object languageVersionProviderObject = getLanguageVersionMethod.invoke(compilerOptions);
-      if (languageVersionProviderObject instanceof Provider) {
-        Provider<?> languageVersionProvider = (Provider<?>) languageVersionProviderObject;
-        if (languageVersionProvider.isPresent()) {
-          Object languageVersion = languageVersionProvider.get();
-          if (languageVersion != null) {
-            Method versionMethod = languageVersion.getClass().getMethod("getVersion");
-            Object versionMethodObject = versionMethod.invoke(languageVersion);
-            if (versionMethodObject != null) {
-              return versionMethodObject.toString();
-            }
+      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+      Provider<?> languageVersionProvider =
+          Utils.invokeMethod(compilerOptions, "getLanguageVersion");
+      if (languageVersionProvider.isPresent()) {
+        Object languageVersion = languageVersionProvider.get();
+        if (languageVersion != null) {
+          Object versionMethodObject = Utils.invokeMethod(languageVersion, "getVersion");
+          if (versionMethodObject != null) {
+            return versionMethodObject.toString();
           }
         }
       }
     } catch (NoSuchMethodException | SecurityException | IllegalAccessException
              | IllegalArgumentException | InvocationTargetException e) {
-      // ignore
+      throw new IllegalStateException("Error in retrieving Kotlin info", e);
     }
     return "";
   }
@@ -139,23 +129,17 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/dsl/KotlinCommonCompilerOptions.kt
     try {
-      Method getCompilerOptionsMethod = kotlinCompile.getClass().getMethod("getCompilerOptions");
-      Object compilerOptions = getCompilerOptionsMethod.invoke(kotlinCompile);
-      Method getLanguageVersionMethod = compilerOptions.getClass().getMethod("getFreeCompilerArgs");
-      Object freeCompilerArgsProviderObject = getLanguageVersionMethod.invoke(compilerOptions);
-      if (freeCompilerArgsProviderObject instanceof Provider) {
-        Provider<?> freeCompilerArgsProvider = (Provider<?>) freeCompilerArgsProviderObject;
-        if (freeCompilerArgsProvider.isPresent()) {
-          Object freeCompilerArgs = freeCompilerArgsProvider.get();
-          if (freeCompilerArgs instanceof List) {
-            return ((List<?>) freeCompilerArgs).stream()
-              .map(Object::toString).collect(Collectors.toList());
-          }
-        }
+      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+      Provider<List<?>> freeCompilerArgsProvider =
+          Utils.invokeMethod(compilerOptions, "getFreeCompilerArgs");
+      if (freeCompilerArgsProvider.isPresent()) {
+        List<?> freeCompilerArgs = freeCompilerArgsProvider.get();
+        return freeCompilerArgs.stream()
+          .map(Object::toString).collect(Collectors.toList());
       }
     } catch (NoSuchMethodException | SecurityException | IllegalAccessException
              | IllegalArgumentException | InvocationTargetException e) {
-      // ignore
+      throw new IllegalStateException("Error in retrieving Kotlin info", e);
     }
     return null;
   }
@@ -164,23 +148,14 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
     if (GradleVersion.current().compareTo(GradleVersion.version("4.2")) >= 0) {
       // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
       try {
-        Method getDestinationDirectoryMethod =
-            kotlinCompile.getClass().getMethod("getDestinationDirectory");
-        Object destinationDirectory = getDestinationDirectoryMethod.invoke(kotlinCompile);
-        Method getAsFileMethod = destinationDirectory.getClass().getMethod("getAsFile");
-        Object fileProviderObject = getAsFileMethod.invoke(destinationDirectory);
-        if (fileProviderObject instanceof Provider) {
-          Provider<?> fileProvider = (Provider<?>) fileProviderObject;
-          if (fileProvider.isPresent()) {
-            Object file = fileProvider.get();
-            if (file instanceof File) {
-              return (File) file;
-            }
-          }
+        Object destinationDirectory = Utils.invokeMethod(kotlinCompile, "getDestinationDirectory");
+        Provider<File> fileProvider = Utils.invokeMethod(destinationDirectory, "getAsFile");
+        if (fileProvider.isPresent()) {
+          return fileProvider.get();
         }
       } catch (NoSuchMethodException | SecurityException | IllegalAccessException
               | IllegalArgumentException | InvocationTargetException e) {
-        // ignore
+        throw new IllegalStateException("Error in retrieving Kotlin info", e);
       }
     }
     return null;

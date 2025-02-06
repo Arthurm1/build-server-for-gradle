@@ -516,7 +516,7 @@ class GradleBuildServerPluginTest {
             .anyMatch(file -> file.toPath().endsWith("scala")));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
-          assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
+          assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
         }
         assertEquals(1, gradleSourceSet.getResourceDirs().size());
         assertNotNull(gradleSourceSet.getBuildTargetDependencies());
@@ -612,7 +612,7 @@ class GradleBuildServerPluginTest {
             .anyMatch(file -> file.toPath().endsWith("scala")));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
-          assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
+          assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
         }
         assertEquals(1, gradleSourceSet.getResourceDirs().size());
         assertNotNull(gradleSourceSet.getSourceOutputDirs());
@@ -788,7 +788,7 @@ class GradleBuildServerPluginTest {
                 .anyMatch(file -> file.toPath().endsWith("groovy")));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
-          assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
+          assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
         }
         assertFalse(gradleSourceSet.getResourceDirs().isEmpty());
         assertNotNull(gradleSourceSet.getSourceOutputDirs());

@@ -23,6 +23,7 @@ import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguage;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
@@ -59,13 +60,23 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
       extension.setCompileTaskName(javaCompile.getName());
 
       // generated sources aren't always marked as such so work out if sources are in the build dir
-      Set<File> generatedSrcDirs = new HashSet<>(
-          sourceSet.getOutput().getGeneratedSourcesDirs().getFiles());
+      Set<File> generatedSrcDirs = new HashSet<>();
+      if (GradleVersion.current().compareTo(GradleVersion.version("5.2")) >= 0) {
+        generatedSrcDirs.addAll(sourceSet.getOutput().getGeneratedSourcesDirs().getFiles());
+      }
       addAnnotationProcessingDir(javaCompile, generatedSrcDirs);
       Set<File> allSourceDirs = new HashSet<>(sourceSet.getJava().getSrcDirs());
-      Set<File> sourceDirsInOutputDir = getFilesWithThisParent(
-          project.getLayout().getBuildDirectory().getAsFile().get().toPath(), allSourceDirs);
-      generatedSrcDirs.addAll(sourceDirsInOutputDir);
+      File buildDir;
+      // Even though ProjectLayout was added in 4.1, DirectoryProperty wasn't added til 4.3
+      if (GradleVersion.current().compareTo(GradleVersion.version("4.3")) >= 0) {
+        buildDir = project.getLayout().getBuildDirectory().getAsFile().get();
+      } else {
+        buildDir = Utils.invokeMethodIgnoreFail(project, "getBuildDir");
+      }
+      if (buildDir != null) {
+        Set<File> sourceDirsInOutputDir = getFilesWithThisParent(buildDir.toPath(), allSourceDirs);
+        generatedSrcDirs.addAll(sourceDirsInOutputDir);
+      }
       allSourceDirs.removeAll(generatedSrcDirs);
       extension.setSourceDirs(allSourceDirs);
       addGeneratedSourceDirs(javaCompile, extension.getSourceDirs(), generatedSrcDirs);
@@ -106,7 +117,8 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
         generatedSrcDirs.add(generatedDir.getAsFile());
       }
     } else if (GradleVersion.current().compareTo(GradleVersion.version("4.3")) >= 0) {
-      File generatedDir = options.getAnnotationProcessorGeneratedSourcesDirectory();
+      File generatedDir = Utils.invokeMethodIgnoreFail(options,
+          "getAnnotationProcessorGeneratedSourcesDirectory");
       if (generatedDir != null) {
         generatedSrcDirs.add(generatedDir);
       }
@@ -288,7 +300,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
     if (GradleVersion.current().compareTo(GradleVersion.version("6.1")) >= 0) {
       return compile.getDestinationDirectory().get().getAsFile();
     } else {
-      return compile.getDestinationDir();
+      return Utils.invokeMethodIgnoreFail(compile, "getDestinationDir");
     }
   }
 }
