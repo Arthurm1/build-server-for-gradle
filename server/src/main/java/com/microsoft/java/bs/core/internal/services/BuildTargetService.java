@@ -465,7 +465,7 @@ public class BuildTargetService {
       if (!isCancelled(cancelToken)) {
         // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
         String[] tasks = entry.getValue().stream().map(taskNameCreator).distinct()
-          .toArray(String[]::new);
+            .toArray(String[]::new);
         code = connector.runTasks(entry.getKey(), reporter, tasks, cancelToken);
         if (code == StatusCode.ERROR) {
           break;
