@@ -7,13 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -32,12 +34,17 @@ import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.util.GradleVersion;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@Execution(ExecutionMode.CONCURRENT)
 class GradleBuildServerPluginTest {
 
   private static Path projectPath;
+  private static Map<File, ReentrantLock> projectLocks = new HashMap<>();
+  private static Map<GradleVersion, ReentrantLock> gradleLocks = new HashMap<>();
 
   @BeforeAll
   static void beforeClass() {
@@ -76,15 +83,43 @@ class GradleBuildServerPluginTest {
     void accept(ProjectConnection connection) throws IOException;
   }
 
+  private <K> ReentrantLock getLock(K key, Map<K, ReentrantLock> locks) {
+    ReentrantLock lock = locks.get(key);
+    if (lock == null) {
+      synchronized (GradleBuildServerPluginTest.class) {
+        lock = locks.get(key);
+        if (lock == null) {
+          lock = new ReentrantLock();
+          locks.put(key, lock);
+        }
+      }
+    }
+    return lock;
+  }
+
   private void withConnection(File projectDir, GradleVersion gradleVersion,
       ConnectionConsumer consumer) throws IOException {
-    GradleConnector connector = GradleConnector.newConnector()
-        .forProjectDirectory(projectDir)
-        .useGradleVersion(gradleVersion.getVersion());
-    try (ProjectConnection connect = connector.connect()) {
-      consumer.accept(connect);
+    // don't allow simultaneous use of same test project
+    ReentrantLock projectLock = getLock(projectDir, projectLocks);
+    projectLock.lock();
+    try {
+      // don't allow simultaneous use of same Gradle version
+      ReentrantLock gradleLock = getLock(gradleVersion, gradleLocks);
+      gradleLock.lock();
+      try {
+        GradleConnector connector = GradleConnector.newConnector()
+            .forProjectDirectory(projectDir)
+            .useGradleVersion(gradleVersion.getVersion());
+        try (ProjectConnection connect = connector.connect()) {
+          consumer.accept(connect);
+        } finally {
+          connector.disconnect();
+        }
+      } finally {
+        gradleLock.unlock();
+      }
     } finally {
-      connector.disconnect();
+      projectLock.unlock();
     }
   }
 
@@ -117,23 +152,20 @@ class GradleBuildServerPluginTest {
   }
 
   private static class GradleJreVersion {
-    final String gradleVersion;
+    final GradleVersion gradleVersion;
     final int jreVersion;
 
     GradleJreVersion(String gradleVersion, int jreVersion) {
-      this.gradleVersion = gradleVersion;
+      this.gradleVersion = GradleVersion.version(gradleVersion);
       this.jreVersion = jreVersion;
-    }
-
-    GradleVersion getGradleVersion() {
-      return GradleVersion.version(gradleVersion);
     }
   }
   
   /**
-   * create a list of gradle versions that work with the runtime JRE.
+   * create a list of gradle versions that work with the runtime JRE and the Gradle version passed.
    */
-  static Stream<GradleVersion> versionProvider() {
+  private static Stream<GradleVersion> versionProvider(String gradleVersionStr) {
+    GradleVersion gradleVersion = GradleVersion.version(gradleVersionStr);
     int javaVersion = getJavaVersion();
     // change the last version in the below list to point to the highest Gradle version supported
     // if the Gradle API changes then keep that version forever and add a comment as to why
@@ -174,11 +206,16 @@ class GradleBuildServerPluginTest {
       // highest supported version
       new GradleJreVersion("8.12", 23)
     ).filter(version -> version.jreVersion >= javaVersion)
-     .map(GradleJreVersion::getGradleVersion);
+     .filter(version -> version.gradleVersion.compareTo(gradleVersion) >= 0)
+     .map(version -> version.gradleVersion);
+  }
+
+  static Stream<GradleVersion> allVersions() {
+    return versionProvider("2.12");
   }
 
   @ParameterizedTest(name = "testModelBuilder {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("junit5-jupiter-starter-gradle", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -244,7 +281,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testGetSourceContainerFromOldGradle {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testMissingRepository(GradleVersion gradleVersion) throws IOException {
     withSourceSets("missing-repository", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -252,7 +289,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testGetSourceContainerFromOldGradle {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testGetSourceContainerFromOldGradle(GradleVersion gradleVersion) throws IOException {
     withSourceSets("non-java", gradleVersion, gradleSourceSets -> {
       assertEquals(0, gradleSourceSets.getGradleSourceSets().size());
@@ -260,7 +297,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testGetOutputLocationFromOldGradle {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testGetOutputLocationFromOldGradle(GradleVersion gradleVersion) throws IOException {
     withSourceSets("legacy-gradle", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -268,7 +305,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testGetAnnotationProcessorGeneratedLocation {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testGetAnnotationProcessorGeneratedLocation(GradleVersion gradleVersion) throws IOException {
     // this test case is to ensure that the plugin won't throw no such method error
     // for JavaCompile.getAnnotationProcessorGeneratedSourcesDirectory()
@@ -278,7 +315,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testSourceInference {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testSourceInference(GradleVersion gradleVersion) throws IOException {
     File projectDir = projectPath.resolve("infer-source-roots").toFile();
     withConnection(projectDir, gradleVersion, connect -> {
@@ -305,7 +342,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testJavaCompilerArgs1 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testJavaCompilerArgs1(GradleVersion gradleVersion) throws IOException {
     // Gradle uses 1.9 in earlier versions to indicate JDK 9
     final String targetVersion;
@@ -338,11 +375,14 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom6_6() {
+    return versionProvider("6.6");
+  }
+
+  // JavaCompile#options#release was added in Gradle 6.6
   @ParameterizedTest(name = "testJavaCompilerArgs2 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom6_6")
   void testJavaCompilerArgs2(GradleVersion gradleVersion) throws IOException {
-    // JavaCompile#options#release was added in Gradle 6.6
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("6.6")) >= 0);
     withSourceSets("java-compilerargs-2", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -365,7 +405,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testJavaCompilerArgs3 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testJavaCompilerArgs3(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-3", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -388,7 +428,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testJavaCompilerArgs4 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testJavaCompilerArgs4(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-4", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -411,7 +451,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testJavaCompilerArgs5 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testJavaCompilerArgs5(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-5", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -433,11 +473,14 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom2_14() {
+    return versionProvider("2.14");
+  }
+
+  // Gradle doesn't set source/target unless specified until version 2.14
   @ParameterizedTest(name = "testJavaCompilerArgs6 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom2_14")
   void testJavaCompilerArgs6(GradleVersion gradleVersion) throws IOException {
-    // Gradle doesn't set source/target unless specified until version 2.14
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("2.14")) >= 0);
     withSourceSets("java-compilerargs-6", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -457,11 +500,14 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom7_6() {
+    return versionProvider("7.6");
+  }
+
+  // FoojayToolchainsPlugin needs Gradle version 7.6 or higher
   @ParameterizedTest(name = "testJavaCompilerArgsToolchain {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom7_6")
   void testJavaCompilerArgsToolchain(GradleVersion gradleVersion) throws IOException {
-    // FoojayToolchainsPlugin needs Gradle version 7.6 or higher
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("7.6")) >= 0);
     withSourceSets("java-compilerargs-toolchain", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -481,11 +527,14 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom5_0() {
+    return versionProvider("5.0");
+  }
+
+  // `java` cannot be used before 5.0
   @ParameterizedTest(name = "testJavaSourceTarget {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom5_0")
   void testJavaSourceTarget(GradleVersion gradleVersion) throws IOException {
-    // `java` cannot be used before 5.0
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("5.0")) >= 0);
     withSourceSets("java-source-target", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -507,7 +556,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testScala2ModelBuilder {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testScala2ModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("scala-2", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
@@ -600,11 +649,14 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom7_3() {
+    return versionProvider("7.3");
+  }
+
+  // Scala 3 was added in Gradle 7.3
   @ParameterizedTest(name = "testScala3ModelBuilder {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom7_3")
   void testScala3ModelBuilder(GradleVersion gradleVersion) throws IOException {
-    // Scala 3 was added in Gradle 7.3
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("7.3")) >= 0);
     withSourceSets("scala-3", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -680,10 +732,13 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom7_4() {
+    return versionProvider("7.4");
+  }
+
   @ParameterizedTest(name = "testNebulaPlugin_11_10 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom7_4")
   void testNebulaPlugin_11_10(GradleVersion gradleVersion) throws IOException {
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("7.4")) >= 0);
     withSourceSets("nebula-plugin-11-10", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -693,10 +748,13 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom5_2() {
+    return versionProvider("5.2");
+  }
+
   @ParameterizedTest(name = "testNebulaPlugin_11_5 {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom5_2")
   void testNebulaPlugin_11_5(GradleVersion gradleVersion) throws IOException {
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0);
     withSourceSets("nebula-plugin-11-5", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -706,12 +764,15 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  static Stream<GradleVersion> versionsFrom7_1() {
+    return versionProvider("7.1");
+  }
+
+  // can't find a valid compatibility matrix for gradle and kotlin plugin versions
+  // Gradle>7.1 seems to support kotlin-gradle-plugin 1.9.21
   @ParameterizedTest(name = "testKotlinModelBuilder {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("versionsFrom7_1")
   void testKotlinModelBuilder(GradleVersion gradleVersion) throws IOException {
-    // can't find a valid compatibility matrix for gradle and kotlin plugin versions
-    // Gradle>7.1 seems to support kotlin-gradle-plugin 1.9.21
-    assumeTrue(gradleVersion.compareTo(GradleVersion.version("7.1")) >= 0);
     withSourceSets("kotlin", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -780,7 +841,7 @@ class GradleBuildServerPluginTest {
   }
 
   @ParameterizedTest(name = "testGroovyModelBuilder {0}")
-  @MethodSource("versionProvider")
+  @MethodSource("allVersions")
   void testGroovyModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("groovy", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());

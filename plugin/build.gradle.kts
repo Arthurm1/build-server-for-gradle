@@ -43,6 +43,7 @@ tasks.named<Test>("test") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
 }
 
 dependencies {
