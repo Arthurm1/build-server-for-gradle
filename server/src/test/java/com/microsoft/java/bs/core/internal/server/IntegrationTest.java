@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -289,9 +290,12 @@ abstract class IntegrationTest {
       PipedOutputStream serverOut,
       ExecutorService threadPool
   ) {
-    // server - set tracer param to `new PrintWriter(System.out)` for JSON message logging.
+    // server
+    // set `tracer` to `new PrintWriter(System.out)` for JSON message logging.
+    // or use `Launcher.getTracer(Path)` to log to file.
+    PrintWriter tracer = null;
     org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher =
-        Launcher.createLauncher(serverOut, serverIn, threadPool, null);
+        Launcher.createLauncher(serverOut, serverIn, threadPool, tracer);
     // client
     TestClient client = new TestClient();
     org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher =

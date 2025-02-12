@@ -9,9 +9,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.log.LogHandler;
@@ -51,6 +56,35 @@ public class Launcher {
     launcher.startListening();
   }
 
+  private static PrintWriter getTracer() {
+    String traceLocation = System.getProperty("bsp.gradle.traceMessagesFile");
+    if (traceLocation != null) {
+      Path tracePath = Paths.get(traceLocation);
+      return getTracer(tracePath);
+    }
+    return null;
+  }
+
+  /**
+   * Create a PrintWriter to log BSP messages to file.
+   *
+   * @param tracePath path of log file
+   * @return writer to pass to Launcher or null if file creation failed.
+   */
+  public static PrintWriter getTracer(Path tracePath) {
+    try {
+      OutputStream outputStream = Files.newOutputStream(
+          tracePath,
+          StandardOpenOption.CREATE,
+          StandardOpenOption.TRUNCATE_EXISTING);
+
+      return new PrintWriter(outputStream);
+    } catch (IOException e) {
+      LOGGER.log(Level.SEVERE, "Error setting up trace file", e);
+      return null;
+    }
+  }
+
   private static org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient>
       createLauncherUsingPipe(String pipePath) {
     NamedPipeStream pipeStream = new NamedPipeStream(pipePath);
@@ -67,7 +101,7 @@ public class Launcher {
 
   private static org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> 
       createLauncher(OutputStream outputStream, InputStream inputStream) {
-    return createLauncher(outputStream, inputStream, Executors.newCachedThreadPool(), null);
+    return createLauncher(outputStream, inputStream, Executors.newCachedThreadPool(), getTracer());
   }
 
   /**

@@ -36,9 +36,14 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## Launch the Build Server for Gradle
 
-### Specify the Plugin Location
+### Main class
 
-The main class of the build server is `com.microsoft.java.bs.core.Launcher`. When you launch the server, you need to specify the location of the Gradle plugin via the system property `plugin.dir`. By default, you will find the plugin jar at `server/build/libs/plugins/plugin-${version}.jar` after building the project.
+The main class of the build server is `com.microsoft.java.bs.core.Launcher`.  The latest version can be downloaded from maven `com.github.arthurm1:gradle-bsp-server:0.5.0` or local versions can be used by incrementing `version` in `gradle.properties` and then publishing to local maven using `gradlew publishToLocalMaven`.
+The tests will always use the latest built code in `.../build/classes/java/main/...` regardless of whether the jars have been published.
+
+### BSP message logging
+
+Set the `bsp.gradle.traceMessagesFile` system property to a file location (e.g. `~/bsp.trace.json`) to log all BSP messages to file.  The file will be truncated on restart of BSP server
 
 ### Preferences
 
