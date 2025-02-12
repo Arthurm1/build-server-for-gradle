@@ -28,6 +28,7 @@ import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.GradleTestTask;
@@ -447,6 +448,24 @@ class GradleApiConnectorTest {
             .anyMatch(arg -> arg.equals("-opt-in=org.mylibrary.OptInAnnotation")));
 
     // TODO test getKotlinAssociates
+  }
+  
+  @Test
+  void testGetJvmRunEnvironment() {
+    File projectDir = projectPath.resolve("composite-build-2").toFile();
+    withConnector(connector -> {
+      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
+          null, null);
+
+      GradleSourceSet mainApp = gradleSourceSets.getGradleSourceSets().stream()
+          .filter(ss -> ss.getProjectName().equals("app") && ss.getSourceSetName().equals("main"))
+          .findAny().get();
+
+      assertEquals(1, mainApp.getRunTasks().size());
+      GradleRunTask runTask = mainApp.getRunTasks().iterator().next();
+      assertEquals(mainApp.getRuntimeClasspath(), runTask.getClasspath());
+      return null;
+    });
   }
 
   @Test

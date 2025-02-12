@@ -121,6 +121,11 @@ public interface GradleSourceSet extends Serializable {
   public Set<GradleTestTask> getTestTasks();
 
   /**
+   * list of run tasks that are associated with this source set.
+   */
+  public Set<GradleRunTask> getRunTasks();
+
+  /**
    * Extensions of the source set.
    */
   Map<String, LanguageExtension> getExtensions();

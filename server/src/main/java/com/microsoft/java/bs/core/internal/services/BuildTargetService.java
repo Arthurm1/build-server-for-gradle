@@ -33,6 +33,7 @@ import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.TelemetryUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.GradleTestTask;
@@ -61,6 +62,8 @@ import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
 import ch.epfl.scala.bsp4j.JvmEnvironmentItem;
 import ch.epfl.scala.bsp4j.JvmMainClass;
+import ch.epfl.scala.bsp4j.JvmRunEnvironmentParams;
+import ch.epfl.scala.bsp4j.JvmRunEnvironmentResult;
 import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams;
 import ch.epfl.scala.bsp4j.JvmTestEnvironmentResult;
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
@@ -773,6 +776,44 @@ public class BuildTargetService {
       }
     }
     return runResult;
+  }
+
+  /**
+   * get the main classes runtime environment.
+   */
+  public JvmRunEnvironmentResult getBuildTargetJvmRunEnvironment(
+      JvmRunEnvironmentParams params, CancellationToken cancelToken) {
+
+    List<JvmEnvironmentItem> items = new ArrayList<>();
+    for (BuildTargetIdentifier btId : params.getTargets()) {
+      GradleBuildTarget target = buildTargetManager.getGradleBuildTarget(btId);
+      if (target == null) {
+        LOGGER.warning("Skip retrieving run environment for the build target: " + btId.getUri()
+            + ". Because it cannot be found in the cache.");
+        continue;
+      }
+      for (GradleRunTask runTask : target.getSourceSet().getRunTasks()) {
+        List<String> classpath = runTask.getClasspath()
+            .stream()
+            .map(file -> file.toURI().toString())
+            .collect(Collectors.toList());
+        List<String> jvmOptions = runTask.getJvmOptions();
+        String workingDirectory = runTask.getWorkingDirectory().toURI().toString();
+        Map<String, String> environmentVariables = runTask.getEnvironmentVariables();
+        String mainClass = runTask.getMainClass();
+        List<JvmMainClass> mainClasses = new ArrayList<>();
+        if (mainClass != null) {
+          List<String> arguments = runTask.getArguments();
+          JvmMainClass jvmMainClass = new JvmMainClass(mainClass, arguments);
+          mainClasses.add(jvmMainClass);
+        }
+        JvmEnvironmentItem item = new JvmEnvironmentItem(btId,
+            classpath, jvmOptions, workingDirectory, environmentVariables);
+        item.setMainClasses(mainClasses);
+        items.add(item);
+      }
+    }
+    return new JvmRunEnvironmentResult(items);
   }
 
   /**

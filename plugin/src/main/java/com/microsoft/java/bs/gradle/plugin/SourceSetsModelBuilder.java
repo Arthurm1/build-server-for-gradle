@@ -24,6 +24,7 @@ import org.gradle.api.Task;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.copy.DefaultCopySpec;
+import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
@@ -32,10 +33,12 @@ import org.gradle.tooling.provider.model.ToolingModelBuilder;
 import org.gradle.util.GradleVersion;
 
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleRunTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
@@ -153,6 +156,9 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     // tests
     gradleSourceSet.setTestTasks(getTestTasks(project, sourceOutputDirs));
 
+    // run tasks
+    gradleSourceSet.setRunTasks(getRunTasks(project, runtimeClasspath));
+
     return gradleSourceSet;
   }
 
@@ -208,6 +214,45 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       }
     }
     return testTasks;
+  }
+
+  /**
+   * find run tasks associated with the source set.
+   *
+   * @param project Gradle project
+   * @param runtimeClasspath runtime classpath of the source set
+   * @return a set of GradleRunTask with info on run setup
+   */
+  public static Set<GradleRunTask> getRunTasks(Project project, List<File> runtimeClasspath) {
+    Set<GradleRunTask> runTasks = new HashSet<>();
+    if (!runtimeClasspath.isEmpty()) {
+      Set<JavaExec> tasks = tasksWithType(project, JavaExec.class);
+      for (JavaExec task : tasks) {
+        
+        List<File> classpath = new LinkedList<>();
+        try {
+          classpath.addAll(task.getClasspath().getFiles());
+        } catch (GradleException e) {
+          // ignore
+        }
+        boolean isForThisSourceSet = classpath.equals(runtimeClasspath);
+        if (isForThisSourceSet) {
+          String taskPath = task.getPath();
+          List<String> jvmOptions = task.getAllJvmArgs();
+          File workingDirectory = task.getWorkingDir();
+          Map<String, String> environmentVariables = task.getEnvironment().entrySet()
+              .stream()
+              .collect(Collectors.toMap(Map.Entry::getKey, Object::toString));
+          String mainClass = task.getMainClass().getOrNull();
+          List<String> arguments = task.getArgs();
+          GradleRunTask runTask = new DefaultGradleRunTask(taskPath, classpath,
+              jvmOptions, workingDirectory, environmentVariables, mainClass,
+              arguments);
+          runTasks.add(runTask);
+        }
+      }
+    }
+    return runTasks;
   }
 
   private static <T extends Task> Set<T> tasksWithType(Project project, Class<T> clazz) {

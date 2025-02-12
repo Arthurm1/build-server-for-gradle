@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.microsoft.java.bs.gradle.model.GradleTestTask;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
 
 /**
- * Contains test information relating to a Gradle Test task.
+ * Contains run information relating to a Gradle Run task.
  */
-public class DefaultGradleTestTask implements GradleTestTask {
+public class DefaultGradleRunTask implements GradleRunTask {
 
   private static final long serialVersionUID = 1L;
 
@@ -22,29 +22,35 @@ public class DefaultGradleTestTask implements GradleTestTask {
   private final List<String> jvmOptions;
   private final File workingDirectory;
   private final Map<String, String> environmentVariables;
+  private final String mainClass;
+  private final List<String> arguments;
 
   /**
-   * Initialize the test information.
+   * Initialize the run information.
    */
-  public DefaultGradleTestTask(String taskPath, List<File> classpath,
+  public DefaultGradleRunTask(String taskPath, List<File> classpath,
       List<String> jvmOptions, File workingDirectory,
-      Map<String, String> environmentVariables) {
+      Map<String, String> environmentVariables, String mainClass, List<String> arguments) {
     this.taskPath = taskPath;
     this.classpath = classpath;
     this.jvmOptions = jvmOptions;
     this.workingDirectory = workingDirectory;
     this.environmentVariables = environmentVariables;
+    this.mainClass = mainClass;
+    this.arguments = arguments;
   }
 
   /**
    * copy constructor.
    */
-  public DefaultGradleTestTask(GradleTestTask gradleTestTask) {
-    this.taskPath = gradleTestTask.getTaskPath();
-    this.classpath = gradleTestTask.getClasspath();
-    this.jvmOptions = gradleTestTask.getJvmOptions();
-    this.workingDirectory = gradleTestTask.getWorkingDirectory();
-    this.environmentVariables = gradleTestTask.getEnvironmentVariables();
+  public DefaultGradleRunTask(GradleRunTask gradleRunTask) {
+    this.taskPath = gradleRunTask.getTaskPath();
+    this.classpath = gradleRunTask.getClasspath();
+    this.jvmOptions = gradleRunTask.getJvmOptions();
+    this.workingDirectory = gradleRunTask.getWorkingDirectory();
+    this.environmentVariables = gradleRunTask.getEnvironmentVariables();
+    this.mainClass = gradleRunTask.getMainClass();
+    this.arguments = gradleRunTask.getArguments();
   }
 
   @Override
@@ -71,11 +77,21 @@ public class DefaultGradleTestTask implements GradleTestTask {
   public Map<String, String> getEnvironmentVariables() {
     return environmentVariables;
   }
+
+  @Override
+  public String getMainClass() {
+    return mainClass;
+  }
+
+  @Override
+  public List<String> getArguments() {
+    return arguments;
+  }
   
   @Override
   public int hashCode() {
     return Objects.hash(taskPath, classpath, jvmOptions, workingDirectory,
-        environmentVariables);
+        environmentVariables, mainClass, arguments);
   }
 
   @Override
@@ -89,20 +105,24 @@ public class DefaultGradleTestTask implements GradleTestTask {
     if (getClass() != obj.getClass()) {
       return false;
     }
-    DefaultGradleTestTask other = (DefaultGradleTestTask) obj;
+    DefaultGradleRunTask other = (DefaultGradleRunTask) obj;
     return Objects.equals(taskPath, other.taskPath)
         && Objects.equals(classpath, other.classpath)
         && Objects.equals(jvmOptions, other.jvmOptions)
         && Objects.equals(workingDirectory, other.workingDirectory)
-        && Objects.equals(environmentVariables, other.environmentVariables);
+        && Objects.equals(environmentVariables, other.environmentVariables)
+        && Objects.equals(mainClass, other.mainClass)
+        && Objects.equals(arguments, other.arguments);
   }
 
   @Override
   public String toString() {
-    return "DefaultGradleTestTask: TaskPath:" + taskPath
+    return "DefaultGradleRunTask: TaskPath:" + taskPath
         + " Classpath:" + classpath
         + " JvmOptions:" + jvmOptions
         + " WorkingDirectory:" + workingDirectory
-        + " EnvironmentVariables:" + environmentVariables;
+        + " EnvironmentVariables:" + environmentVariables
+        + " MainClass:" + mainClass
+        + " Arguments:" + arguments;
   }
 }

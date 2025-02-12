@@ -6,11 +6,16 @@ package com.microsoft.java.bs.gradle.model.actions;
 import com.microsoft.java.bs.gradle.model.Artifact;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleRunTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
+
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildController;
 import org.gradle.tooling.model.Model;
@@ -232,10 +237,46 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
           runtimeClasspath.addAll(sourceOutputDir);
         }
       }
+      Set<GradleTestTask> testTasks = new HashSet<>();
+      for (GradleTestTask task : sourceSet.getTestTasks()) {
+        List<File> classpath = new ArrayList<>();
+        for (File file : task.getClasspath()) {
+          // replace jar on classpath with source output on classpath
+          List<File> sourceOutputDir = archivesToSourceOutput.get(file);
+          if (sourceOutputDir == null) {
+            classpath.add(file);
+          } else {
+            classpath.addAll(sourceOutputDir);
+          }
+        }
+        GradleTestTask newTask = new DefaultGradleTestTask(task.getTaskPath(),
+            classpath, task.getJvmOptions(), task.getWorkingDirectory(),
+            task.getEnvironmentVariables());
+        testTasks.add(newTask);
+      }
+      Set<GradleRunTask> runTasks = new HashSet<>();
+      for (GradleRunTask task : sourceSet.getRunTasks()) {
+        List<File> classpath = new ArrayList<>();
+        for (File file : task.getClasspath()) {
+          // replace jar on classpath with source output on classpath
+          List<File> sourceOutputDir = archivesToSourceOutput.get(file);
+          if (sourceOutputDir == null) {
+            classpath.add(file);
+          } else {
+            classpath.addAll(sourceOutputDir);
+          }
+        }
+        GradleRunTask newTask = new DefaultGradleRunTask(task.getTaskPath(),
+            classpath, task.getJvmOptions(), task.getWorkingDirectory(),
+            task.getEnvironmentVariables(), task.getMainClass(), task.getArguments());
+        runTasks.add(newTask);
+      }
       if (sourceSet instanceof DefaultGradleSourceSet) {
         ((DefaultGradleSourceSet) sourceSet).setBuildTargetDependencies(dependencies);
         ((DefaultGradleSourceSet) sourceSet).setCompileClasspath(compileClasspath);
         ((DefaultGradleSourceSet) sourceSet).setRuntimeClasspath(runtimeClasspath);
+        ((DefaultGradleSourceSet) sourceSet).setTestTasks(testTasks);
+        ((DefaultGradleSourceSet) sourceSet).setRunTasks(runTasks);
       }
     }
   }

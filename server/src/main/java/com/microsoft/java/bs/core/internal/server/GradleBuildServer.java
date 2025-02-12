@@ -166,8 +166,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<JvmRunEnvironmentResult> buildTargetJvmRunEnvironment(
       JvmRunEnvironmentParams params) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'buildTarget/jvmRunEnvironment'");
+    return handleRequest("buildTarget/jvmRunEnvironment", cancelToken ->
+        buildTargetService.getBuildTargetJvmRunEnvironment(params, cancelToken));
   }
 
   @Override

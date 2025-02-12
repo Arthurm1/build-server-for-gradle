@@ -26,6 +26,7 @@ Following BSP requests are supported in the current implementation:
 - `buildTarget/scalacOptions`
 - `buildTarget/test`
 - `buildTarget/run`
+- `buildTarget/jvmRunEnvironment`
 - `buildTarget/jvmTestEnvironment`
 - `workspace/buildTargets`
 - `workspace/reload`

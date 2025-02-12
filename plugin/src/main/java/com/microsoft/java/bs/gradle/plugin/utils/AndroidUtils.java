@@ -193,6 +193,10 @@ public class AndroidUtils {
       gradleSourceSet.setTestTasks(SourceSetsModelBuilder.getTestTasks(project,
           gradleSourceSet.getSourceOutputDirs()));
 
+      // run tasks
+      gradleSourceSet.setRunTasks(SourceSetsModelBuilder.getRunTasks(project,
+          gradleSourceSet.getRuntimeClasspath()));
+
       // extensions
       addExtensions(gradleSourceSet, compilerArgs);
 

@@ -121,7 +121,7 @@ public class LifecycleService {
     capabilities.setCompileProvider(new CompileProvider(SupportedLanguages.allBspNames));
     capabilities.setTestProvider(new TestProvider(SupportedLanguages.allBspNames));
     capabilities.setRunProvider(new RunProvider(SupportedLanguages.allBspNames));
-    capabilities.setJvmRunEnvironmentProvider(false);
+    capabilities.setJvmRunEnvironmentProvider(true);
     capabilities.setJvmTestEnvironmentProvider(true);
     capabilities.setJvmCompileClasspathProvider(false);
     capabilities.setCargoFeaturesProvider(false);
