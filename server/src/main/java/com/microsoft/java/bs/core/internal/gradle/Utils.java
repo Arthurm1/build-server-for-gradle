@@ -474,7 +474,7 @@ public class Utils {
     } else {
       bspPluginSetup = "";
     }
-    String workspace = workspaceDir.toString().replace("\\", "\\\\").replace("'", "\\'");
+
     String javaSemanticDbSetup = javaSemanticDbVersion != null
         && !javaSemanticDbVersion.isEmpty()
         ? "    javaSemanticDbVersion = '" + javaSemanticDbVersion + "'\n" : "";
@@ -483,6 +483,7 @@ public class Utils {
         ? "    scalaSemanticDbVersion = '" + scalaSemanticDbVersion + "'\n" : "";
     String semanticDbPluginSetup;
     if (!javaSemanticDbSetup.isEmpty() || !scalaSemanticDbSetup.isEmpty()) {
+      String workspace = workspaceDir.toString().replace("\\", "\\\\").replace("'", "\\'");
       semanticDbPluginSetup = """
           // apply plugin to setup semanticdb info
           apply plugin: com.microsoft.java.bs.gradle.plugin.MetalsBspPlugin
