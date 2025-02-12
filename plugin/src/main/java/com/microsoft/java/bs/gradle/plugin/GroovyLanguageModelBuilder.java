@@ -5,6 +5,7 @@ package com.microsoft.java.bs.gradle.plugin;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,7 +66,13 @@ public class GroovyLanguageModelBuilder extends LanguageModelBuilder {
       extension.setCompileTaskName(groovyCompile.getName());
 
       extension.setSourceDirs(getSourceFolders(sourceSet));
-      extension.setGeneratedSourceDirs(Collections.emptySet());
+      Set<File> generatedDirs = new HashSet<>();
+      File annotationProcessorDir = JavaLanguageModelBuilder.getAnnotationProcessingDir(
+          groovyCompile.getOptions());
+      if (annotationProcessorDir != null) {
+        generatedDirs.add(annotationProcessorDir);
+      }
+      extension.setGeneratedSourceDirs(generatedDirs);
       extension.setClassesDir(getClassesDir(groovyCompile));
 
       return extension;

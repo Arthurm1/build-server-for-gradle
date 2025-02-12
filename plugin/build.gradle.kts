@@ -89,8 +89,19 @@ tasks.named("check") {
   dependsOn("test", "test11", "test17", "test21")
 }
 
+// for android libraries
+repositories {
+  maven {
+    url = uri("https://maven.google.com/")
+  }
+}
+
 dependencies {
   implementation(project(":model"))
+  // DO NOT USE THESE in the codebase but it's handy to bring up the source in the IDE
+  // Java toolchain must be switched to JDK 17 for this to compile
+  // compileOnly("com.android.application:com.android.application.gradle.plugin:8.5.1")
+  // compileOnly("com.android.library:com.android.library.gradle.plugin:8.5.1")
   testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

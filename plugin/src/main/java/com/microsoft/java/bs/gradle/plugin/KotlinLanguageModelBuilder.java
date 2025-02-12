@@ -4,7 +4,6 @@
 package com.microsoft.java.bs.gradle.plugin;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -83,21 +82,16 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
   private String getKotlinApiVersion(Task kotlinCompile) {
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/dsl/KotlinCommonCompilerOptions.kt
-    try {
-      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
-      Provider<?> apiVersionProvider = Utils.invokeMethod(compilerOptions, "getApiVersion");
-      if (apiVersionProvider.isPresent()) {
-        Object apiVersion = apiVersionProvider.get();
-        if (apiVersion != null) {
-          Object versionMethodObject = Utils.invokeMethod(apiVersion, "getVersion");
-          if (versionMethodObject != null) {
-            return versionMethodObject.toString();
-          }
+    Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+    Provider<?> apiVersionProvider = Utils.invokeMethod(compilerOptions, "getApiVersion");
+    if (apiVersionProvider.isPresent()) {
+      Object apiVersion = apiVersionProvider.get();
+      if (apiVersion != null) {
+        Object versionMethodObject = Utils.invokeMethod(apiVersion, "getVersion");
+        if (versionMethodObject != null) {
+          return versionMethodObject.toString();
         }
       }
-    } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-             | IllegalArgumentException | InvocationTargetException e) {
-      throw new IllegalStateException("Error in retrieving Kotlin info", e);
     }
     return "";
   }
@@ -105,22 +99,17 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
   private String getKotlinLanguageVersion(Task kotlinCompile) {
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/dsl/KotlinCommonCompilerOptions.kt
-    try {
-      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
-      Provider<?> languageVersionProvider =
-          Utils.invokeMethod(compilerOptions, "getLanguageVersion");
-      if (languageVersionProvider.isPresent()) {
-        Object languageVersion = languageVersionProvider.get();
-        if (languageVersion != null) {
-          Object versionMethodObject = Utils.invokeMethod(languageVersion, "getVersion");
-          if (versionMethodObject != null) {
-            return versionMethodObject.toString();
-          }
+    Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+    Provider<?> languageVersionProvider =
+        Utils.invokeMethod(compilerOptions, "getLanguageVersion");
+    if (languageVersionProvider.isPresent()) {
+      Object languageVersion = languageVersionProvider.get();
+      if (languageVersion != null) {
+        Object versionMethodObject = Utils.invokeMethod(languageVersion, "getVersion");
+        if (versionMethodObject != null) {
+          return versionMethodObject.toString();
         }
       }
-    } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-             | IllegalArgumentException | InvocationTargetException e) {
-      throw new IllegalStateException("Error in retrieving Kotlin info", e);
     }
     return "";
   }
@@ -128,18 +117,13 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
   private List<String> getKotlinOptions(Task kotlinCompile) {
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
     // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/dsl/KotlinCommonCompilerOptions.kt
-    try {
-      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
-      Provider<List<?>> freeCompilerArgsProvider =
-          Utils.invokeMethod(compilerOptions, "getFreeCompilerArgs");
-      if (freeCompilerArgsProvider.isPresent()) {
-        List<?> freeCompilerArgs = freeCompilerArgsProvider.get();
-        return freeCompilerArgs.stream()
-          .map(Object::toString).collect(Collectors.toList());
-      }
-    } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-             | IllegalArgumentException | InvocationTargetException e) {
-      throw new IllegalStateException("Error in retrieving Kotlin info", e);
+    Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+    Provider<List<?>> freeCompilerArgsProvider =
+        Utils.invokeMethod(compilerOptions, "getFreeCompilerArgs");
+    if (freeCompilerArgsProvider.isPresent()) {
+      List<?> freeCompilerArgs = freeCompilerArgsProvider.get();
+      return freeCompilerArgs.stream()
+        .map(Object::toString).collect(Collectors.toList());
     }
     return null;
   }
@@ -147,15 +131,10 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
   private File getClassesDir(Task kotlinCompile, SourceSet sourceSet) {
     if (GradleVersion.current().compareTo(GradleVersion.version("4.2")) >= 0) {
       // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
-      try {
-        Object destinationDirectory = Utils.invokeMethod(kotlinCompile, "getDestinationDirectory");
-        Provider<File> fileProvider = Utils.invokeMethod(destinationDirectory, "getAsFile");
-        if (fileProvider.isPresent()) {
-          return fileProvider.get();
-        }
-      } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-              | IllegalArgumentException | InvocationTargetException e) {
-        throw new IllegalStateException("Error in retrieving Kotlin info", e);
+      Object destinationDirectory = Utils.invokeMethod(kotlinCompile, "getDestinationDirectory");
+      Provider<File> fileProvider = Utils.invokeMethod(destinationDirectory, "getAsFile");
+      if (fileProvider.isPresent()) {
+        return fileProvider.get();
       }
     }
     return null;

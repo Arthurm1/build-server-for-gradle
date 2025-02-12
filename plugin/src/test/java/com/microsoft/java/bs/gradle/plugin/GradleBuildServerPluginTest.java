@@ -43,8 +43,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 class GradleBuildServerPluginTest {
 
   private static Path projectPath;
-  private static Map<File, ReentrantLock> projectLocks = new HashMap<>();
-  private static Map<GradleVersion, ReentrantLock> gradleLocks = new HashMap<>();
+  private static final Map<File, ReentrantLock> projectLocks = new HashMap<>();
+  private static final Map<GradleVersion, ReentrantLock> gradleLocks = new HashMap<>();
 
   @BeforeAll
   static void beforeClass() {
@@ -66,12 +66,15 @@ class GradleBuildServerPluginTest {
           .addArguments("-Dorg.gradle.vfs.watch=false")
           .addArguments("-Dorg.gradle.logging.level=quiet")
           .addJvmArguments("-Dbsp.gradle.supportedLanguages="
-            + String.join(",", SupportedLanguages.allBspNames));
+            + String.join(",", SupportedLanguages.allBspNames))
+          // Add back in to remote debug
+          //.addJvmArguments("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
+          .setStandardOutput(System.out)
+          .setStandardError(System.err);
 
       return new DefaultGradleSourceSets(action.run());
     } catch (Exception e) {
-      throw new IllegalStateException("Error retrieving source sets with script "
-          + initScriptContents, e);
+      throw new IllegalStateException("Error retrieving source sets", e);
     } finally {
       if (initScript != null) {
         initScript.delete();
@@ -130,8 +133,6 @@ class GradleBuildServerPluginTest {
       GradleSourceSets gradleSourceSets = getGradleSourceSets(connect);
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         assertEquals(gradleVersion.getVersion(), gradleSourceSet.getGradleVersion());
-        assertEquals(projectName, gradleSourceSet.getProjectName());
-        assertEquals(projectDir, gradleSourceSet.getProjectDir());
         assertEquals(projectDir, gradleSourceSet.getRootDir());
       }
       consumer.accept(gradleSourceSets);
@@ -164,9 +165,11 @@ class GradleBuildServerPluginTest {
   /**
    * create a list of gradle versions that work with the runtime JRE and the Gradle version passed.
    */
-  private static Stream<GradleVersion> versionProvider(String gradleVersionStr) {
-    GradleVersion gradleVersion = GradleVersion.version(gradleVersionStr);
-    int javaVersion = getJavaVersion();
+  private static Stream<GradleVersion> versionProvider(String gradleVersionStr,
+        Integer jreVersion) {
+    GradleVersion gradleVersion = gradleVersionStr != null
+        ? GradleVersion.version(gradleVersionStr) : null;
+    int currentJavaVersion = getJavaVersion();
     // change the last version in the below list to point to the highest Gradle version supported
     // if the Gradle API changes then keep that version forever and add a comment as to why
     return Stream.of(
@@ -203,15 +206,19 @@ class GradleBuildServerPluginTest {
       new GradleJreVersion("7.6.1", 19),
       // JDK source/target options changed from 1.9 -> 9 in 8.0
       new GradleJreVersion("8.0", 19),
+      // Android plugin support
+      new GradleJreVersion("8.7", 21),
       // highest supported version
       new GradleJreVersion("8.12", 23)
-    ).filter(version -> version.jreVersion >= javaVersion)
-     .filter(version -> version.gradleVersion.compareTo(gradleVersion) >= 0)
+    ).filter(version -> version.jreVersion >= currentJavaVersion)
+     .filter(version -> jreVersion == null || currentJavaVersion >= jreVersion)
+     .filter(version -> gradleVersion == null
+         || version.gradleVersion.compareTo(gradleVersion) >= 0)
      .map(version -> version.gradleVersion);
   }
 
   static Stream<GradleVersion> allVersions() {
-    return versionProvider("2.12");
+    return versionProvider("2.12", null);
   }
 
   @ParameterizedTest(name = "testModelBuilder {0}")
@@ -220,6 +227,9 @@ class GradleBuildServerPluginTest {
     withSourceSets("junit5-jupiter-starter-gradle", gradleVersion, gradleSourceSets -> {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertEquals("junit5-jupiter-starter-gradle", gradleSourceSet.getProjectName());
+        assertEquals(projectPath.resolve("junit5-jupiter-starter-gradle").toFile(),
+            gradleSourceSet.getProjectDir());
         assertEquals(":", gradleSourceSet.getProjectPath());
         assertTrue(gradleSourceSet.getSourceSetName().equals("main")
             || gradleSourceSet.getSourceSetName().equals("test"));
@@ -376,7 +386,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom6_6() {
-    return versionProvider("6.6");
+    return versionProvider("6.6", null);
   }
 
   // JavaCompile#options#release was added in Gradle 6.6
@@ -474,7 +484,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom2_14() {
-    return versionProvider("2.14");
+    return versionProvider("2.14", null);
   }
 
   // Gradle doesn't set source/target unless specified until version 2.14
@@ -501,7 +511,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom7_6() {
-    return versionProvider("7.6");
+    return versionProvider("7.6", null);
   }
 
   // FoojayToolchainsPlugin needs Gradle version 7.6 or higher
@@ -528,7 +538,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom5_0() {
-    return versionProvider("5.0");
+    return versionProvider("5.0", null);
   }
 
   // `java` cannot be used before 5.0
@@ -650,7 +660,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom7_3() {
-    return versionProvider("7.3");
+    return versionProvider("7.3", null);
   }
 
   // Scala 3 was added in Gradle 7.3
@@ -733,7 +743,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom7_4() {
-    return versionProvider("7.4");
+    return versionProvider("7.4", null);
   }
 
   @ParameterizedTest(name = "testNebulaPlugin_11_10 {0}")
@@ -749,7 +759,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom5_2() {
-    return versionProvider("5.2");
+    return versionProvider("5.2", null);
   }
 
   @ParameterizedTest(name = "testNebulaPlugin_11_5 {0}")
@@ -765,7 +775,7 @@ class GradleBuildServerPluginTest {
   }
 
   static Stream<GradleVersion> versionsFrom7_1() {
-    return versionProvider("7.1");
+    return versionProvider("7.1", null);
   }
 
   // can't find a valid compatibility matrix for gradle and kotlin plugin versions
@@ -897,5 +907,180 @@ class GradleBuildServerPluginTest {
         }
       }
     });
+  }
+
+  static Stream<GradleVersion> androidVersions() {
+    return versionProvider("8.7", 17);
+  }
+
+  @ParameterizedTest(name = "testAndroid {0}")
+  @MethodSource("androidVersions")
+  void testAndroid(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("android-test", gradleVersion, gradleSourceSets -> {
+      List<GradleSourceSet> sourceSets = gradleSourceSets.getGradleSourceSets();
+      assertEquals(10, sourceSets.size());
+
+      File appDir = projectPath.resolve("android-test").resolve("app").toFile();
+      GradleSourceSet appDebug = findSourceSet(sourceSets, "app", "debug");
+      assertEquals(":app", appDebug.getProjectPath());
+      assertEquals(appDir, appDebug.getProjectDir());
+      assertEquals(":app:assembleDebug", appDebug.getClassesTaskName());
+      assertEquals(47, appDebug.getCompileClasspath().size());
+      assertEquals(57, appDebug.getRuntimeClasspath().size());
+      assertEquals(4, appDebug.getSourceDirs().size());
+      assertEquals(2, appDebug.getResourceOutputDirs().size());
+
+      GradleSourceSet appRelease = findSourceSet(sourceSets, "app", "release");
+      assertEquals(":app", appRelease.getProjectPath());
+      assertEquals(appDir, appRelease.getProjectDir());
+      assertEquals(":app:assembleRelease", appRelease.getClassesTaskName());
+      assertEquals(47, appRelease.getCompileClasspath().size());
+      assertEquals(57, appRelease.getRuntimeClasspath().size());
+      assertEquals(4, appRelease.getSourceDirs().size());
+      assertEquals(2, appRelease.getResourceOutputDirs().size());
+
+      GradleSourceSet appDebugAndroidTest = findSourceSet(sourceSets, "app", "debugAndroidTest");
+      assertEquals(":app", appDebugAndroidTest.getProjectPath());
+      assertEquals(appDir, appDebugAndroidTest.getProjectDir());
+      assertEquals(":app:assembleDebugAndroidTest", appDebugAndroidTest.getClassesTaskName());
+      assertEquals(66, appDebugAndroidTest.getCompileClasspath().size());
+      assertEquals(26, appDebugAndroidTest.getRuntimeClasspath().size());
+      assertEquals(4, appDebugAndroidTest.getSourceDirs().size());
+      assertEquals(2, appDebugAndroidTest.getResourceOutputDirs().size());
+
+      GradleSourceSet appDebugUnitTest = findSourceSet(sourceSets, "app", "debugUnitTest");
+      assertEquals(":app", appDebugUnitTest.getProjectPath());
+      assertEquals(appDir, appDebugUnitTest.getProjectDir());
+      assertEquals(":app:assembleDebugUnitTest", appDebugUnitTest.getClassesTaskName());
+      assertEquals(51, appDebugUnitTest.getCompileClasspath().size());
+      assertEquals(60, appDebugUnitTest.getRuntimeClasspath().size());
+      assertEquals(4, appDebugUnitTest.getSourceDirs().size());
+      assertEquals(1, appDebugUnitTest.getResourceOutputDirs().size());
+
+      GradleSourceSet appReleaseUnitTest = findSourceSet(sourceSets, "app", "releaseUnitTest");
+      assertEquals(":app", appReleaseUnitTest.getProjectPath());
+      assertEquals(appDir, appReleaseUnitTest.getProjectDir());
+      assertEquals(":app:assembleReleaseUnitTest", appReleaseUnitTest.getClassesTaskName());
+      assertEquals(51, appReleaseUnitTest.getCompileClasspath().size());
+      assertEquals(60, appReleaseUnitTest.getRuntimeClasspath().size());
+      assertEquals(4, appReleaseUnitTest.getSourceDirs().size());
+      assertEquals(1, appReleaseUnitTest.getResourceOutputDirs().size());
+
+      File mylibraryDir = projectPath.resolve("android-test").resolve("mylibrary").toFile();
+      GradleSourceSet mylibraryDebug = findSourceSet(sourceSets, "mylibrary", "debug");
+      assertEquals(":mylibrary", mylibraryDebug.getProjectPath());
+      assertEquals(mylibraryDir, mylibraryDebug.getProjectDir());
+      assertEquals(":mylibrary:assembleDebug", mylibraryDebug.getClassesTaskName());
+      assertEquals(0, mylibraryDebug.getCompileClasspath().size());
+      assertEquals(0, mylibraryDebug.getRuntimeClasspath().size());
+      assertEquals(4, mylibraryDebug.getSourceDirs().size());
+      assertEquals(2, mylibraryDebug.getResourceOutputDirs().size());
+
+      GradleSourceSet mylibraryRelease = findSourceSet(sourceSets, "mylibrary", "release");
+      assertEquals(":mylibrary", mylibraryRelease.getProjectPath());
+      assertEquals(mylibraryDir, mylibraryRelease.getProjectDir());
+      assertEquals(":mylibrary:assembleRelease", mylibraryRelease.getClassesTaskName());
+      assertEquals(0, mylibraryRelease.getCompileClasspath().size());
+      assertEquals(0, mylibraryRelease.getRuntimeClasspath().size());
+      assertEquals(4, mylibraryRelease.getSourceDirs().size());
+      assertEquals(2, mylibraryRelease.getResourceOutputDirs().size());
+
+      GradleSourceSet mylibraryDebugAndroidTest =
+          findSourceSet(sourceSets, "mylibrary", "debugAndroidTest");
+      assertEquals(":mylibrary", mylibraryDebugAndroidTest.getProjectPath());
+      assertEquals(mylibraryDir, mylibraryDebugAndroidTest.getProjectDir());
+      assertEquals(":mylibrary:assembleDebugAndroidTest",
+          mylibraryDebugAndroidTest.getClassesTaskName());
+      assertEquals(15, mylibraryDebugAndroidTest.getCompileClasspath().size());
+      assertEquals(0, mylibraryDebugAndroidTest.getRuntimeClasspath().size());
+      assertEquals(4, mylibraryDebugAndroidTest.getSourceDirs().size());
+      assertEquals(2, mylibraryDebugAndroidTest.getResourceOutputDirs().size());
+
+      GradleSourceSet mylibraryDebugUnitTest =
+          findSourceSet(sourceSets, "mylibrary", "debugUnitTest");
+      assertEquals(":mylibrary", mylibraryDebugUnitTest.getProjectPath());
+      assertEquals(mylibraryDir, mylibraryDebugUnitTest.getProjectDir());
+      assertEquals(":mylibrary:assembleDebugUnitTest", mylibraryDebugUnitTest.getClassesTaskName());
+      assertEquals(4, mylibraryDebugUnitTest.getCompileClasspath().size());
+      assertEquals(0, mylibraryDebugUnitTest.getRuntimeClasspath().size());
+      assertEquals(4, mylibraryDebugUnitTest.getSourceDirs().size());
+      assertEquals(1, mylibraryDebugUnitTest.getResourceOutputDirs().size());
+
+      GradleSourceSet mylibraryReleaseUnitTest =
+          findSourceSet(sourceSets, "mylibrary", "releaseUnitTest");
+      assertEquals(":mylibrary", mylibraryReleaseUnitTest.getProjectPath());
+      assertEquals(mylibraryDir, mylibraryReleaseUnitTest.getProjectDir());
+      assertEquals(":mylibrary:assembleReleaseUnitTest",
+          mylibraryReleaseUnitTest.getClassesTaskName());
+      assertEquals(4, mylibraryReleaseUnitTest.getCompileClasspath().size());
+      assertEquals(0, mylibraryReleaseUnitTest.getRuntimeClasspath().size());
+      assertEquals(4, mylibraryReleaseUnitTest.getSourceDirs().size());
+      assertEquals(1, mylibraryReleaseUnitTest.getResourceOutputDirs().size());
+
+      for (GradleSourceSet gradleSourceSet : sourceSets) {
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith(Paths.get("java"))),
+            gradleSourceSet::toString);
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith(Paths.get("kotlin"))),
+            gradleSourceSet::toString);
+
+        assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size(), gradleSourceSet::toString);
+        assertEquals(4, gradleSourceSet.getResourceDirs().size(), gradleSourceSet::toString);
+        assertEquals(1, gradleSourceSet.getSourceOutputDirs().size(), gradleSourceSet::toString);
+
+        assertTrue(gradleSourceSet.getBuildTargetDependencies().isEmpty(),
+            gradleSourceSet::toString);
+        assertFalse(gradleSourceSet.getModuleDependencies().isEmpty(), gradleSourceSet::toString);
+        assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
+            dependency -> dependency.getArtifacts().stream().anyMatch(
+                artifact -> artifact.getUri().toString().endsWith("/android.jar")
+            )));
+        assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith("classes")));
+
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
+
+        assertNotNull(javaExtension, gradleSourceSet::toString);
+        assertNotNull(javaExtension.getJavaHome(), gradleSourceSet::toString);
+        assertNotNull(javaExtension.getJavaVersion(), gradleSourceSet::toString);
+        assertNotNull(javaExtension.getSourceCompatibility(), gradleSourceSet::toString);
+        assertNotNull(javaExtension.getTargetCompatibility(), gradleSourceSet::toString);
+        assertEquals(2, javaExtension.getSourceDirs().size(), gradleSourceSet::toString);
+        assertNotNull(javaExtension.getCompilerArgs(), gradleSourceSet::toString);
+        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
+        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
+        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
+        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
+        if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
+          assertTrue(args.contains("|-source|1.8"), () -> "Available args: " + args);
+        }
+        assertTrue(args.contains("|-target|1.8"), () -> "Available args: " + args);
+        assertTrue(args.contains("|-bootclasspath"), () -> "Available args: " + args);
+        if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
+          assertEquals("1.8", javaExtension.getSourceCompatibility(),
+                  () -> "Available args: " + args);
+        }
+        assertEquals("1.8", javaExtension.getTargetCompatibility(),
+                () -> "Available args: " + args);
+        assertTrue(javaExtension.getClassesDir().toPath().endsWith("classes"));
+
+        KotlinExtension kotlinExtension = SupportedLanguages.KOTLIN.getExtension(gradleSourceSet);
+        assertNotNull(kotlinExtension);
+        assertEquals(4, kotlinExtension.getSourceDirs().size());
+      }
+    });
+  }
+
+  private GradleSourceSet findSourceSet(List<GradleSourceSet> sourceSets,
+      String projectName, String sourceSetName) {
+    for (GradleSourceSet sourceSet : sourceSets) {
+      if (sourceSet.getProjectName().equals(projectName)
+          && sourceSet.getSourceSetName().equals(sourceSetName)) {
+        return sourceSet;
+      }
+    }
+    throw new IllegalStateException("Source Set " + projectName + " " + sourceSetName
+        + " not found in " + sourceSets);
   }
 }

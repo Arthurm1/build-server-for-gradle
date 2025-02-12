@@ -75,7 +75,13 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
       extension.setCompileTaskName(scalaCompile.getName());
 
       extension.setSourceDirs(getSourceFolders(sourceSet));
-      extension.setGeneratedSourceDirs(Collections.emptySet());
+      Set<File> generatedDirs = new HashSet<>();
+      File annotationProcessorDir = JavaLanguageModelBuilder.getAnnotationProcessingDir(
+          scalaCompile.getOptions());
+      if (annotationProcessorDir != null) {
+        generatedDirs.add(annotationProcessorDir);
+      }
+      extension.setGeneratedSourceDirs(generatedDirs);
       extension.setClassesDir(getClassesDir(scalaCompile));
 
       extension.setScalaOrganization(getScalaOrganization(scalaLibraryDependency));

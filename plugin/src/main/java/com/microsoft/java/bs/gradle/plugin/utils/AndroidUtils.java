@@ -5,49 +5,43 @@ import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
 import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
+import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinExtension;
 import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.SourceSetsModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.file.FileSystemLocation;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.compile.JavaCompile;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Utility class for android related operations.
+ * See https://developer.android.com/reference/tools/gradle-api for API
  */
 public class AndroidUtils {
 
   private AndroidUtils() {
-  }
-
-  /**
-   * Checks if the given project is an Android project.
-   *
-   * @param project Gradle project to check
-   */
-  public static boolean isAndroidProject(Project project) {
-    return getAndroidExtension(project) != null;
   }
 
   /**
@@ -58,73 +52,33 @@ public class AndroidUtils {
    */
   public static List<GradleSourceSet> getBuildVariantsAsGradleSourceSets(Project project) {
 
-    List<GradleSourceSet> sourceSets = new LinkedList<>();
-
     Object androidExtension = getAndroidExtension(project);
     if (androidExtension == null) {
-      return sourceSets;
+      return Collections.emptyList();
     }
 
-    AndroidProjectType androidProjectType = getProjectType(project);
-    if (androidProjectType == null) {
-      return sourceSets;
-    }
-
-    List<Object> variants = new LinkedList<>();
-    switch (androidProjectType) {
-      case APPLICATION:
-      case DYNAMIC_FEATURE:
-        variants = getVariants(androidExtension, "getApplicationVariants", "getTestVariants");
-        break;
-      case LIBRARY:
-        variants = getVariants(androidExtension, "getLibraryVariants", "getTestVariants");
-        break;
-      case INSTANT_APP_FEATURE:
-        variants = getVariants(androidExtension, "getFeatureVariants", "getTestVariants");
-        break;
-      case ANDROID_TEST:
-        variants = getVariants(androidExtension, "getTestVariants");
-        break;
-      default:
-    }
-
-    for (Object variant : variants) {
-      GradleSourceSet sourceSet = convertVariantToGradleSourceSet(project, variant, false);
-      if (sourceSet != null) {
-        sourceSets.add(sourceSet);
-      }
-    }
-
-    if (androidProjectType != AndroidProjectType.ANDROID_TEST) {
-      for (Object variant : getVariants(androidExtension, "getUnitTestVariants")) {
-        GradleSourceSet sourceSet = convertVariantToGradleSourceSet(project, variant, true);
-        if (sourceSet != null) {
-          sourceSets.add(sourceSet);
-        }
-      }
-    }
-
-    return sourceSets;
-
+    return Stream.of("getApplicationVariants",
+            "getLibraryVariants",
+            "getFeatureVariants",
+            "getTestVariants",
+            "getUnitTestVariants")
+        .flatMap(name -> getVariant(androidExtension, name).stream())
+        .map(variant -> convertVariantToGradleSourceSet(project, variant))
+        .collect(Collectors.toList());
   }
 
   /**
-   * Returns a list of variants extracted with the listed method names from the given
-   * android extension.
+   * Returns a list of variants extracted with the method name from the given android extension.
    *
    * @param androidExtension AndroidExtension object from which the variants are to be extracted.
-   * @param methodNames name of different methods to invoke to get all the variants.
+   * @param methodName name of method to invoke to get all the variants.
    */
-  private static List<Object> getVariants(Object androidExtension, String... methodNames) {
-    List<Object> variants = new LinkedList<>();
-    for (String methodName : methodNames) {
-      try {
-        variants.addAll(Utils.invokeMethod(androidExtension, methodName));
-      } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-        // do nothing
-      }
+  private static List<Object> getVariant(Object androidExtension, String methodName) {
+    Collection<Object> variants = Utils.invokeMethodIgnoreFail(androidExtension, methodName);
+    if (variants != null) {
+      return new LinkedList<>(variants);
     }
-    return variants;
+    return Collections.emptyList();
   }
 
   /**
@@ -133,80 +87,86 @@ public class AndroidUtils {
    *
    * @param project Gradle project to populate GradleSourceSet properties
    * @param variant Android Build Variant object to populate GradleSourceSet properties
-   * @param isUnitTest Indicates if the given variant is a unit test variant
    */
   private static GradleSourceSet convertVariantToGradleSourceSet(
       Project project,
-      Object variant,
-      boolean isUnitTest
+      Object variant
   ) {
 
-    try {
+    DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
+    gradleSourceSet.setBuildTargetDependencies(new HashSet<>());
 
-      DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
-      gradleSourceSet.setBuildTargetDependencies(new HashSet<>());
+    gradleSourceSet.setGradleVersion(project.getGradle().getGradleVersion());
+    gradleSourceSet.setProjectName(project.getName());
+    String projectPath = project.getPath();
+    gradleSourceSet.setProjectPath(projectPath);
+    gradleSourceSet.setProjectDir(project.getProjectDir());
+    gradleSourceSet.setRootDir(project.getRootDir());
 
-      gradleSourceSet.setGradleVersion(project.getGradle().getGradleVersion());
-      gradleSourceSet.setProjectName(project.getName());
-      String projectPath = project.getPath();
-      gradleSourceSet.setProjectPath(projectPath);
-      gradleSourceSet.setProjectDir(project.getProjectDir());
-      gradleSourceSet.setRootDir(project.getRootDir());
+    // variant class should be com.android.build.gradle.api.BaseVariant or child class
+    String variantName = Utils.invokeMethod(variant, "getName");
+    gradleSourceSet.setSourceSetName(variantName);
 
-      String variantName = Utils.invokeMethod(variant, "getName");
-      gradleSourceSet.setSourceSetName(variantName);
+    // classes task equivalent in android (assembleRelease)
+    Provider<Task> assembleTask = Utils.invokeMethod(variant, "getAssembleProvider");
+    gradleSourceSet.setClassesTaskName(
+        SourceSetUtils.getFullTaskName(projectPath, assembleTask.get().getName())
+    );
 
-      // classes task equivalent in android (assembleRelease)
-      gradleSourceSet.setClassesTaskName(
-          SourceSetUtils.getFullTaskName(projectPath, "assemble" + capitalize(variantName))
-      );
+    gradleSourceSet.setCleanTaskName(SourceSetUtils.getFullTaskName(projectPath, "clean"));
 
-      gradleSourceSet.setCleanTaskName(SourceSetUtils.getFullTaskName(projectPath, "clean"));
+    // compile task in android (compileReleaseJavaWithJavac)
+    HashSet<String> tasks = new HashSet<>();
+    Provider<JavaCompile> javaCompileProvider =
+        Utils.invokeMethod(variant, "getJavaCompileProvider");
+    JavaCompile javaCompile = javaCompileProvider.get();
+    tasks.add(SourceSetUtils.getFullTaskName(projectPath, javaCompile.getName()));
+    gradleSourceSet.setTaskNames(tasks);
 
-      // compile task in android (compileReleaseJavaWithJavac)
-      HashSet<String> tasks = new HashSet<>();
-      String compileTaskName = "compile" + capitalize(variantName) + "JavaWithJavac";
-      tasks.add(SourceSetUtils.getFullTaskName(projectPath, compileTaskName));
-      gradleSourceSet.setTaskNames(tasks);
+    // extensions
+    Map<String, LanguageExtension> extensions = new HashMap<>();
+    Set<File> javaSourceDirs = getDirs(variant, "getJavaDirectories");
+    addJavaExtension(extensions, project, javaCompile, javaSourceDirs);
+    Set<File> kotlinSourceDirs = getDirs(variant, "getKotlinDirectories");
+    addKotlinExtension(extensions, kotlinSourceDirs);
+    gradleSourceSet.setExtensions(extensions);
 
-      // module dependencies
-      addModuleDependencies(gradleSourceSet, project, variant);
+    // compile and runtime configurations
+    Configuration compileConfig = Utils.invokeMethod(variant, "getCompileConfiguration");
+    Configuration runtimeConfig = Utils.invokeMethod(variant, "getRuntimeConfiguration");
 
-      // source and resource
-      addSourceAndResources(gradleSourceSet, variant, isUnitTest);
+    // classpath
+    addClasspath(gradleSourceSet, compileConfig, runtimeConfig, javaCompile);
 
-      // resource outputs
-      addResourceOutputs(gradleSourceSet, variant, isUnitTest);
+    // module dependencies
+    addModuleDependencies(gradleSourceSet, project, compileConfig, runtimeConfig);
 
-      List<String> compilerArgs = new ArrayList<>();
+    // source and resource
+    addSourceAndResources(gradleSourceSet, variant);
 
-      // generated sources and source outputs
-      addGeneratedSourceAndSourceOutputs(gradleSourceSet, variant, compilerArgs);
+    // resource outputs
+    addResourceOutputs(gradleSourceSet, variant);
 
-      // classpath
-      addClasspath(gradleSourceSet, variant);
+    // generated sources and source outputs
+    addGeneratedSourceAndSourceOutputs(gradleSourceSet, extensions.values());
 
-      // Archive output dirs (not relevant in case of android build variants)
-      gradleSourceSet.setArchiveOutputFiles(new HashMap<>());
+    // Archive output dirs. TODO
+    // the `.aar` files produced by ArchiveTasks contain a `classes.jar` file.
+    // the `classes.jar` inputs should tell us what project is being referenced
+    // But can't figure out how to get hold of the task that produces the classes.jar
+    // to find out the inputs. :shrug:
+    // the Android tests don't contain any inter project dependencies
+    gradleSourceSet.setArchiveOutputFiles(new HashMap<>());
 
-      // tests
-      gradleSourceSet.setTestTasks(SourceSetsModelBuilder.getTestTasks(project,
-          gradleSourceSet.getSourceOutputDirs()));
+    // tests
+    gradleSourceSet.setTestTasks(SourceSetsModelBuilder.getTestTasks(project,
+        gradleSourceSet.getSourceOutputDirs()));
 
-      // run tasks
-      gradleSourceSet.setRunTasks(SourceSetsModelBuilder.getRunTasks(project,
-          gradleSourceSet.getRuntimeClasspath()));
+    // run tasks
+    gradleSourceSet.setRunTasks(SourceSetsModelBuilder.getRunTasks(project,
+        gradleSourceSet.getRuntimeClasspath()));
 
-      // extensions
-      addExtensions(gradleSourceSet, compilerArgs);
-
-      return gradleSourceSet;
-
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException ignored) {
-      // do nothing
-    }
-
-    return null;
+    return gradleSourceSet;
   }
 
   /**
@@ -214,63 +174,64 @@ public class AndroidUtils {
    *
    * @param gradleSourceSet Instance of DefaultGradleSourceSet
    * @param project Instance of Project
-   * @param variant Instance of Build Variant
+   * @param compileConfig Compile time configuration
+   * @param runtimeConfig Runtime time configuration
    */
-  private static void addModuleDependencies(
-      DefaultGradleSourceSet gradleSourceSet,
-      Project project,
-      Object variant
+  private static void addModuleDependencies(DefaultGradleSourceSet gradleSourceSet,
+      Project project, Configuration compileConfig, Configuration runtimeConfig
   ) {
-    Set<GradleModuleDependency> moduleDependencies = new HashSet<>();
+    List<Configuration> configs = new ArrayList<>();
+    configs.add(compileConfig);
+    configs.add(runtimeConfig);
+    Set<GradleModuleDependency> moduleDependencies = new HashSet<>(
+        DependencyCollector.getModuleDependencies(project, configs));
 
-    try {
-      // compile and runtime libraries
-      Configuration compileConfiguration = getProperty(variant, "compileConfiguration");
-      Configuration runtimeConfiguration = getProperty(variant, "runtimeConfiguration");
-
-      List<Configuration> configs = new ArrayList<>();
-      configs.add(compileConfiguration);
-      configs.add(runtimeConfiguration);
-      moduleDependencies.addAll(DependencyCollector.getModuleDependencies(project, configs));
-    } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-      // do nothing
+    // add Android SDK
+    Object androidComponents = getAndroidComponentExtension(project);
+    if (androidComponents != null) {
+      Object sdkComponents = Utils.invokeMethod(androidComponents, "getSdkComponents");
+      Provider<List<RegularFile>> bootClasspath =
+          Utils.invokeMethod(sdkComponents, "getBootClasspath");
+      List<RegularFile> bootClasspathFiles = bootClasspath.get();
+      bootClasspathFiles.stream().map(RegularFile::getAsFile)
+          .forEach(file -> moduleDependencies.add(mockModuleDependency(file)));
     }
-
-    try {
-      // add Android SDK
-      Object androidComponents = getAndroidComponentExtension(project);
-      if (androidComponents != null) {
-        Object sdkComponents = getProperty(androidComponents, "sdkComponents");
-        Object bootClasspath =
-            ((Provider<?>) getProperty(sdkComponents, "bootclasspathProvider")).get();
-        try {
-          List<RegularFile> bootClasspathFiles = Utils.invokeMethod(bootClasspath, "get");
-          List<File> sdkClasspath =
-              bootClasspathFiles.stream().map(RegularFile::getAsFile).collect(Collectors.toList());
-          for (File file : sdkClasspath) {
-            moduleDependencies.add(mockModuleDependency(file.toPath().toUri()));
-          }
-        } catch (IllegalStateException | InvocationTargetException e) {
-          // failed to retrieve android sdk classpath
-          // do nothing
-        }
-      }
-      // add R.jar file
-      String taskName = "process" + capitalize(gradleSourceSet.getSourceSetName()) + "Resources";
-      Task processResourcesTask = project.getTasks().findByName(taskName);
-      if (processResourcesTask != null) {
-        Object output = Utils.invokeMethod(processResourcesTask, "getRClassOutputJar");
-        RegularFile file = Utils.invokeMethod(output, "get");
+    // add R.jar file
+    String taskName = "process" + capitalize(gradleSourceSet.getSourceSetName()) + "Resources";
+    Task processResourcesTask = Utils.taskByName(project, taskName);
+    if (processResourcesTask != null) {
+      Provider<RegularFile> outputProvider = Utils.invokeMethod(processResourcesTask,
+          "getRClassOutputJar");
+      if (outputProvider.isPresent()) {
+        RegularFile file = outputProvider.get();
         File jarFile = file.getAsFile();
         if (jarFile.exists()) {
-          moduleDependencies.add(mockModuleDependency(jarFile.toPath().toUri()));
+          moduleDependencies.add(mockModuleDependency(jarFile));
         }
       }
-    } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-      // do nothing
     }
 
     gradleSourceSet.setModuleDependencies(moduleDependencies);
+  }
+
+  /**
+   * Get specific type of input dirs for the given GradleSourceSet.
+   *
+   * @param variant Instance of Build Variant
+   * @param methodName name of method to return relevante dirs
+   */
+  private static Set<File> getDirs(
+      Object variant,
+      String methodName
+  ) {
+    Set<File> dirs = new HashSet<>();
+    Object sourceSets = Utils.invokeMethod(variant, "getSourceSets");
+    if (sourceSets instanceof Iterable) {
+      for (Object sourceSet : (Iterable<?>) sourceSets) {
+        dirs.addAll(Utils.invokeMethod(sourceSet, methodName));
+      }
+    }
+    return dirs;
   }
 
   /**
@@ -278,36 +239,19 @@ public class AndroidUtils {
    *
    * @param gradleSourceSet Instance of DefaultGradleSourceSet
    * @param variant Instance of Build Variant
-   * @param isUnitTest Indicates if the given variant is a unit test variant
    */
   private static void addSourceAndResources(
       DefaultGradleSourceSet gradleSourceSet,
-      Object variant,
-      boolean isUnitTest
+      Object variant
   ) {
-
     Set<File> sourceDirs = new HashSet<>();
-    Set<File> resourceDirs = new HashSet<>();
-
-    try {
-      Object sourceSets = getProperty(variant, "sourceSets");
-      if (sourceSets instanceof Iterable) {
-        for (Object sourceSet : (Iterable<?>) sourceSets) {
-          Set<File> javaDirectories = getProperty(sourceSet, "javaDirectories");
-          sourceDirs.addAll(javaDirectories);
-          if (!isUnitTest) {
-            resourceDirs.addAll(getProperty(sourceSet, "resDirectories"));
-          }
-          resourceDirs.addAll(getProperty(sourceSet, "resourcesDirectories"));
-        }
-      }
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-      // do nothing
-    }
-
+    sourceDirs.addAll(getDirs(variant, "getJavaDirectories"));
+    sourceDirs.addAll(getDirs(variant, "getKotlinDirectories"));
     gradleSourceSet.setSourceDirs(sourceDirs);
+    Set<File> resourceDirs = new HashSet<>();
+    resourceDirs.addAll(getDirs(variant, "getResDirectories"));
+    resourceDirs.addAll(getDirs(variant, "getResourcesDirectories"));
     gradleSourceSet.setResourceDirs(resourceDirs);
-
   }
 
   /**
@@ -315,141 +259,143 @@ public class AndroidUtils {
    *
    * @param gradleSourceSet Instance of DefaultGradleSourceSet
    * @param variant Instance of Build Variant
-   * @param isUnitTest Indicates if the given variant is a unit test variant
    */
   private static void addResourceOutputs(
       DefaultGradleSourceSet gradleSourceSet,
-      Object variant,
-      boolean isUnitTest
+      Object variant
   ) {
 
     Set<File> resourceOutputs = new HashSet<>();
 
-    try {
-      Provider<Task> resourceProvider = getProperty(variant, "processJavaResourcesProvider");
-      if (resourceProvider != null) {
-        Task resTask = resourceProvider.get();
-        File outputDir = Utils.invokeMethod(resTask, "getDestinationDir");
-        resourceOutputs.add(outputDir);
-      }
+    Provider<Task> resourceProvider = Utils.invokeMethod(variant,
+        "getProcessJavaResourcesProvider");
+    if (resourceProvider != null) {
+      Task resTask = resourceProvider.get();
+      File outputDir = Utils.invokeMethod(resTask, "getDestinationDir");
+      resourceOutputs.add(outputDir);
+    }
 
-      if (!isUnitTest) {
-        Provider<Task> resProvider = getProperty(variant, "mergeResourcesProvider");
-        if (resProvider != null) {
-          Task resTask = resProvider.get();
-          Object outputDir = Utils.invokeMethod(resTask, "getOutputDir");
-          Provider<File> fileProvider = Utils.invokeMethod(outputDir, "getAsFile");
-          File output = fileProvider.get();
-          resourceOutputs.add(output);
-        }
-      }
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-      // do nothing
+    Provider<Task> resProvider;
+    try {
+      resProvider = Utils.invokeMethod(variant, "getMergeResourcesProvider");
+    } catch (Exception e) {
+      // mergeResourcesProvider isn't initialized on all variants
+      resProvider = null;
+    }
+    if (resProvider != null) {
+      Task resTask = resProvider.get();
+      Provider<FileSystemLocation> outputDir = Utils.invokeMethod(resTask, "getOutputDir");
+      File output = outputDir.get().getAsFile();
+      resourceOutputs.add(output);
     }
 
     gradleSourceSet.setResourceOutputDirs(resourceOutputs);
-
   }
 
   /**
    * Add source output and generated source output directories to the given GradleSourceSet.
    *
    * @param gradleSourceSet Instance of DefaultGradleSourceSet
-   * @param variant Instance of Build Variant
-   * @param compilerArgs List to be populated from the java compiler arguments.
    */
   private static void addGeneratedSourceAndSourceOutputs(
       DefaultGradleSourceSet gradleSourceSet,
-      Object variant,
-      List<String> compilerArgs
+      Collection<LanguageExtension> languageExtensions
   ) {
-
     Set<File> generatedSources = new HashSet<>();
     Set<File> sourceOutputs = new HashSet<>();
 
-    try {
-      Provider<Task> javaCompileProvider = getProperty(variant, "javaCompileProvider");
-      if (javaCompileProvider != null) {
-        Task javaCompileTask = javaCompileProvider.get();
-
-        compilerArgs.addAll(
-            JavaLanguageModelBuilder.getCompilerArgs((JavaCompile) javaCompileTask));
-
-        File outputDir = Utils.invokeMethod(javaCompileTask, "getDestinationDir");
-        sourceOutputs.add(outputDir);
-
-        Object source = Utils.invokeMethod(javaCompileTask, "getSource");
-        Set<File> compileSources = Utils.invokeMethod(source, "getFiles");
-
-        // generated = compile source - source
-        for (File compileSource : compileSources) {
-          boolean inSourceDir = gradleSourceSet.getSourceDirs().stream()
-              .anyMatch(dir -> compileSource.getAbsolutePath().startsWith(dir.getAbsolutePath()));
-          if (inSourceDir) {
-            continue;
-          }
-          boolean inGeneratedSourceDir = generatedSources.stream()
-              .anyMatch(dir -> compileSource.getAbsolutePath().startsWith(dir.getAbsolutePath()));
-          if (inGeneratedSourceDir) {
-            continue;
-          }
-          generatedSources.add(compileSource);
-        }
+    for (LanguageExtension extension : languageExtensions) {
+      if (extension.getClassesDir() != null) {
+        sourceOutputs.add(extension.getClassesDir());
       }
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-      // do nothing
+      if (extension.getGeneratedSourceDirs() != null) {
+        generatedSources.addAll(extension.getGeneratedSourceDirs());
+      }
     }
 
     gradleSourceSet.setGeneratedSourceDirs(generatedSources);
     gradleSourceSet.setSourceOutputDirs(sourceOutputs);
-
   }
 
   /**
    * Add classpath files to the given GradleSourceSet.
    *
    * @param gradleSourceSet Instance of DefaultGradleSourceSet
-   * @param variant Instance of Build Variant
+   * @param compileConfig Compile time configuration
+   * @param runtimeConfig Runtime time configuration
    */
-  private static void addClasspath(DefaultGradleSourceSet gradleSourceSet, Object variant) {
+  private static void addClasspath(DefaultGradleSourceSet gradleSourceSet,
+       Configuration compileConfig, Configuration runtimeConfig, JavaCompile javaCompile) {
 
-    Set<File> compileClasspathFiles = new HashSet<>();
+    List<File> compileClasspathFiles = new LinkedList<>();
     try {
-      Object compileConfig = Utils.invokeMethod(variant, "getCompileConfiguration");
-      compileClasspathFiles.addAll(Utils.invokeMethod(compileConfig, "getFiles"));
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-      // do nothing
+      compileClasspathFiles.addAll(compileConfig.getFiles());
+    } catch (Exception e1) {
+      // attempt to get classpath through java compiler
+      try {
+        compileClasspathFiles.addAll(javaCompile.getClasspath().getFiles());
+      } catch (Exception e2) {
+        throw new IllegalStateException("Error getting compile path for "
+            + gradleSourceSet.getProjectPath() + " "
+            + gradleSourceSet.getSourceSetName() + " "
+            + gradleSourceSet.getExtensions() + " "
+            + compileConfig, e2);
+      }
     }
-    gradleSourceSet.setCompileClasspath(new LinkedList<>(compileClasspathFiles));
+    gradleSourceSet.setCompileClasspath(compileClasspathFiles);
 
-    gradleSourceSet.setRuntimeClasspath(new LinkedList<>());
+    List<File> runtimeClasspathFiles = new LinkedList<>();
+    try {
+      runtimeClasspathFiles.addAll(runtimeConfig.getFiles());
+    } catch (Exception e) {
+      System.err.println("Ignoring error getting runtime path for " + runtimeConfig);
+    }
+    gradleSourceSet.setRuntimeClasspath(runtimeClasspathFiles);
   }
 
   /**
-   * Add language extension to the given GradleSourceSet.
+   * Add Java language extension to the given map.
    *
-   * @param gradleSourceSet Instance of DefaultGradleSourceSet
-   * @param compilerArgs List of compiler arguments needed to build the language extension.
+   * @param extensions map of language extensions to populate
+   * @param project Gradle project
+   * @param javaCompile Gradle's Java compile task
+   * @param javaSourceDirs source dirs for java compilation
    */
-  private static void addExtensions(
-      DefaultGradleSourceSet gradleSourceSet,
-      List<String> compilerArgs
+  private static void addJavaExtension(
+      Map<String, LanguageExtension> extensions,
+      Project project,
+      JavaCompile javaCompile,
+      Set<File> javaSourceDirs
   ) {
-    Map<String, LanguageExtension> extensions = new HashMap<>();
-    boolean isJavaSupported = Arrays.stream(SourceSetUtils.getSupportedLanguages())
-        .anyMatch(l -> Objects.equals(l, SupportedLanguages.JAVA.getBspName()));
-    if (isJavaSupported) {
-      DefaultJavaExtension extension = new DefaultJavaExtension();
+    Set<String> languages = Arrays.stream(SourceSetUtils.getSupportedLanguages())
+        .collect(Collectors.toSet());
 
-      extension.setCompilerArgs(compilerArgs);
-      extension.setSourceCompatibility(
-          JavaLanguageModelBuilder.getSourceCompatibility(compilerArgs));
-      extension.setTargetCompatibility(
-          JavaLanguageModelBuilder.getTargetCompatibility(compilerArgs));
-
+    if (languages.contains(SupportedLanguages.JAVA.getBspName())) {
+      JavaLanguageModelBuilder builder = new JavaLanguageModelBuilder();
+      LanguageExtension extension = builder.getExtension(project, javaCompile, javaSourceDirs);
       extensions.put(SupportedLanguages.JAVA.getBspName(), extension);
     }
-    gradleSourceSet.setExtensions(extensions);
+  }
+
+  /**
+   * Add Kotlin language extension to the given map.
+   *
+   * @param extensions map of language extensions to populate
+   * @param kotlinSourceDirs source dirs for kotlin compilation
+   */
+  private static void addKotlinExtension(
+      Map<String, LanguageExtension> extensions,
+      Set<File> kotlinSourceDirs
+  ) {
+    Set<String> languages = Arrays.stream(SourceSetUtils.getSupportedLanguages())
+        .collect(Collectors.toSet());
+
+    if (languages.contains(SupportedLanguages.KOTLIN.getBspName())) {
+      // TODO flesh this out once we know how to extract kotlin setup.
+      DefaultKotlinExtension extension = new DefaultKotlinExtension();
+      extension.setSourceDirs(kotlinSourceDirs);
+      extensions.put(SupportedLanguages.KOTLIN.getBspName(), extension);
+    }
   }
 
   /**
@@ -492,70 +438,6 @@ public class AndroidUtils {
   }
 
   /**
-   * Returns the AndroidProjectType based on the plugin applied to the given project.
-   *
-   * @param project Gradle project to check for plugin and return the corresponding project type.
-   */
-  private static AndroidProjectType getProjectType(Project project) {
-
-    if (getAndroidExtension(project) == null) {
-      return null;
-    }
-
-    AndroidProjectType projectType = null;
-
-    if (project.getPluginManager().hasPlugin("com.android.application")) {
-      projectType = AndroidProjectType.APPLICATION;
-    } else if (project.getPluginManager().hasPlugin("com.android.library")) {
-      projectType = AndroidProjectType.LIBRARY;
-    } else if (project.getPluginManager().hasPlugin("com.android.dynamic-feature")) {
-      projectType = AndroidProjectType.DYNAMIC_FEATURE;
-    } else if (project.getPluginManager().hasPlugin("com.android.feature")) {
-      projectType = AndroidProjectType.INSTANT_APP_FEATURE;
-    } else if (project.getPluginManager().hasPlugin("com.android.test")) {
-      projectType = AndroidProjectType.ANDROID_TEST;
-    }
-
-    return projectType;
-
-  }
-
-  /**
-   * Extracts the given property from the given object with {@code getProperty} method.
-   *
-   * @param obj object from which the property is to be extracted
-   * @param propertyName name of the property to be extracted
-   */
-  public static <A> A getProperty(Object obj, String propertyName)
-      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    return Utils.invokeMethod(obj, new Class<?>[] { String.class }, "getProperty",
-      new Object[] { propertyName });
-  }
-
-  /**
-   * Checks if the given property exists in the given object with {@code hasProperty} method.
-   *
-   * @param obj object from which the property is to be extracted
-   * @param propertyName name of the property to be extracted
-   */
-  public static boolean hasProperty(Object obj, String propertyName)
-      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    return Utils.invokeMethod(obj, new Class<?>[] { String.class }, "hasProperty",
-      new Object[] { propertyName });
-  }
-
-  /**
-   * Enum class representing different types of Android projects.
-   */
-  private enum AndroidProjectType {
-    APPLICATION,
-    LIBRARY,
-    DYNAMIC_FEATURE,
-    INSTANT_APP_FEATURE,
-    ANDROID_TEST
-  }
-
-  /**
    * Returns the given string with its first letter capitalized.
    *
    * @param s String to capitalize
@@ -567,14 +449,14 @@ public class AndroidUtils {
   /**
    * Mocks GradleModuleDependency with a single artifact.
    *
-   * @param jarUri Uri for the artifact to include in the ModuleDependency object.
+   * @param file file for the artifact to include in the ModuleDependency object.
    */
-  private static GradleModuleDependency mockModuleDependency(URI jarUri) {
+  private static GradleModuleDependency mockModuleDependency(File file) {
 
     final String unknown = "UNKNOWN";
 
     List<Artifact> artifacts = new LinkedList<>();
-    artifacts.add(new DefaultArtifact(jarUri, null));
+    artifacts.add(new DefaultArtifact(file.toPath().toUri(), null));
 
     return new DefaultGradleModuleDependency(
         unknown,

@@ -375,9 +375,9 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
     return "DefaultGradleSourceSet: GradleVersion:" + gradleVersion
         + " ProjectName:" + projectName
         + " projectPath:" + projectPath
+        + " sourceSetName:" + sourceSetName
         + " projectDir:" + projectDir
         + " rootDir:" + rootDir
-        + " sourceSetName:" + sourceSetName
         + " classesTaskName:" + classesTaskName
         + " cleanTaskName:" + cleanTaskName
         + " taskNames:" + taskNames

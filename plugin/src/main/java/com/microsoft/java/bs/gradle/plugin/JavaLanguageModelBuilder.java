@@ -51,48 +51,63 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
       Set<GradleModuleDependency> moduleDependencies) {
     JavaCompile javaCompile = getJavaCompileTask(project, sourceSet);
     if (javaCompile != null) {
-      DefaultJavaExtension extension = new DefaultJavaExtension();
 
-      // jdk
-      extension.setJavaHome(DefaultInstalledJdk.current().getJavaHome());
-      extension.setJavaVersion(DefaultInstalledJdk.current().getJavaVersion().getMajorVersion());
-
-      extension.setCompileTaskName(javaCompile.getName());
-
-      // generated sources aren't always marked as such so work out if sources are in the build dir
-      Set<File> generatedSrcDirs = new HashSet<>();
-      if (GradleVersion.current().compareTo(GradleVersion.version("5.2")) >= 0) {
-        generatedSrcDirs.addAll(sourceSet.getOutput().getGeneratedSourcesDirs().getFiles());
-      }
-      addAnnotationProcessingDir(javaCompile, generatedSrcDirs);
       Set<File> allSourceDirs = new HashSet<>(sourceSet.getJava().getSrcDirs());
-      File buildDir;
-      // Even though ProjectLayout was added in 4.1, DirectoryProperty wasn't added til 4.3
-      if (GradleVersion.current().compareTo(GradleVersion.version("4.3")) >= 0) {
-        buildDir = project.getLayout().getBuildDirectory().getAsFile().get();
-      } else {
-        buildDir = Utils.invokeMethodIgnoreFail(project, "getBuildDir");
-      }
-      if (buildDir != null) {
-        Set<File> sourceDirsInOutputDir = getFilesWithThisParent(buildDir.toPath(), allSourceDirs);
-        generatedSrcDirs.addAll(sourceDirsInOutputDir);
-      }
-      allSourceDirs.removeAll(generatedSrcDirs);
-      extension.setSourceDirs(allSourceDirs);
-      addGeneratedSourceDirs(javaCompile, extension.getSourceDirs(), generatedSrcDirs);
-      extension.setGeneratedSourceDirs(generatedSrcDirs);
-
-      extension.setClassesDir(getClassesDir(javaCompile));
-
-      List<String> compilerArgs = getCompilerArgs(javaCompile);
-      extension.setCompilerArgs(compilerArgs);
-      // Ignore options and get source/target compatibility directly from javaCompile.
-      extension.setSourceCompatibility(javaCompile.getSourceCompatibility());
-      extension.setTargetCompatibility(javaCompile.getTargetCompatibility());
-
-      return extension;
+      return getExtension(project, javaCompile, allSourceDirs);
     }
     return null;
+  }
+
+  /**
+   * Extract a JavaExtension from the project information.
+   *
+   * @param project Gradle project
+   * @param javaCompile java compile task
+   * @param allSourceDirs all the source directories for the sourceset/variant
+   * @return the Java information
+   */
+  public DefaultJavaExtension getExtension(Project project, JavaCompile javaCompile,
+      Set<File> allSourceDirs) {
+
+    DefaultJavaExtension extension = new DefaultJavaExtension();
+
+    // jdk
+    extension.setJavaHome(DefaultInstalledJdk.current().getJavaHome());
+    extension.setJavaVersion(DefaultInstalledJdk.current().getJavaVersion().getMajorVersion());
+
+    extension.setCompileTaskName(javaCompile.getName());
+
+    Set<File> generatedSrcDirs = new HashSet<>();
+    File annotationProcessingDir = getAnnotationProcessingDir(javaCompile);
+    if (annotationProcessingDir != null) {
+      generatedSrcDirs.add(annotationProcessingDir);
+    }
+    Set<File> sourceDirs = new HashSet<>(allSourceDirs);
+    File buildDir;
+    // Even though ProjectLayout was added in 4.1, DirectoryProperty wasn't added til 4.3
+    if (GradleVersion.current().compareTo(GradleVersion.version("4.3")) >= 0) {
+      buildDir = project.getLayout().getBuildDirectory().map(Directory::getAsFile).getOrNull();
+    } else {
+      buildDir = Utils.invokeMethodIgnoreFail(project, "getBuildDir");
+    }
+    // generated sources aren't marked as such so work out if sources are in the build dir
+    if (buildDir != null) {
+      Set<File> sourceDirsInOutputDir = getFilesWithThisParent(buildDir.toPath(), sourceDirs);
+      generatedSrcDirs.addAll(sourceDirsInOutputDir);
+    }
+    sourceDirs.removeAll(generatedSrcDirs);
+    extension.setSourceDirs(sourceDirs);
+    addGeneratedSourceDirs(javaCompile, extension.getSourceDirs(), generatedSrcDirs);
+    extension.setGeneratedSourceDirs(generatedSrcDirs);
+
+    extension.setCompilerArgs(getCompilerArgs(javaCompile));
+    extension.setClassesDir(getClassesDir(javaCompile));
+
+    // Ignore options and get source/target compatibility directly from javaCompile.
+    extension.setSourceCompatibility(javaCompile.getSourceCompatibility());
+    extension.setTargetCompatibility(javaCompile.getTargetCompatibility());
+
+    return extension;
   }
 
   private Set<File> getFilesWithThisParent(Path parent, Set<File> files) {
@@ -109,21 +124,27 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
     return (JavaCompile) getLanguageCompileTask(project, sourceSet);
   }
 
-  private void addAnnotationProcessingDir(JavaCompile javaCompile, Set<File> generatedSrcDirs) {
+  private File getAnnotationProcessingDir(JavaCompile javaCompile) {
     CompileOptions options = javaCompile.getOptions();
-    if (GradleVersion.current().compareTo(GradleVersion.version("6.3")) >= 0) {
-      Directory generatedDir = options.getGeneratedSourceOutputDirectory().getOrNull();
-      if (generatedDir != null) {
-        generatedSrcDirs.add(generatedDir.getAsFile());
-      }
-    } else if (GradleVersion.current().compareTo(GradleVersion.version("4.3")) >= 0) {
-      File generatedDir = Utils.invokeMethodIgnoreFail(options,
-          "getAnnotationProcessorGeneratedSourcesDirectory");
-      if (generatedDir != null) {
-        generatedSrcDirs.add(generatedDir);
-      }
-    }
+    return getAnnotationProcessingDir(options);
   }
+
+  /**
+   * get the annotation processing path if it exists.
+   *
+   * @param options compile options
+   * @return path to annotation processing output dir or null
+   */
+  public static File getAnnotationProcessingDir(CompileOptions options) {
+    if (GradleVersion.current().compareTo(GradleVersion.version("6.3")) >= 0) {
+      return options.getGeneratedSourceOutputDirectory().getAsFile().getOrNull();
+    } else if (GradleVersion.current().compareTo(GradleVersion.version("4.3")) >= 0) {
+      return Utils.invokeMethodIgnoreFail(options,
+          "getAnnotationProcessorGeneratedSourcesDirectory");
+    }
+    return null;
+  }
+
 
   private void addGeneratedSourceDirs(JavaCompile javaCompile, Set<File> srcDirs,
       Set<File> generatedSrcDirs) {
@@ -198,9 +219,19 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
 
   private static DefaultJavaCompileSpec getJavaCompileSpec(JavaCompile javaCompile) {
     CompileOptions options = javaCompile.getOptions();
-    
+
     DefaultJavaCompileSpec specs = new DefaultJavaCompileSpec();
-    specs.setCompileOptions(options);
+    try {
+      specs.setCompileOptions(options);
+    } catch (Exception e1) {
+      // Android will throw exceptions here.  Populate as many options manually as possible
+      try {
+        options.getCompilerArgumentProviders().clear();
+        specs.setCompileOptions(options);
+      } catch (Exception e2) {
+        // do nothing
+      }
+    }
 
     // check the project hasn't already got the target or source defined in the
     // compiler args so they're not overwritten below

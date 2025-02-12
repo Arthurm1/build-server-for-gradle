@@ -7,8 +7,6 @@ import ch.epfl.scala.bsp4j.CleanCacheResult;
 import ch.epfl.scala.bsp4j.CompileParams;
 import ch.epfl.scala.bsp4j.CompileReport;
 import ch.epfl.scala.bsp4j.CompileResult;
-import ch.epfl.scala.bsp4j.DependencyModule;
-import ch.epfl.scala.bsp4j.DependencyModulesItem;
 import ch.epfl.scala.bsp4j.DependencyModulesParams;
 import ch.epfl.scala.bsp4j.DependencyModulesResult;
 import ch.epfl.scala.bsp4j.DependencySourcesParams;
@@ -49,8 +47,6 @@ import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
 import ch.epfl.scala.bsp4j.extended.TestFinishEx;
 import ch.epfl.scala.bsp4j.extended.TestName;
 import ch.epfl.scala.bsp4j.extended.TestStartEx;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
 
@@ -223,6 +219,17 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
             .collect(Collectors.joining("\n"))));
   }
 
+  private List<MavenDependencyModule> getDependencies(
+       DependencyModulesResult dependencyModulesResult) {
+
+    return dependencyModulesResult.getItems().stream()
+        .flatMap(item -> item.getModules().stream())
+        .filter(dependencyModule -> "maven".equals(dependencyModule.getDataKind()))
+        .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
+                MavenDependencyModule.class))
+        .toList();
+  }
+
   @Test
   void testCompilingSingleProjectServer() {
     withNewTestServer("junit5-jupiter-starter-gradle", (gradleBuildServer, client) -> {
@@ -258,11 +265,9 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       DependencyModulesResult dependencyModulesResult = gradleBuildServer
           .buildTargetDependencyModules(dependencyModulesParams).join();
       assertEquals(2, dependencyModulesResult.getItems().size());
-      List<MavenDependencyModuleArtifact> allArtifacts = dependencyModulesResult.getItems().stream()
-          .flatMap(item -> item.getModules().stream())
-          .filter(dependencyModule -> "maven".equals(dependencyModule.getDataKind()))
-          .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
-              MavenDependencyModule.class))
+      List<MavenDependencyModuleArtifact> allArtifacts =
+          getDependencies(dependencyModulesResult)
+          .stream()
           .flatMap(mavenDependencyModule -> mavenDependencyModule.getArtifacts().stream())
           .filter(artifact -> "sources".equals(artifact.getClassifier()))
           .toList();
@@ -2086,32 +2091,13 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           .map(BuildTarget::getId)
           .collect(Collectors.toList());
 
-      DependencyModulesResult dependencyModulesResultBefore = buildServer
+      DependencyModulesResult dependencyModulesResult = buildServer
           .buildTargetDependencyModules(new DependencyModulesParams(btIds)).join();
 
-      for (DependencyModulesItem item : dependencyModulesResultBefore.getItems()) {
-        assertTrue(containsAndroidArtifactPath(item.getModules()));
-      }
-
+      List<MavenDependencyModule> dependencies = getDependencies(dependencyModulesResult);
+      assertTrue(dependencies.stream().anyMatch(
+          dep -> dep.getArtifacts().stream().anyMatch(
+            art -> art.getUri().endsWith("/android.jar"))));
     });
-
   }
-
-  private boolean containsAndroidArtifactPath(List<DependencyModule> modules) {
-
-    for (DependencyModule module : modules) {
-      Object data = module.getData();
-      if (data instanceof JsonObject) {
-        for (JsonElement artifact  : ((JsonObject) data).getAsJsonArray("artifacts")) {
-          if (artifact.getAsJsonObject().get("uri").getAsString().endsWith("android.jar")) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-
-  }
-
 }

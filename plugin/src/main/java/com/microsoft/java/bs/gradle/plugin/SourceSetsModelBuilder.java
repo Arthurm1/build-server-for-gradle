@@ -7,6 +7,7 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,7 +21,6 @@ import com.microsoft.java.bs.gradle.plugin.utils.AndroidUtils;
 import com.microsoft.java.bs.gradle.plugin.utils.SourceSetUtils;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.copy.DefaultCopySpec;
@@ -58,15 +58,13 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   @Override
   public Object buildAll(String modelName, Project project) {
     // mapping Gradle source set to our customized model.
-    List<GradleSourceSet> sourceSets;
+    List<GradleSourceSet> sourceSets = new ArrayList<>();
 
     // Fetch source sets depending on the project type
-    if (AndroidUtils.isAndroidProject(project)) {
-      sourceSets = AndroidUtils.getBuildVariantsAsGradleSourceSets(project);
-    } else {
-      sourceSets = getSourceSetContainer(project).stream()
-          .map(ss -> getSourceSet(project, ss)).collect(Collectors.toList());
-    }
+    sourceSets.addAll(AndroidUtils.getBuildVariantsAsGradleSourceSets(project));
+    sourceSets.addAll(getSourceSetContainer(project).stream()
+        .map(ss -> getSourceSet(project, ss))
+        .collect(Collectors.toList()));
 
     excludeSourceDirsFromModules(sourceSets);
 
@@ -172,7 +170,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   public static Set<GradleTestTask> getTestTasks(Project project, Set<File> sourceOutputDirs) {
     Set<GradleTestTask> testTasks = new HashSet<>();
     if (!sourceOutputDirs.isEmpty()) {
-      Set<Test> tasks = tasksWithType(project, Test.class);
+      Set<Test> tasks = Utils.tasksWithType(project, Test.class);
       for (Test task : tasks) {
         boolean isForThisSourceSet = false;
         if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) >= 0) {
@@ -226,7 +224,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   public static Set<GradleRunTask> getRunTasks(Project project, List<File> runtimeClasspath) {
     Set<GradleRunTask> runTasks = new HashSet<>();
     if (!runtimeClasspath.isEmpty()) {
-      Set<JavaExec> tasks = tasksWithType(project, JavaExec.class);
+      Set<JavaExec> tasks = Utils.tasksWithType(project, JavaExec.class);
       for (JavaExec task : tasks) {
         
         List<File> classpath = new LinkedList<>();
@@ -255,14 +253,6 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     return runTasks;
   }
 
-  private static <T extends Task> Set<T> tasksWithType(Project project, Class<T> clazz) {
-    // Gradle gives concurrentmodification exceptions if multiple threads resolve
-    // the tasks concurrently, which happens on multi-project builds
-    synchronized (project.getRootProject()) {
-      return new HashSet<>(project.getTasks().withType(clazz));
-    }
-  }
-
   /**
    * get all archive tasks for this project and maintain the archive file
    * to source set mapping.
@@ -270,7 +260,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   @SuppressWarnings("deprecation")
   private Map<File, List<File>> getArchiveOutputFiles(Project project, SourceSet sourceSet) {
     // get all archive tasks for this project and find the dirs that are included in the archive
-    Set<AbstractArchiveTask> archiveTasks = tasksWithType(project, AbstractArchiveTask.class);
+    Set<AbstractArchiveTask> archiveTasks = Utils.tasksWithType(project, AbstractArchiveTask.class);
     Map<File, List<File>> archiveOutputFiles = new HashMap<>();
     for (AbstractArchiveTask archiveTask : archiveTasks) {
       Set<Object> archiveSourcePaths = getArchiveSourcePaths(archiveTask.getRootSpec());
@@ -353,7 +343,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       }
     } catch (NoSuchMethodException | SecurityException | IllegalAccessException
              | IllegalArgumentException | InvocationTargetException e) {
-      // ignore
+      throw new IllegalStateException("Error getting source sets", e);
     }
     return new LinkedList<>();
   }
