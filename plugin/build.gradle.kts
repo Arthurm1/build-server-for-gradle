@@ -44,9 +44,53 @@ tasks.named<Test>("test") {
     exceptionFormat = TestExceptionFormat.FULL
   }
   systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(8)
+  }
+}
+
+tasks.register<Test>("test11") {
+  useJUnitPlatform()
+  testLogging {
+    events("passed", "skipped", "failed")
+    exceptionFormat = TestExceptionFormat.FULL
+  }
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(11)
+  }
+}
+
+tasks.register<Test>("test17") {
+  useJUnitPlatform()
+  testLogging {
+    events("passed", "skipped", "failed")
+    exceptionFormat = TestExceptionFormat.FULL
+  }
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+
+tasks.register<Test>("test21") {
+  useJUnitPlatform()
+  testLogging {
+    events("passed", "skipped", "failed")
+    exceptionFormat = TestExceptionFormat.FULL
+  }
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
+tasks.named("check") {
+  dependsOn("test", "test11", "test17", "test21")
 }
 
 dependencies {
   implementation(project(":model"))
   testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

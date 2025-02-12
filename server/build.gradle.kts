@@ -40,18 +40,6 @@ publishing {
   }
 }
 
-dependencies {
-  implementation(project(":model"))
-  implementation("ch.epfl.scala:bsp4j:${project.findProperty("bspVersion") as String}")
-  implementation("org.apache.commons:commons-lang3:3.17.0")
-  implementation("org.gradle:gradle-tooling-api:8.12")
-
-  testImplementation(platform("org.junit:junit-bom:5.11.4"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testImplementation("org.mockito:mockito-core:5.15.2")
-  testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
-}
-
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(17)
@@ -72,4 +60,17 @@ tasks.named<Test>("test") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
+}
+
+dependencies {
+  implementation(project(":model"))
+  implementation("ch.epfl.scala:bsp4j:${project.findProperty("bspVersion") as String}")
+  implementation("org.apache.commons:commons-lang3:3.17.0")
+  implementation("org.gradle:gradle-tooling-api:8.12")
+
+  testImplementation(platform("org.junit:junit-bom:5.11.4"))
+  testImplementation("org.junit.jupiter:junit-jupiter")
+  testImplementation("org.mockito:mockito-core:5.15.2")
+  testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
