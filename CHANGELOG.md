@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0
+## What's Changed
+* enhancement - Faster source set retrieval by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/168
+* enhancement - Named pipe support by @Jiaming in https://github.com/microsoft/build-server-for-gradle/pull/162
+* enhancement - Android support by @Tanish-Ranjan in https://github.com/microsoft/build-server-for-gradle/pull/173 and in https://github.com/microsoft/build-server-for-gradle/pull/194
+* enhancement - Kotlin support by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/0ee64d90f4ea5bea886f493d06af5f1226059b9f
+* enhancement - Groovy support by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/b7684e7415723b3d5924ad379e4cfc92c5b46d45
+* enhancement - Retrieve JVM runtime classpath by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/741a3965a47ad6ad7300337cbd96ddac7a0098f0
+* enhancement - Include changed details in buildTarget/didChange message by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/acf5ef19b0c5bca78b63dd5c4537f421a3340964
+* enhancement - Support buildTarget/run by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/72a6d4f44aac1ebd2b38f4264b755b544173d2d4
+* enhancement - Support buildTarget/inverseSources by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/4a010f8020016028eb6e5fbb1f208a0d8781786e
+* enhancement - Support buildTarget/jvmTestEnvironment by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/05770798fbf8ffb96de57b49d86dc91b8a17fb7d
+* enhancement - Support buildTarget/jvmRunEnvironment by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/b54d5ab6093f4a39bc67cbcd0fa307d6fe4c0f85
+* enhancement - Support buildTarget/jvmCompileClasspath by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/98b89c88bb12f81c4aa6c36bc010e145886af482
+* enhancement - Support BSP cancellation by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/34675a1447df18389cb8aec5496519ee14490a75
+* enhancement - Support semanticDB plugin by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/94549a6845392cdaada41231df595ddbfab8b329
+* enhancement - Add export to Bloop by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/1811d5b4aec532ed0a06cfb7c53a70278f77fa62
+* fix - Get java version compatibility only from java compile task by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/188
+* fix - Recognise generated sources by language by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/1790e3fe2e05220e4959f77f3c8c0c81c9d36b08 and https://github.com/Arthurm1/build-server-for-gradle/commit/7ac0402fdae4887d0f3fd4630b5def2ca77d59e9
+* fix - Remove duplicate Scala compiler options by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/c74475acad604f7ef868669a290327689c0aa33b
+* fix - Stop spurious buildTarget/didChange messages by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/33dc7fedbbbca35733447f185a494af845ed6937 and https://github.com/Arthurm1/build-server-for-gradle/commit/ed49b92bd5e304a754080feb25867cd09f2a5dd8
+
 ## 0.3.0
 ## What's Changed
 * enhancement - Add support for running tests by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/144
