@@ -345,11 +345,11 @@ abstract class IntegrationTest {
         assertTrue(capabilities.getResourcesProvider());
         assertTrue(capabilities.getOutputPathsProvider());
         assertTrue(capabilities.getBuildTargetChangedProvider());
-        assertFalse(capabilities.getJvmRunEnvironmentProvider());
+        assertTrue(capabilities.getJvmRunEnvironmentProvider());
         assertTrue(capabilities.getJvmTestEnvironmentProvider());
         assertFalse(capabilities.getCargoFeaturesProvider());
         assertTrue(capabilities.getCanReload());
-        assertFalse(capabilities.getJvmCompileClasspathProvider());
+        assertTrue(capabilities.getJvmCompileClasspathProvider());
         testServer.onBuildInitialized();
         consumer.accept(testServer, client);
       } finally {
