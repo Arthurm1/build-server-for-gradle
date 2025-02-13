@@ -127,6 +127,7 @@ public class BuildTargetService {
    * Initialize the build target service.
    *
    * @param buildTargetManager the build target manager.
+   * @param connector wrapper round connection to Gradle API
    * @param preferenceManager the preference manager.
    */
   public BuildTargetService(BuildTargetManager buildTargetManager,
@@ -158,6 +159,8 @@ public class BuildTargetService {
 
   /**
    * reload the sourcesets from scratch and notify the BSP client if they have changed.
+   *
+   * @param cancelToken token to cancel Gradle command
    */
   public void reloadWorkspace(CancellationToken cancelToken) {
     List<BuildTargetChangeInfo> changedTargets = updateBuildTargets(cancelToken);
@@ -191,12 +194,20 @@ public class BuildTargetService {
     return getBuildTargetManager(cancelToken).getGradleBuildTarget(btId);
   }
 
+  /**
+   * set the build client.
+   *
+   * @param client the BSP client
+   */
   public void setClient(BuildClient client) {
     this.client = client;
   }
 
   /**
    * Get the build targets of the workspace.
+   *
+   * @param cancelToken token to cancel Gradle command
+   * @return the workspace targets
    */
   public WorkspaceBuildTargetsResult getWorkspaceBuildTargets(CancellationToken cancelToken) {
     List<GradleBuildTarget> allTargets = getBuildTargetManager(cancelToken)
@@ -213,6 +224,10 @@ public class BuildTargetService {
 
   /**
    * Get the sources.
+   *
+   * @param params targets to retrieve sources for
+   * @param cancelToken token to cancel Gradle command
+   * @return the target sources
    */
   public SourcesResult getBuildTargetSources(SourcesParams params, CancellationToken cancelToken) {
     List<SourcesItem> sourceItems = new ArrayList<>();
@@ -244,6 +259,10 @@ public class BuildTargetService {
 
   /**
    * Get the resources.
+   *
+   * @param params targets to retrieve resources for
+   * @param cancelToken token to cancel Gradle command
+   * @return the target resources
    */
   public ResourcesResult getBuildTargetResources(ResourcesParams params,
       CancellationToken cancelToken) {
@@ -271,6 +290,10 @@ public class BuildTargetService {
 
   /**
    * Get the output paths.
+   *
+   * @param params targets to retrieve output paths for
+   * @param cancelToken token to cancel Gradle command
+   * @return the target output paths
    */
   public OutputPathsResult getBuildTargetOutputPaths(OutputPathsParams params,
       CancellationToken cancelToken) {
@@ -320,6 +343,10 @@ public class BuildTargetService {
 
   /**
    * Get inverse sources.
+   *
+   * @param params documents to retrieve inverse sources for
+   * @param cancelToken token to cancel Gradle command
+   * @return the inverse sources
    */
   public InverseSourcesResult getBuildTargetInverseSources(InverseSourcesParams params,
       CancellationToken cancelToken) {
@@ -338,6 +365,10 @@ public class BuildTargetService {
 
   /**
    * Get artifacts dependencies - old way.
+   *
+   * @param params targets to retrieve artifacts dependencies for
+   * @param cancelToken token to cancel Gradle command
+   * @return the artifacts dependencies
    */
   public DependencySourcesResult getBuildTargetDependencySources(DependencySourcesParams params,
       CancellationToken cancelToken) {
@@ -369,6 +400,10 @@ public class BuildTargetService {
 
   /**
    * Get artifacts dependencies.
+   *
+   * @param params targets to retrieve artifacts dependencies for
+   * @param cancelToken token to cancel Gradle command
+   * @return the artifacts dependencies
    */
   public DependencyModulesResult getBuildTargetDependencyModules(DependencyModulesParams params,
       CancellationToken cancelToken) {
@@ -412,6 +447,10 @@ public class BuildTargetService {
 
   /**
    * Compile the build targets.
+   *
+   * @param params targets to build
+   * @param cancelToken token to cancel Gradle command
+   * @return the compile result
    */
   public CompileResult compile(CompileParams params, CancellationToken cancelToken) {
     if (params.getTargets().isEmpty()) {
@@ -441,6 +480,10 @@ public class BuildTargetService {
 
   /**
    * clean the build targets.
+   *
+   * @param params targets to clean sources for
+   * @param cancelToken token to cancel Gradle command
+   * @return the clean result
    */
   public CleanCacheResult cleanCache(CleanCacheParams params, CancellationToken cancelToken) {
     ProgressReporter reporter = new DefaultProgressReporter(client);
@@ -520,6 +563,10 @@ public class BuildTargetService {
 
   /**
    * Get the Java compiler options.
+   *
+   * @param params targets to get the Java compiler options for
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets javac options
    */
   public JavacOptionsResult getBuildTargetJavacOptions(JavacOptionsParams params,
       CancellationToken cancelToken) {
@@ -562,6 +609,10 @@ public class BuildTargetService {
   
   /**
    * Get the Scala compiler options.
+   *
+   * @param params targets to get the Scala compiler options for
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets scalac options
    */
   public ScalacOptionsResult getBuildTargetScalacOptions(ScalacOptionsParams params,
       CancellationToken cancelToken) {
@@ -604,6 +655,10 @@ public class BuildTargetService {
 
   /**
    * Run the test classes.
+   *
+   * @param params targets and other test information required to run the tests
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets test results
    */
   public TestResult buildTargetTest(TestParams params, CancellationToken cancelToken) {
     TestResult testResult = new TestResult(StatusCode.OK);
@@ -709,6 +764,10 @@ public class BuildTargetService {
 
   /**
    * get the test classes.
+   *
+   * @param params targets to get the test classes for
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets test environments
    */
   public JvmTestEnvironmentResult getBuildTargetJvmTestEnvironment(
       JvmTestEnvironmentParams params, CancellationToken cancelToken) {
@@ -762,6 +821,10 @@ public class BuildTargetService {
 
   /**
    * Run the main class.
+   *
+   * @param params targets and other run information required to run the main classes
+   * @param cancelToken token to cancel Gradle command
+   * @return the run main class result
    */
   public RunResult buildTargetRun(RunParams params, CancellationToken cancelToken) {
     RunResult runResult = new RunResult(StatusCode.OK);
@@ -813,6 +876,10 @@ public class BuildTargetService {
 
   /**
    * get the main classes runtime environment.
+   *
+   * @param params targets to get the main classes for
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets run environments
    */
   public JvmRunEnvironmentResult getBuildTargetJvmRunEnvironment(
       JvmRunEnvironmentParams params, CancellationToken cancelToken) {

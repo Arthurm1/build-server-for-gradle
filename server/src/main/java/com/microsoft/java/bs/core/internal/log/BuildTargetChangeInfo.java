@@ -46,18 +46,38 @@ public class BuildTargetChangeInfo {
     this.newSourceSet = newSourceSet;
   }
 
+  /**
+   * has the build target config changed.
+   *
+   * @return flag indicating change.
+   */
   public boolean hasChanged() {
     return oldSourceSet != null && newSourceSet != null;
   }
 
+  /**
+   * is the build target new.
+   *
+   * @return flag indicating new.
+   */
   public boolean isAdded() {
     return oldSourceSet == null && newSourceSet != null;
   }
 
+  /**
+   * has the build target been deleted.
+   *
+   * @return flag indicating deletion.
+   */
   public boolean isRemoved() {
     return oldSourceSet != null && newSourceSet == null;
   }
 
+  /**
+   * Get the build target id.
+   *
+   * @return build target id
+   */
   public BuildTargetIdentifier getBtId() {
     return btId;
   }

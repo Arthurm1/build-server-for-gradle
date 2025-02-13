@@ -43,10 +43,20 @@ public class AppRunReporter extends ProgressReporter implements Closeable {
     stdErr = new SysErrOutputStream(client, originId, taskId);
   }
 
+  /**
+   * Get the app's standard output stream.
+   *
+   * @return standard output stream
+   */
   public OutputStream getStdOut() {
     return stdOut;
   }
 
+  /**
+   * Get the app's error output stream.
+   *
+   * @return error output stream
+   */
   public OutputStream getStdErr() {
     return stdErr;
   }

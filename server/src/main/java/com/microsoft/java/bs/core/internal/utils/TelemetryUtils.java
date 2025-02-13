@@ -14,6 +14,10 @@ public class TelemetryUtils {
 
   /**
    * Return a map suitable for metadata telemetry.
+   *
+   * @param kind the kind of telemetry
+   * @param data the telemetry data
+   * @return a map containing the telemetry key/value pair
    */
   public static Map<String, String> getMetadataMap(String kind, String data) {
     Map<String, String> map = new HashMap<>();

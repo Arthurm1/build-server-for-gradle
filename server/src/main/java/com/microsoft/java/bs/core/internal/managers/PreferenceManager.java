@@ -22,30 +22,63 @@ public class PreferenceManager {
 
   private List<String> clientSupportedLanguages;
 
+  /**
+   * constructor.
+   */
   public PreferenceManager() {
     this.clientSupportedLanguages = new LinkedList<>();
   }
 
+  /**
+   * set the client preferences.
+   *
+   * @param preferences BSP client preferences
+   */
   public void setPreferences(Preferences preferences) {
     this.preferences = preferences;
   }
 
+  /**
+   * get the client preferences.
+   *
+   * @return BSP client preferences
+   */
   public Preferences getPreferences() {
     return preferences;
   }
 
+  /**
+   * get the workspace uri.
+   *
+   * @return workspace uri
+   */
   public URI getRootUri() {
     return rootUri;
   }
 
+  /**
+   * set the workspace uri.
+   *
+   * @param rootUri workspace uri
+   */
   public void setRootUri(URI rootUri) {
     this.rootUri = rootUri;
   }
 
+  /**
+   * get the languages supported by the client.
+   *
+   * @return supported languages
+   */
   public List<String> getClientSupportedLanguages() {
     return clientSupportedLanguages;
   }
 
+  /**
+   * set the languages supported by the client.
+   *
+   * @param clientSupportedLanguages supported languages
+   */
   public void setClientSupportedLanguages(List<String> clientSupportedLanguages) {
     this.clientSupportedLanguages = clientSupportedLanguages;
   }

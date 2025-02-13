@@ -21,6 +21,11 @@ public class LogHandler extends Handler {
 
   private final BuildClient client;
 
+  /**
+   * constructor.
+   *
+   * @param client the BSP client
+   */
   public LogHandler(BuildClient client) {
     this.client = client;
   }

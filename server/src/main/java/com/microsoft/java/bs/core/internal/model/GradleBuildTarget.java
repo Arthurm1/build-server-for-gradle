@@ -13,6 +13,13 @@ import ch.epfl.scala.bsp4j.BuildTarget;
  * Represents a Gradle build target.
  */
 public class GradleBuildTarget {
+
+  /**
+   * constructor.
+   *
+   * @param buildTarget the build target information
+   * @param sourceSet the Gradle source set information.
+   */
   public GradleBuildTarget(BuildTarget buildTarget, GradleSourceSet sourceSet) {
     this.buildTarget = buildTarget;
     this.sourceSet = sourceSet;
@@ -22,18 +29,38 @@ public class GradleBuildTarget {
 
   private GradleSourceSet sourceSet;
 
+  /**
+   * get the build target information.
+   *
+   * @return build target
+   */
   public BuildTarget getBuildTarget() {
     return buildTarget;
   }
 
+  /**
+   * set the build target information.
+   *
+   * @param buildTarget build target
+   */
   public void setBuildTarget(BuildTarget buildTarget) {
     this.buildTarget = buildTarget;
   }
 
+  /**
+   * get the Gradle source set information.
+   *
+   * @return Gradle source set
+   */
   public GradleSourceSet getSourceSet() {
     return sourceSet;
   }
 
+  /**
+   * set the Gradle source set information.
+   *
+   * @param sourceSet Gradle source set
+   */
   public void setSourceSet(GradleSourceSet sourceSet) {
     this.sourceSet = sourceSet;
   }

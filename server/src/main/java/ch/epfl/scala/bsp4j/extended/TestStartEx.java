@@ -21,16 +21,29 @@ public class TestStartEx extends TestStart {
 
   /**
    * Create a new instance of {@link TestStartEx}.
+   *
+   * @param displayName the test's display name
+   * @param testName the test's name information
    */
   public TestStartEx(@NonNull String displayName, @NonNull TestName testName) {
     super(displayName);
     this.testName = testName;
   }
 
+  /**
+   * Get the test's name information.
+   *
+   * @return the test's name information
+   */
   public TestName getTestName() {
     return testName;
   }
 
+  /**
+   * Set the test's name information.
+   *
+   * @param testName the test's name information
+   */
   public void setTestName(TestName testName) {
     this.testName = testName;
   }

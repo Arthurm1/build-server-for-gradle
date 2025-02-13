@@ -48,6 +48,9 @@ public class BuildTargetManager {
 
   private volatile Map<Path, BuildTargetIdentifier> sourceDirsMap;
 
+  /**
+   * constructor.
+   */
   public BuildTargetManager() {
     this.cache = new HashMap<>();
     this.sourceDirsMap = new HashMap<>();
@@ -56,6 +59,7 @@ public class BuildTargetManager {
   /**
    * Store the Gradle source sets.
    *
+   * @param gradleSourceSets the new source sets.
    * @return A list containing identifiers of changed build targets.
    */
   public List<BuildTargetChangeInfo> store(GradleSourceSets gradleSourceSets) {
@@ -171,14 +175,30 @@ public class BuildTargetManager {
     }
   }
 
+  /**
+   * get the build target data for the specified build target id.
+   *
+   * @param buildTargetId the build target id
+   * @return the build target data or null if doesn't exist in the cache
+   */
   public GradleBuildTarget getGradleBuildTarget(BuildTargetIdentifier buildTargetId) {
     return cache.get(buildTargetId);
   }
 
+  /**
+   * get all the build targets.
+   *
+   * @return all the build target data in the cache
+   */
   public List<GradleBuildTarget> getAllGradleBuildTargets() {
     return new ArrayList<>(cache.values());
   }
 
+  /**
+   * get the map of build target source dirs to their build target.
+   *
+   * @return map of source dirs to respective build target
+   */
   public Map<Path, BuildTargetIdentifier> getSourceDirsMap() {
     return new HashMap<>(sourceDirsMap);
   }

@@ -27,6 +27,11 @@ public class TestName {
 
   /**
    * Create a new instance of {@link TestName}.
+   *
+   * @param displayName test display name
+   * @param suiteName test suite name
+   * @param className test class name
+   * @param methodName test method name
    */
   public TestName(@NonNull String displayName, String suiteName,
       String className, String methodName) {
@@ -36,42 +41,92 @@ public class TestName {
     this.methodName = methodName;
   }
 
+  /**
+   * get the test display name.
+   *
+   * @return the test display name
+   */
   public String getDisplayName() {
     return displayName;
   }
 
+  /**
+   * set the test display name.
+   *
+   * @param displayName the test display name
+   */
   public void setDisplayName(String displayName) {
     this.displayName = displayName;
   }
 
+  /**
+   * get the test suite name.
+   *
+   * @return the test suite name
+   */
   public String getSuiteName() {
     return suiteName;
   }
 
+  /**
+   * set the test suite name.
+   *
+   * @param suiteName the test suite name
+   */
   public void setSuiteName(String suiteName) {
     this.suiteName = suiteName;
   }
 
+  /**
+   * get the test class name.
+   *
+   * @return the test class name
+   */
   public String getClassName() {
     return className;
   }
 
+  /**
+   * set the test class name.
+   *
+   * @param className the test class name
+   */
   public void setClassName(String className) {
     this.className = className;
   }
 
+  /**
+   * get the test method name.
+   *
+   * @return the test method name
+   */
   public String getMethodName() {
     return methodName;
   }
 
+  /**
+   * set the test method name.
+   *
+   * @param methodName the test method name
+   */
   public void setMethodName(String methodName) {
     this.methodName = methodName;
   }
 
+  /**
+   * get the test parent.
+   *
+   * @return the test parent
+   */
   public TestName getParent() {
     return parent;
   }
 
+  /**
+   * set the test parent.
+   *
+   * @param parent the test parent
+   */
   public void setParent(TestName parent) {
     this.parent = parent;
   }

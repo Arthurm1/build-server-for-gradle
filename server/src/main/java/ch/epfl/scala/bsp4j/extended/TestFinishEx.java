@@ -24,6 +24,10 @@ public class TestFinishEx extends TestFinish {
 
   /**
    * Create a new instance of {@link TestFinishEx}.
+   *
+   * @param displayName the test display name
+   * @param status the test status
+   * @param testName the test name
    */
   public TestFinishEx(@NonNull String displayName, @NonNull TestStatus status,
       @NonNull TestName testName) {
@@ -31,19 +35,38 @@ public class TestFinishEx extends TestFinish {
     this.testName = testName;
   }
 
-
+  /**
+   * get the test name.
+   *
+   * @return the test name
+   */
   public TestName getTestName() {
     return testName;
   }
 
+  /**
+   * set the test name.
+   *
+   * @param testName the test name
+   */
   public void setTestName(TestName testName) {
     this.testName = testName;
   }
 
+  /**
+   * get the error stack trace.
+   *
+   * @return the error stack trace
+   */
   public String getStackTrace() {
     return stackTrace;
   }
 
+  /**
+   * set the error stack trace.
+   *
+   * @param stackTrace the error stack trace
+   */
   public void setStackTrace(String stackTrace) {
     this.stackTrace = stackTrace;
   }

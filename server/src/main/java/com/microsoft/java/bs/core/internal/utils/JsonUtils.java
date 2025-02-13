@@ -13,8 +13,13 @@ public class JsonUtils {
   private JsonUtils() {}
 
   /**
+   * *
    * Converts given JSON objects to given Model objects.
    *
+   * @param <T> the type of class
+   * @param object the data object to convert to an instance of clazz
+   * @param clazz the type of class to convert to
+   * @return an instance of the class representing the object data
    * @throws IllegalArgumentException if clazz is null
    */
   public static <T> T toModel(Object object, Class<T> clazz) {

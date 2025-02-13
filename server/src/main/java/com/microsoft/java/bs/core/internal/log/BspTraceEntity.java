@@ -27,22 +27,47 @@ public class BspTraceEntity {
     this.rootCauseMessage = builder.rootCauseMessage;
   }
 
+  /**
+   * get the exception's root cause message.
+   *
+   * @return root cause message
+   */
   public String getRootCauseMessage() {
     return rootCauseMessage;
   }
 
+  /**
+   * get the exception's stack trace.
+   *
+   * @return exception's stack trace
+   */
   public String getTrace() {
     return trace;
   }
 
+  /**
+   * get the BSP's message request name.
+   *
+   * @return BSP's message request name.
+   */
   public String getOperationName() {
     return operationName;
   }
 
+  /**
+   * get the build server version.
+   *
+   * @return build server version
+   */
   public String getBuildServerVersion() {
     return buildServerVersion;
   }
 
+  /**
+   * get the request call's duration in milliseconds.
+   *
+   * @return the request call's duration in milliseconds
+   */
   public String getDuration() {
     return duration;
   }
@@ -56,26 +81,55 @@ public class BspTraceEntity {
     private String operationName;
     private String duration;
 
+    /**
+     * set the exception's root cause message.
+     *
+     * @param rootCauseMessage the exception's root cause message.
+     * @return the builder
+     */
     public Builder rootCauseMessage(String rootCauseMessage) {
       this.rootCauseMessage = rootCauseMessage;
       return this;
     }
 
+    /**
+     * set the exception's stack trace.
+     *
+     * @param trace exception's stack trace
+     * @return the builder
+     */
     public Builder trace(String trace) {
       this.trace = trace;
       return this;
     }
 
+    /**
+     * set the BSP's message request name..
+     *
+     * @param operationName the BSP's message request name.
+     * @return the builder
+     */
     public Builder operationName(String operationName) {
       this.operationName = operationName;
       return this;
     }
 
+    /**
+     * set the request call's duration in milliseconds.
+     *
+     * @param duration the request call's duration in milliseconds
+     * @return the builder
+     */
     public Builder duration(String duration) {
       this.duration = duration;
       return this;
     }
 
+    /**
+     * create the trace entity.
+     *
+     * @return the trace entity
+     */
     public BspTraceEntity build() {
       return new BspTraceEntity(this);
     }

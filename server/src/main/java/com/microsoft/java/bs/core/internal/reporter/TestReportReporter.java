@@ -48,6 +48,8 @@ public class TestReportReporter extends ProgressReporter {
    * initialise.
    *
    * @param btId the build target being tested.
+   * @param client the BSP client
+   * @param originId the client origin id
    */
   public TestReportReporter(BuildTargetIdentifier btId, BuildClient client, String originId) {
     super(client, originId);

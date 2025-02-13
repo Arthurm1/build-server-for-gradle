@@ -40,6 +40,8 @@ public class Launcher {
 
   /**
    * Main entry point.
+   *
+   * @param args command line arguments
    */
   public static void main(String[] args) {
 
@@ -154,6 +156,9 @@ public class Launcher {
 
   /**
    * Parse the arguments and return a map of key-value pairs.
+   *
+   * @param args command line arguments
+   * @return map of key value pairs
    */
   public static Map<String, String> parseArgs(String[] args) {
     Map<String, String> paramMap = new HashMap<>();

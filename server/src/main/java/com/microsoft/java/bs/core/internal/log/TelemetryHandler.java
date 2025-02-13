@@ -20,6 +20,11 @@ public class TelemetryHandler extends Handler {
 
   private final BuildClient client;
 
+  /**
+   * constructor.
+   *
+   * @param client the BSP client
+   */
   public TelemetryHandler(BuildClient client) {
     this.client = client;
   }

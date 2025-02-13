@@ -30,6 +30,7 @@ public abstract class ProgressReporter implements ProgressListener {
    * Instantiates a {@link ProgressReporter}.
    *
    * @param client BSP client to report to.
+   * @param originId client supplied originId.
    */
   public ProgressReporter(BuildClient client, String originId) {
     this.client = client;

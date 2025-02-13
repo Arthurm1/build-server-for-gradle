@@ -19,16 +19,29 @@ public class GradleTestEntity {
 
   /**
    * Initialize the test information.
+   *
+   * @param gradleTestTask the test environment
+   * @param testClasses the jvm test class names 
    */
   public GradleTestEntity(GradleTestTask gradleTestTask, Set<String> testClasses) {
     this.gradleTestTask = gradleTestTask;
     this.testClasses = testClasses;
   }
 
+  /**
+   * get the test environment.
+   *
+   * @return the test environment
+   */
   public GradleTestTask getGradleTestTask() {
     return gradleTestTask;
   }
 
+  /**
+   * get the jvm test class names.
+   *
+   * @return the jvm test class names 
+   */
   public Set<String> getTestClasses() {
     return testClasses;
   }

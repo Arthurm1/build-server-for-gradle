@@ -56,6 +56,9 @@ public class LifecycleService {
 
   /**
    * Constructor for {@link LifecycleService}.
+   *
+   * @param connector wrapper round Gradle connector
+   * @param preferenceManager user preferences
    */
   public LifecycleService(GradleApiConnector connector, PreferenceManager preferenceManager) {
     this.connector = connector;
@@ -64,6 +67,10 @@ public class LifecycleService {
 
   /**
    * Initialize the build server.
+   *
+   * @param params initialization params
+   * @param cancelToken Gradle cancel token
+   * @return result of initialization
    */
   public InitializeBuildResult initializeServer(InitializeBuildParams params,
       CancellationToken cancelToken) {
@@ -81,6 +88,11 @@ public class LifecycleService {
     return buildResult;
   }
 
+  /**
+   * set the BSP client.
+   *
+   * @param client the BSP client
+   */
   public void setClient(BuildClient client) {
     this.client = client;
   }
@@ -128,12 +140,17 @@ public class LifecycleService {
     return capabilities;
   }
 
+  /**
+   * set the build server status to initialized.
+   */
   public void onBuildInitialized() {
     status = Status.INITIALIZED;
   }
 
   /**
    * Shutdown all Gradle connectors and mark the server status to shutdown.
+   *
+   * @return null
    */
   public Object shutdown() {
     connector.shutdown();

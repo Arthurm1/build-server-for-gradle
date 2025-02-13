@@ -18,6 +18,9 @@ public class TestNameRecorder implements ProgressListener {
 
   private final Set<String> mainClasses;
 
+  /**
+   * constructor.
+   */
   public TestNameRecorder() {
     mainClasses = new HashSet<>();
   }
@@ -32,6 +35,11 @@ public class TestNameRecorder implements ProgressListener {
     }
   }
 
+  /**
+   * get the set of test classes retrieved by the test dry-run.
+   *
+   * @return set of test classes
+   */
   public Set<String> getMainClasses() {
     return mainClasses;
   }

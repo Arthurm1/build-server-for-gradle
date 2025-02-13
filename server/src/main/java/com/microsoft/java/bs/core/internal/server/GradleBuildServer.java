@@ -83,6 +83,12 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   private final BuildTargetService buildTargetService;
 
+  /**
+   * constructor.
+   *
+   * @param lifecycleService lifecycle service
+   * @param buildTargetService build target service
+   */
   public GradleBuildServer(LifecycleService lifecycleService,
       BuildTargetService buildTargetService) {
     this.lifecycleService = lifecycleService;

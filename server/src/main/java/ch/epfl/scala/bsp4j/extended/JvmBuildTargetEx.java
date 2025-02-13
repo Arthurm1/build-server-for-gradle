@@ -24,26 +24,56 @@ public class JvmBuildTargetEx extends JvmBuildTarget {
     super();
   }
 
+  /**
+   * get the version of Gradle for the build target.
+   *
+   * @return the gradle version
+   */
   public String getGradleVersion() {
     return gradleVersion;
   }
 
+  /**
+   * set the version of Gradle for the build target.
+   *
+   * @param gradleVersion the gradle version
+   */
   public void setGradleVersion(String gradleVersion) {
     this.gradleVersion = gradleVersion;
   }
 
+  /**
+   * get the java source compatibility setting of the build target.
+   *
+   * @return the java source compatibility setting
+   */
   public String getSourceCompatibility() {
     return sourceCompatibility;
   }
 
+  /**
+   * set the java source compatibility setting of the build target.
+   *
+   * @param sourceCompatibility the java source compatibility setting
+   */
   public void setSourceCompatibility(String sourceCompatibility) {
     this.sourceCompatibility = sourceCompatibility;
   }
 
+  /**
+   * get the java target compatibility setting of the build target.
+   *
+   * @return the java target compatibility setting
+   */
   public String getTargetCompatibility() {
     return targetCompatibility;
   }
 
+  /**
+   * set the java target compatibility setting of the build target.
+   *
+   * @param targetCompatibility the java target compatibility setting
+   */
   public void setTargetCompatibility(String targetCompatibility) {
     this.targetCompatibility = targetCompatibility;
   }

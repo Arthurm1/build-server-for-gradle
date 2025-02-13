@@ -22,6 +22,11 @@ public class NamedPipeStream {
   private final String pipeName;
   private StreamProvider provider;
 
+  /**
+   * Constructor.
+   *
+   * @param pipeName name of pipe.
+   */
   public NamedPipeStream(String pipeName) {
     this.pipeName = pipeName;
   }
@@ -48,10 +53,20 @@ public class NamedPipeStream {
     return pipeStreamProvider;
   }
 
+  /**
+   * get the input stream.
+   *
+   * @return input stream
+   */
   public InputStream getInputStream() {
     return getSelectedStream().getInputStream();
   }
 
+  /**
+   * get the output stream.
+   *
+   * @return output stream
+   */
   public OutputStream getOutputStream() {
     return getSelectedStream().getOutputStream();
   }

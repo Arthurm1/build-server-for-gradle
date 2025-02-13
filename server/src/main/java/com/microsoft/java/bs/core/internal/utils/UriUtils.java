@@ -14,6 +14,9 @@ public class UriUtils {
 
   /**
    * Get the URI from the given string.
+   *
+   * @param uri the uri in String form
+   * @return the URI instance
    */
   public static URI getUriFromString(String uri) {
     try {
@@ -25,6 +28,9 @@ public class UriUtils {
 
   /**
    * Returns the URI without query.
+   *
+   * @param uriString the uri in String form
+   * @return the URI instance without the query section.
    */
   public static URI getUriWithoutQuery(String uriString) {
     try {
@@ -41,6 +47,10 @@ public class UriUtils {
 
   /**
    * Returns the query value by key from the URI.
+   *
+   * @param uriString the uri in String form
+   * @param key the key of the key/value required
+   * @return the value of the key/value in the query section of the uri.
    */
   public static String getQueryValueByKey(String uriString, String key) {
     try {

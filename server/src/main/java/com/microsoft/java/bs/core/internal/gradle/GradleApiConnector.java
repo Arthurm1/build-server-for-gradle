@@ -62,6 +62,11 @@ public class GradleApiConnector {
       "Could not create an instance of Tooling API implementation "
       + "using the specified Gradle distribution";
 
+  /**
+   * constructor.
+   *
+   * @param preferenceManager the user preferences in how to use the connection
+   */
   public GradleApiConnector(PreferenceManager preferenceManager) {
     this.preferenceManager = preferenceManager;
     connectors = new ConcurrentHashMap<>();
@@ -71,6 +76,7 @@ public class GradleApiConnector {
    * Extracts the GradleVersion for the given project.
    *
    * @param projectUri URI of the project used to fetch the gradle version.
+   * @param cancellationToken the Gradle cancellation token.
    * @return Gradle version of the project or empty string upon failure.
    */
   public String getGradleVersion(URI projectUri, CancellationToken cancellationToken) {
@@ -86,6 +92,7 @@ public class GradleApiConnector {
    * Extracts the GradleVersion for the given project connection.
    *
    * @param connection ProjectConnection used to fetch the gradle version.
+   * @param cancellationToken the Gradle cancellation token.
    * @return Gradle version of the project or empty string upon failure.
    */
   public String getGradleVersion(ProjectConnection connection,
@@ -102,6 +109,7 @@ public class GradleApiConnector {
    * Extracts the BuildEnvironment model for the given project.
    *
    * @param projectUri URI of the project used to fetch the gradle java home.
+   * @param cancellationToken the Gradle cancellation token.
    * @return BuildEnvironment of the project or {@code null} upon failure.
    */
   public BuildEnvironment getBuildEnvironment(URI projectUri,
@@ -118,6 +126,7 @@ public class GradleApiConnector {
    * Extracts the BuildEnvironment model for the given project.
    *
    * @param connection ProjectConnection used to fetch the gradle version.
+   * @param cancellationToken the Gradle cancellation token.
    * @return BuildEnvironment of the project.
    */
   private BuildEnvironment getBuildEnvironment(ProjectConnection connection,
@@ -132,6 +141,7 @@ public class GradleApiConnector {
    * Runs a probe build to check if the build fails due to java home incompatibility.
    *
    * @param projectUri URI of the project for which the check needs to be performed.
+   * @param cancellationToken the Gradle cancellation token.
    * @return true if the given project has compatible java home, false otherwise.
    */
   public boolean checkCompatibilityWithProbeBuild(URI projectUri,
@@ -167,6 +177,7 @@ public class GradleApiConnector {
    *
    * @param projectUri uri of the project
    * @param client     connection to BSP client
+   * @param cancellationToken the Gradle cancellation token.
    * @return an instance of {@link GradleSourceSets}
    */
   public GradleSourceSets getGradleSourceSets(URI projectUri, BuildClient client,
@@ -219,7 +230,9 @@ public class GradleApiConnector {
    *
    * @param projectUri uri of the project
    * @param reporter   reporter on feedback from Gradle
+   * @param cancellationToken the Gradle cancellation token.
    * @param tasks      tasks to run
+   * @return the result of running the tasks
    */
   public StatusCode runTasks(URI projectUri, ProgressReporter reporter,
       String[] tasks, CancellationToken cancellationToken) {
@@ -264,9 +277,21 @@ public class GradleApiConnector {
 
     return statusCode;
   }
+  
 
   /**
    * request Gradle to run tests.
+   *
+   * @param projectUri URI of the project
+   * @param testClassesMethodsMap map of build targets to test classes to test methods to run
+   * @param jvmOptions the tests jvm options
+   * @param args the tests run arguments
+   * @param envVars the tests environment variables
+   * @param client the BSP client
+   * @param originId client message originId
+   * @param compileProgressReporter listener to pass compile progress back to client.
+   * @param cancellationToken the Gradle cancellation token.
+   * @return the result of running the tests
    */
   public StatusCode runTests(
       URI projectUri,
@@ -362,7 +387,14 @@ public class GradleApiConnector {
   }
 
   /**
-   * request Gradle to return test classes.
+   * Retrieve the test classes for the project.
+   *
+   * @param projectUri URI of the project.
+   * @param testTaskMap map of build targets to their Gradle test tasks
+   * @param client the BSP client
+   * @param compileProgressReporter listener to pass compile progress back to client.
+   * @param cancellationToken the Gradle cancellation token.
+   * @return the JVM test classes discovered
    */
   public Map<BuildTargetIdentifier, List<GradleTestEntity>> getTestClasses(URI projectUri,
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap, BuildClient client,
@@ -432,6 +464,19 @@ public class GradleApiConnector {
 
   /**
    * request Gradle to run main class.
+   *
+   * @param projectUri URI of the project.
+   * @param projectPath the path of the project to associate with this main class run.
+   * @param sourceSetName the respective project source set (used for runtime classpath)
+   * @param className the main class
+   * @param environmentVariables the main class environment variables
+   * @param jvmOptions the main class jvm options
+   * @param arguments the main class run arguments
+   * @param client the BSP client
+   * @param originId client message originId
+   * @param compileProgressReporter listener to pass compile progress back to client.
+   * @param cancellationToken the Gradle cancellation token.
+   * @return result of running main class
    */
   public StatusCode runMainClass(URI projectUri, String projectPath, String sourceSetName,
       String className, Map<String, String> environmentVariables, List<String> jvmOptions,
@@ -491,6 +536,9 @@ public class GradleApiConnector {
     return statusCode;
   }
 
+  /**
+   * shutdown the connections.
+   */
   public void shutdown() {
     connectors.values().forEach(GradleConnector::disconnect);
   }

@@ -50,6 +50,8 @@ public class Utils {
    * Get the Gradle connector for the project.
    *
    * @param project The project.
+   * @param preferences User preferences.
+   * @return a connector to the Gradle API
    */
   public static GradleConnector getProjectConnector(File project, Preferences preferences) {
     GradleConnector connector = GradleConnector.newConnector()
@@ -83,6 +85,7 @@ public class Utils {
    * @param preferences The preferences.
    * @param action The build action.
    * @param cancellationToken Gradle cancellation token.
+   * @return a build action executer for the Gradle API
    */
   public static <T> BuildActionExecuter<T> getBuildActionExecuter(ProjectConnection connection,
       Preferences preferences, BuildAction<T> action, CancellationToken cancellationToken) {
@@ -97,6 +100,7 @@ public class Utils {
    * @param preferences The preferences.
    * @param clazz The model class.
    * @param cancellationToken Gradle cancellation token.
+   * @return a model builder for the Gradle API
    */
   public static <T> ModelBuilder<T> getModelBuilder(ProjectConnection connection,
       Preferences preferences, Class<T> clazz, CancellationToken cancellationToken) {
@@ -109,6 +113,7 @@ public class Utils {
    * @param connection The project connection.
    * @param preferences The preferences.
    * @param cancellationToken Gradle cancellation token.
+   * @return a build launcher for the Gradle API
    */
   public static BuildLauncher getBuildLauncher(ProjectConnection connection,
       Preferences preferences, CancellationToken cancellationToken) {
@@ -121,6 +126,7 @@ public class Utils {
    * @param connection The project connection.
    * @param preferences The preferences.
    * @param cancellationToken Gradle cancellation token.
+   * @return a test launcher for the Gradle API
    */
   public static TestLauncher getTestLauncher(ProjectConnection connection,
       Preferences preferences, CancellationToken cancellationToken) {
@@ -130,9 +136,11 @@ public class Utils {
   /**
    * Set the Launcher properties.
    *
+   * @param <T> the type of launcher
    * @param launcher The launcher.
    * @param preferences The preferences.
    * @param cancellationToken Gradle cancellation token.
+   * @return the launcher passed in
    */
   public static <T extends ConfigurableLauncher<T>> T setLauncherProperties(T launcher,
       Preferences preferences, CancellationToken cancellationToken) {
@@ -164,6 +172,9 @@ public class Utils {
    * compatibility matrix</a>
    *
    * <p>If a compatible Java versions is not found, an empty string will be returned.
+   *
+   * @param gradleVersion the gradle version in String form
+   * @return the latest compatible java version in String form
    */
   public static String getLatestCompatibleJavaVersion(String gradleVersion) {
     GradleVersion version = GradleVersion.version(gradleVersion);
@@ -206,6 +217,8 @@ public class Utils {
 
   /**
    * Get the oldest compatible Java version for the current Gradle version.
+   *
+   * @return the oldest supported Java version
    */
   public static String getOldestCompatibleJavaVersion() {
     return "1.8";
@@ -300,6 +313,7 @@ public class Utils {
    *
    * @param projectRoot Root path of the project.
    * @param preferences The preferences.
+   * @return the build kind
    */
   public static GradleBuildKind getEffectiveBuildKind(File projectRoot, Preferences preferences) {
     if (preferences.isWrapperEnabled()) {
@@ -431,6 +445,9 @@ public class Utils {
   /**
    * Create a Gradle init script to apply the BSP plugin to all projects.
    *
+   * @param workspaceDir the root dir of all the projects
+   * @param javaSemanticDbVersion version of the java semanticdb jar
+   * @param scalaSemanticDbVersion version of the scala semanticdb jar
    * @return the text for an init script to apply the BSP plugin.
    */
   public static String createPluginScript(File workspaceDir, String javaSemanticDbVersion,
@@ -442,6 +459,9 @@ public class Utils {
    * Create a Gradle init script to alter the javac and scalac compiler options to
    * include the semantic db plugins.
    *
+   * @param workspaceDir the root dir of all the projects
+   * @param javaSemanticDbVersion version of the java semanticdb jar
+   * @param scalaSemanticDbVersion version of the scala semanticdb jar
    * @return the text for an init script to alter the compiler options.
    */
   public static String createCompilerOptionsScript(File workspaceDir, String javaSemanticDbVersion,

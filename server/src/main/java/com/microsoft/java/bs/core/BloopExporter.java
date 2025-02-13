@@ -42,6 +42,8 @@ public class BloopExporter {
 
   /**
    * Main entry point.
+   *
+   * @param args command line arguments
    */
   public static void main(String[] args) {
     Path projectPath;
