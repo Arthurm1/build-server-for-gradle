@@ -1,6 +1,8 @@
 plugins {
   id("com.github.ben-manes.versions") version "0.52.0"
   checkstyle
+  // needed here (even though not applied) to prevent class loader issues
+  id("com.vanniktech.maven.publish") version ("0.30.0") apply false
 }
 
 subprojects {

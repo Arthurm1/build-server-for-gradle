@@ -2,30 +2,26 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
   id("java-gradle-plugin")
-  id("maven-publish")
   id("java")
+  // publishing to Central Portal
+  id("com.vanniktech.maven.publish") version ("0.30.0")
 }
 
-// disable the plugin publishing so maven & plugin don't clash on publish
+/*
 gradlePlugin {
-  isAutomatedPublishing = false
-}
-
-// use `gradlew plugin:publishToLocalMaven` to publish local and test
-publishing {
-  repositories {
-    mavenLocal()
-  }
-  publications {
-    create<MavenPublication>("maven") {
-      groupId = project.findProperty("group") as String
-      artifactId = project.findProperty("pluginArtifactId") as String
-      version = project.findProperty("version") as String
-
-      from(components["java"])
+  website.set("https://github.com/arthurm1/build-server-for-gradle")
+  vcsUrl.set("https://github.com/arthurm1/build-server-for-gradle.git")
+  plugins {
+    create("gradleBuildServerPlugin") {
+      id = "io.github.arthurm1.gradle-bsp-plugin"
+      displayName = "Gradle Build Server Plugin"
+      description = "A Gradle plugin to aid with BSP implementation"
+      implementationClass = "com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin"
+      tags.set(listOf("Build Server Protocol", "BSP"))
     }
   }
 }
+*/
 
 java {
   toolchain {
@@ -90,11 +86,13 @@ tasks.named("check") {
 }
 
 // for android libraries
+/*
 repositories {
   maven {
     url = uri("https://maven.google.com/")
   }
 }
+*/
 
 dependencies {
   implementation(project(":model"))
