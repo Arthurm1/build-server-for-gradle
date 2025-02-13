@@ -26,6 +26,8 @@ import ch.epfl.scala.bsp4j.DependencySourcesResult;
 import ch.epfl.scala.bsp4j.InverseSourcesParams;
 import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathParams;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathResult;
 import ch.epfl.scala.bsp4j.ScalaBuildTarget;
 import ch.epfl.scala.bsp4j.ScalacOptionsParams;
 import ch.epfl.scala.bsp4j.ScalacOptionsResult;
@@ -339,12 +341,15 @@ class BuildTargetServiceTest {
   }
 
   @Test
-  void testGetJavacOptions() {
+  void testGetJavacOptionsAndJvmClasspath() {
     GradleBuildTarget gradleBuildTarget = mock(GradleBuildTarget.class);
     when(buildTargetManager.getGradleBuildTarget(any())).thenReturn(gradleBuildTarget);
 
+    List<File> classpath = new ArrayList<>();
+    classpath.add(new File(System.getProperty("java.io.tmpdir")));
     GradleSourceSet gradleSourceSet = mock(GradleSourceSet.class);
     when(gradleBuildTarget.getSourceSet()).thenReturn(gradleSourceSet);
+    when(gradleSourceSet.getCompileClasspath()).thenReturn(classpath);
 
     JavaExtension mockedJavaExtension = mock(JavaExtension.class);
     when(mockedJavaExtension.isJavaExtension()).thenReturn(true);
@@ -364,6 +369,13 @@ class BuildTargetServiceTest {
   
     assertEquals(1, javacOptions.getItems().size());
     assertEquals(2, javacOptions.getItems().get(0).getOptions().size());
+    assertEquals(1, javacOptions.getItems().get(0).getClasspath().size());
+    
+    JvmCompileClasspathResult classpaths = buildTargetService.getBuildTargetJvmCompileClasspath(
+        new JvmCompileClasspathParams(Arrays.asList(new BuildTargetIdentifier("test"))), null);
+  
+    assertEquals(1, classpaths.getItems().size());
+    assertEquals(1, classpaths.getItems().get(0).getClasspath().size());
   }
 
   @Test

@@ -180,9 +180,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<JvmCompileClasspathResult> buildTargetJvmCompileClasspath(
       JvmCompileClasspathParams params) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException(
-        "Unimplemented method 'buildTarget/jvmCompileClasspath'");
+    return handleRequest("buildTarget/jvmCompileClasspath", cancelToken ->
+        buildTargetService.getBuildTargetJvmCompileClasspath(params, cancelToken));
   }
 
   @Override

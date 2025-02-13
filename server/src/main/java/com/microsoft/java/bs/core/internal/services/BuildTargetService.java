@@ -60,6 +60,9 @@ import ch.epfl.scala.bsp4j.DependencySourcesResult;
 import ch.epfl.scala.bsp4j.JavacOptionsItem;
 import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathItem;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathParams;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathResult;
 import ch.epfl.scala.bsp4j.JvmEnvironmentItem;
 import ch.epfl.scala.bsp4j.JvmMainClass;
 import ch.epfl.scala.bsp4j.JvmRunEnvironmentParams;
@@ -484,6 +487,36 @@ public class BuildTargetService {
     }
     return code;
   }
+
+  /**
+   * Get the Java compiler paths.
+   *
+   * @param params targets to get the Java compiler paths for
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets compiler paths
+   */
+  public JvmCompileClasspathResult getBuildTargetJvmCompileClasspath(
+      JvmCompileClasspathParams params, CancellationToken cancelToken) {
+    List<JvmCompileClasspathItem> items = new ArrayList<>();
+    for (BuildTargetIdentifier btId : params.getTargets()) {
+      if (!isCancelled(cancelToken)) {
+        GradleBuildTarget target = getGradleBuildTarget(btId, cancelToken);
+        if (target == null) {
+          LOGGER.warning("Skip jvm compile classpath collection for the build target: "
+              + btId.getUri() + ". Because it cannot be found in the cache.");
+          continue;
+        }
+
+        GradleSourceSet sourceSet = target.getSourceSet();
+        List<String> classpath = sourceSet.getCompileClasspath().stream()
+            .map(file -> file.toPath().toUri().toString())
+            .collect(Collectors.toList());
+        items.add(new JvmCompileClasspathItem(btId, classpath));
+      }
+    }
+    return new JvmCompileClasspathResult(items);
+  }
+
 
   /**
    * Get the Java compiler options.

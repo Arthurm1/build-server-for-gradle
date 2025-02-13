@@ -24,6 +24,7 @@ Following BSP requests are supported in the current implementation:
 - `buildTarget/cleanCache`
 - `buildTarget/javacOptions`
 - `buildTarget/scalacOptions`
+- `buildTarget/jvmCompileClasspath`
 - `buildTarget/test`
 - `buildTarget/run`
 - `buildTarget/jvmRunEnvironment`
