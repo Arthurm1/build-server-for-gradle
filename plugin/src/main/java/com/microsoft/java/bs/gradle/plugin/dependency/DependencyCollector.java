@@ -5,6 +5,7 @@ package com.microsoft.java.bs.gradle.plugin.dependency;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.result.ArtifactResolutionResult;
 import org.gradle.api.artifacts.result.ArtifactResult;
 import org.gradle.api.artifacts.result.ComponentArtifactsResult;
@@ -54,28 +56,28 @@ public class DependencyCollector {
         .stream()
         .filter(configuration -> configurationNames.contains(configuration.getName()))
         .collect(Collectors.toList());
-    return getModuleDependencies(project, configurations);
+    return getModuleDependencies(project.getDependencies(), configurations);
   }
 
   /**
    * Resolve and collect dependencies from a collection of {@link Configuration}.
    */
-  public static Set<GradleModuleDependency> getModuleDependencies(Project project,
-      List<Configuration> configurations) {
+  public static Set<GradleModuleDependency> getModuleDependencies(DependencyHandler dependencies,
+      Collection<Configuration> configurations) {
     if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) < 0) {
       try {
         List<ResolvedConfiguration> configs = configurations.stream()
             .map(Configuration::getResolvedConfiguration)
             .collect(Collectors.toList());
-        Stream<DefaultGradleModuleDependency> dependencies = configs.stream()
+        Stream<DefaultGradleModuleDependency> moduleDependencies = configs.stream()
             .flatMap(config -> config.getResolvedArtifacts().stream())
-            .map(artifact -> getArtifact(project, artifact));
+            .map(artifact -> getArtifact(dependencies, artifact));
 
         // add as individual files for direct dependencies on jars
         Stream<DefaultGradleModuleDependency> directDependencies = configs.stream()
             .flatMap(config -> config.getFiles(Specs.satisfyAll()).stream())
             .map(DependencyCollector::getFileDependency);
-        return Stream.concat(dependencies, directDependencies)
+        return Stream.concat(moduleDependencies, directDependencies)
           .filter(Objects::nonNull)
           .collect(Collectors.toSet());
       } catch (GradleException ex) {
@@ -86,28 +88,28 @@ public class DependencyCollector {
       return configurations.stream()
         .filter(Configuration::isCanBeResolved)
         .flatMap(configuration -> getConfigurationArtifacts(configuration).stream())
-        .map(artifactResult -> getArtifact(project, artifactResult))
+        .map(artifactResult -> getArtifact(dependencies, artifactResult))
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
     }
   }
 
-  private static DefaultGradleModuleDependency getArtifact(Project project,
+  private static DefaultGradleModuleDependency getArtifact(DependencyHandler dependencies,
       ResolvedArtifactResult artifactResult) {
     ComponentArtifactIdentifier id = artifactResult.getId();
-    return getArtifact(project, id, artifactResult.getFile());
+    return getArtifact(dependencies, id, artifactResult.getFile());
   }
 
-  private static DefaultGradleModuleDependency getArtifact(Project project,
+  private static DefaultGradleModuleDependency getArtifact(DependencyHandler dependencies,
       ResolvedArtifact resolvedArtifact) {
     ComponentArtifactIdentifier id = resolvedArtifact.getId();
-    return getArtifact(project, id, resolvedArtifact.getFile());
+    return getArtifact(dependencies, id, resolvedArtifact.getFile());
   }
 
-  private static DefaultGradleModuleDependency getArtifact(Project project,
+  private static DefaultGradleModuleDependency getArtifact(DependencyHandler dependencies,
       ComponentArtifactIdentifier id, File artifactFile) {
     if (id instanceof ModuleComponentArtifactIdentifier) {
-      return getModuleArtifactDependency(project, (ModuleComponentArtifactIdentifier) id,
+      return getModuleArtifactDependency(dependencies, (ModuleComponentArtifactIdentifier) id,
         artifactFile);
     }
     if (id instanceof OpaqueComponentArtifactIdentifier) {
@@ -129,10 +131,11 @@ public class DependencyCollector {
         .getArtifacts());
   }
 
-  private static DefaultGradleModuleDependency getModuleArtifactDependency(Project project,
-      ModuleComponentArtifactIdentifier artifactIdentifier, File resolvedArtifactFile) {
+  private static DefaultGradleModuleDependency getModuleArtifactDependency(
+      DependencyHandler dependencies, ModuleComponentArtifactIdentifier artifactIdentifier,
+      File resolvedArtifactFile) {
     @SuppressWarnings({"unchecked", "UnstableApiUsage"})
-    ArtifactResolutionResult resolutionResult = project.getDependencies()
+    ArtifactResolutionResult resolutionResult = dependencies
         .createArtifactResolutionQuery()
         .forComponents(artifactIdentifier.getComponentIdentifier())
         .withArtifacts(

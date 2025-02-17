@@ -184,7 +184,7 @@ public class AndroidUtils {
     configs.add(compileConfig);
     configs.add(runtimeConfig);
     Set<GradleModuleDependency> moduleDependencies = new HashSet<>(
-        DependencyCollector.getModuleDependencies(project, configs));
+        DependencyCollector.getModuleDependencies(project.getDependencies(), configs));
 
     // add Android SDK
     Object androidComponents = getAndroidComponentExtension(project);
