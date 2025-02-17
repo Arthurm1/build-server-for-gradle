@@ -3,28 +3,29 @@
 
 package com.microsoft.java.bs.core;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 
 import com.microsoft.java.bs.core.internal.gradle.Utils;
-import com.microsoft.java.bs.gradle.model.Artifact;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
@@ -78,310 +79,215 @@ public class BloopExporter {
     // output JSON
     writeJson(sourceSets, bloopPath, displayNames, projectDir, oldOutputDirToNewOutputDir);
   }
-  
+
   private void writeJson(List<GradleSourceSet> sourceSets, Path bloopPath,
       Map<BuildTargetDependency, String> displayNames, File projectDir,
       Map<File, List<File>> oldOutputDirToNewOutputDir) {
+    Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     for (GradleSourceSet sourceSet : sourceSets) {
       BuildTargetDependency dep = new DefaultBuildTargetDependency(sourceSet);
       String displayName = displayNames.get(dep);
       Path targetPath = bloopPath.resolve(displayName + ".json");
-      File targetFile = targetPath.toFile();
-      try (PrintWriter writer = new PrintWriter(targetFile)) {
-        writeJson(writer, displayName, sourceSet, projectDir, bloopPath,
-            oldOutputDirToNewOutputDir, displayNames);
+      BloopConfig config = convertToBloop(displayName, sourceSet, projectDir, bloopPath,
+          oldOutputDirToNewOutputDir, displayNames);
+      String json = gson.toJson(config);
+      try {
+        Files.writeString(targetPath, json);
       } catch (IOException e) {
         throw new IllegalStateException("Error writing to file " + targetPath, e);
       }
     }
   }
-  
-  private void writeJson(PrintWriter writer, String displayName, GradleSourceSet sourceSet,
+
+  private record BloopConfig(String version,
+                             BloopProject project) {
+  }
+
+  private record BloopProject(String name,
+                              String directory,
+                              String workspaceDir,
+                              Collection<String> sources,
+                              Collection<String> dependencies,
+                              Collection<String> classpath,
+                              String out,
+                              String classesDir,
+                              Collection<String> resources,
+                              BloopScala scala,
+                              BloopJava java,
+                              BloopTest test,
+                              BloopPlatform platform,
+                              BloopResolution resolution,
+                              Collection<String> tags) {
+  }
+
+  private record BloopScalaSetup(String order,
+                                 boolean addLibraryToBootClasspath,
+                                 boolean addCompilerToClasspath,
+                                 boolean addExtraJarsToClasspath,
+                                 boolean manageBootClasspath,
+                                 boolean filterLibraryFromClasspath) {
+  }
+
+  private record BloopScala(String organization,
+                            String name,
+                            String version,
+                            Collection<String> options,
+                            Collection<String> jars,
+                            BloopScalaSetup setup) {
+  }
+
+  private record BloopJava(Collection<String> options) {
+  }
+
+  private record BloopTestFramework(Collection<String> names) {
+  }
+
+  private record BloopTestOptionsArguments(Collection<String> args,
+                                           BloopTestFramework framework) {
+  }
+
+  private record BloopTestOptions(Collection<String> excludes,
+                                  Collection<BloopTestOptionsArguments> arguments) {
+  }
+
+  private record BloopTest(List<BloopTestFramework> frameworks,
+                           BloopTestOptions options) {
+  }
+
+  private record BloopPlatformConfig(String home,
+                                     Collection<String> options) {
+  }
+
+  private record BloopPlatform(String name,
+                               BloopPlatformConfig config,
+                               Collection<String> mainClass,
+                               Collection<String> classpath) {
+  }
+
+  private record BloopResolutionModuleArtifact(String name,
+                                               String classifier,
+                                               String path) {
+  }
+
+  private record BloopResolutionModule(String organization,
+                                       String name,
+                                       String version,
+                                       Collection<BloopResolutionModuleArtifact> artifacts) {
+  }
+
+  private record BloopResolution(Collection<BloopResolutionModule> modules) {
+  }
+
+  private BloopTest getFixedTestConfig() {
+    BloopTestFramework junit = new BloopTestFramework(List.of(
+        "com.novocode.junit.JUnitFramework"));
+    BloopTestFramework scalatest = new BloopTestFramework(List.of(
+        "org.scalatest.tools.Framework",
+        "org.scalatest.tools.ScalaTestFramework"));
+    BloopTestFramework scalacheck = new BloopTestFramework(List.of(
+        "org.scalacheck.ScalaCheckFramework"));
+    BloopTestFramework specs2 = new BloopTestFramework(List.of(
+        "org.specs.runner.SpecsFramework",
+        "org.specs2.runner.Specs2Framework",
+        "org.specs2.runner.SpecsFramework"));
+    BloopTestFramework utest = new BloopTestFramework(List.of(
+        "utest.runner.Framework"));
+    BloopTestFramework munit = new BloopTestFramework(List.of(
+        "munit.Framework"));
+
+    List<BloopTestFramework> frameworks = List.of(junit, scalatest, scalacheck, specs2, utest,
+        munit);
+    BloopTestOptionsArguments junitArguments = new BloopTestOptionsArguments(
+        List.of("-v", "-a"), junit);
+    BloopTestOptions options = new BloopTestOptions(Collections.emptyList(), List.of(
+        junitArguments));
+    return new BloopTest(frameworks, options);
+  }
+
+  private BloopConfig convertToBloop(String displayName, GradleSourceSet sourceSet,
       File projectDir, Path bloopPath, Map<File, List<File>> oldClassesDirToNewClassesDir,
       Map<BuildTargetDependency, String> displayNames) {
-    writer.println("{");
-    writer.println("  \"version\": \"1.4.0\",");
-    writer.println("  \"project\": {");
-    writer.print("    \"name\": ");
-    writer.print(quote(displayName));
-    writer.println(",");
-    writer.print("    \"directory\": ");
-    writer.print(quote(sourceSet.getProjectDir()));
-    writer.println(",");
-    writer.print("    \"workspaceDir\": ");
-    writer.print(quote(projectDir));
-    writer.println(",");
-    writer.println("    \"sources\": [");
-    write(writer, sourceSet.getSourceDirs(), "       ",
-        sourceDir -> writer.print(quote(sourceDir)));
-    writer.println("    ],");
 
-    writer.println("    \"dependencies\": [");
-    write(writer, sourceSet.getBuildTargetDependencies(), "       ",
-        dependency -> writer.print(quote(displayNames.get(dependency))));
-    writer.println("    ],");
-
-    writer.println("    \"classpath\": [");
-    boolean isFirst = true;
-    Set<File> usedPaths = new HashSet<>();
-    for (File compileClasspath : sourceSet.getCompileClasspath()) {
-      List<File> mappedClasspaths = oldClassesDirToNewClassesDir.get(compileClasspath);
-      if (mappedClasspaths == null) {
-        mappedClasspaths = new ArrayList<>();
-        mappedClasspaths.add(compileClasspath);
-      }
-      for (File classpath : mappedClasspaths) {
-        if (!usedPaths.contains(classpath)) {
-          if (!isFirst) {
-            writer.println(",");
-          }
-          writer.print("       ");
-          writer.print(quote(classpath));
-          isFirst = false;
-          usedPaths.add(classpath);
-        }
-      }
-    }
-    if (!isFirst) {
-      writer.println();
-    }
-    writer.println("    ],");
-    File outDir = bloopPath.resolve(displayName).resolve("build").toFile();
-    writer.print("    \"out\": ");
-    writer.print(quote(outDir));
-    writer.println(",");
-    File classesDir = bloopPath.resolve(displayName).resolve("build").resolve("classes").toFile();
-    writer.print("    \"classesDir\": ");
-    writer.print(quote(classesDir));
-    writer.println(",");
-
-    writer.println("    \"resources\": [");
-    write(writer, sourceSet.getResourceDirs(), "       ",
-        resourceDir -> writer.print(quote(resourceDir)));
-    writer.println("    ],");
-    
+    List<String> sources = Stream
+        .of(sourceSet.getSourceDirs().stream().sorted(),
+            sourceSet.getGeneratedSourceDirs().stream().sorted())
+        .flatMap(ss -> ss.map(File::toString))
+        .distinct()
+        .collect(Collectors.toList());
+    List<String> dependencies = sourceSet.getBuildTargetDependencies().stream()
+        .map(displayNames::get)
+        .sorted()
+        .distinct()
+        .collect(Collectors.toList());
+    List<String> compileClasspath = substituteClasspath(sourceSet.getCompileClasspath(),
+        oldClassesDirToNewClassesDir);
+    Path projectPath = bloopPath.resolve(displayName);
+    String outDir = toString(projectPath.resolve("build").toFile());
+    String classesDir = toString(projectPath.resolve("build").resolve("classes").toFile());
+    Set<String> resources = sourceSet.getResourceDirs().stream()
+        .map(File::toString)
+        .collect(Collectors.toSet());
+    BloopScala scala;
     ScalaExtension scalaExt = SupportedLanguages.SCALA.getExtension(sourceSet);
     if (scalaExt != null) {
-      writer.println("    \"scala\": {");
-      writer.print("    \"organization\": ");
-      writer.print(quote(scalaExt.getScalaOrganization()));
-      writer.println(",");
-      writer.println("    \"name\": \"scala-compiler\",");
-      writer.print("    \"version\": ");
-      writer.print(quote(scalaExt.getScalaVersion()));
-      writer.println(",");
-      writer.println("      \"options\": [");
-
-      write(writer, scalaExt.getScalaCompilerArgs(), "         ",
-          scalaOpt -> writer.print(quote(scalaOpt)));
-      writer.println("      ],");
-      writer.println("      \"jars\": [");
-      write(writer, scalaExt.getScalaJars(), "         ",
-          scalaJar -> writer.print(quote(scalaJar)));
-      writer.println("      ],");
-      writer.println("      \"setup\": {");
-      writer.println("        \"order\": \"mixed\",");
-      writer.println("        \"addLibraryToBootClasspath\": true,");
-      writer.println("        \"addCompilerToClasspath\": false,");
-      writer.println("        \"addExtraJarsToClasspath\": false,");
-      writer.println("        \"manageBootClasspath\": true,");
-      writer.println("        \"filterLibraryFromClasspath\": true");
-      writer.println("      }");
-      writer.println("    },");
+      BloopScalaSetup setup = new BloopScalaSetup("mixed", true, false, false, true, true);
+      List<String> jars = scalaExt.getScalaJars().stream()
+          .map(File::toString)
+          .collect(Collectors.toList());
+      scala = new BloopScala(scalaExt.getScalaOrganization(), "scala-compiler",
+          scalaExt.getScalaVersion(), scalaExt.getScalaCompilerArgs(), jars, setup);
+    } else {
+      scala = null;
     }
-
+    BloopJava java;
+    BloopPlatform platform;
     JavaExtension javaExt = SupportedLanguages.JAVA.getExtension(sourceSet);
     if (javaExt != null) {
-      writer.println("    \"java\": {");
-      writer.println("      \"options\": [");
-      write(writer, javaExt.getCompilerArgs(), "         ",
-          javaOpt -> writer.print(quote(javaOpt)));
-      writer.println("      ]");
-      writer.println("    },");
-    }
-
-    if (sourceSet.hasTests()) {
-      writer.println("""
-          "test": {
-            "frameworks": [
-              {
-                "names": [
-                      "com.novocode.junit.JUnitFramework"
-                ]
-              },
-              {
-                "names": [
-                      "org.scalatest.tools.Framework",
-                      "org.scalatest.tools.ScalaTestFramework"
-                ]
-              },
-              {
-                "names": [
-                      "org.scalacheck.ScalaCheckFramework"
-                ]
-              },
-              {
-                "names": [
-                      "org.specs.runner.SpecsFramework",
-                      "org.specs2.runner.Specs2Framework",
-                      "org.specs2.runner.SpecsFramework"
-                ]
-              },
-              {
-                "names": [
-                      "utest.runner.Framework"
-                ]
-              },
-              {
-                "names": [
-                      "munit.Framework"
-                ]
-              }
-            ],
-            "options": {
-              "excludes": [],
-              "arguments": [
-                {
-                  "args": [
-                        "-v",
-                        "-a"
-                  ],
-                  "framework": {
-                    "names": [
-                            "com.novocode.junit.JUnitFramework"
-                    ]
-                  }
-                }
-              ]
-            }
-          },""");
-    }
-
-    if (javaExt != null) {
-      writer.println("    \"platform\": {");
-      writer.println("      \"name\": \"jvm\",");
-      writer.println("      \"config\": {");
-      writer.print("        \"home\": ");
-      writer.print(quote(javaExt.getJavaHome()));
-      writer.println(",");
-      writer.println("        \"options\": []");
-      writer.println("      },");
-      writer.println("      \"mainClass\": [],");
-      writer.println("      \"classpath\": [");
-      usedPaths = new HashSet<>();
-      isFirst = true;
-      for (File compileClasspath : sourceSet.getRuntimeClasspath()) {
-        List<File> mappedClasspaths = oldClassesDirToNewClassesDir.get(compileClasspath);
-        if (mappedClasspaths == null) {
-          mappedClasspaths = new ArrayList<>();
-          mappedClasspaths.add(compileClasspath);
-        }
-        for (File classpath : mappedClasspaths) {
-          if (!usedPaths.contains(classpath)) {
-            if (!isFirst) {
-              writer.println(",");
-            }
-            writer.print("         ");
-            writer.print(quote(classpath));
-            isFirst = false;
-            usedPaths.add(classpath);
-          }
-        }
-      }
-      if (!isFirst) {
-        writer.println();
-      }
-      writer.println("      ]");
-      writer.println("    },");
-    }
-
-    writer.println("    \"resolution\": {");
-    writer.println("      \"modules\": [");
-    isFirst = true;
-    for (GradleModuleDependency moduleDep : sourceSet.getModuleDependencies()) {
-      if (!isFirst) {
-        writer.println(",");
-      }
-      writer.println("         {");
-      writer.print("           \"organization\": \"");
-      writer.print(moduleDep.getGroup());
-      writer.println("\",");
-      writer.print("           \"name\": \"");
-      writer.print(moduleDep.getModule());
-      writer.println("\",");
-      writer.print("           \"version\": \"");
-      writer.print(moduleDep.getVersion());
-      writer.println("\",");
-      writer.println("           \"artifacts\": [");
-
-      boolean isFirstArtifact = true;
-      for (Artifact artifact : moduleDep.getArtifacts()) {
-        if (artifact.getClassifier() == null || artifact.getClassifier().equals("sources")) {
-          if (!isFirstArtifact) {
-            writer.println(",");
-          }
-          writer.println("             {");
-          writer.print("               \"name\": \"");
-          writer.print(moduleDep.getModule());
-          writer.println("\",");
-          if (artifact.getClassifier() != null) {
-            writer.print("               \"classifier\": \"");
-            writer.print(artifact.getClassifier());
-            writer.println("\",");
-          }
-          writer.print("               \"path\": ");
-          writer.print(quote(new File(artifact.getUri())));
-          writer.println();
-          writer.print("             }");
-          isFirstArtifact = false;
-        }
-      }
-      if (!isFirstArtifact) {
-        writer.println();
-      }
-
-      writer.println("           ]");
-      writer.print("         }");
-      isFirst = false;
-    }
-    if (!isFirst) {
-      writer.println();
-    }
-    writer.println("      ]");
-    writer.println("    },");
-
-    writer.println("    \"tags\": [");
-    if (sourceSet.hasTests()) {
-      writer.println("      \"test\"");
+      java = new BloopJava(javaExt.getCompilerArgs());
+      BloopPlatformConfig config = new BloopPlatformConfig(toString(javaExt.getJavaHome()),
+          Collections.emptyList());
+      List<String> runtimeClasspath = substituteClasspath(sourceSet.getRuntimeClasspath(),
+          oldClassesDirToNewClassesDir);
+      platform = new BloopPlatform("jvm", config, Collections.emptyList(), runtimeClasspath);
     } else {
-      writer.println("      \"library\"");
+      java = null;
+      platform = null;
     }
-    writer.println("    ]");
-    writer.println("  }");
-    writer.println("}");
+    BloopTest test = sourceSet.hasTests() ? getFixedTestConfig() : null;
+    List<BloopResolutionModule> modules = sourceSet.getModuleDependencies().stream()
+        .map(dep -> new BloopResolutionModule(dep.getGroup(), dep.getModule(), dep.getVersion(),
+            dep.getArtifacts().stream()
+                .map(artifact -> new BloopResolutionModuleArtifact(dep.getModule(),
+                    artifact.getClassifier(), toString(new File(artifact.getUri()))))
+                .collect(Collectors.toList())))
+        .collect(Collectors.toList());
+    BloopResolution resolution = new BloopResolution(modules);
+    List<String> tags = new ArrayList<>();
+    if (sourceSet.hasTests()) {
+      tags.add("test");
+    } else {
+      tags.add("library");
+    }
+    BloopProject bloopProject = new BloopProject(displayName, toString(sourceSet.getProjectDir()),
+        toString(projectDir), sources, dependencies, compileClasspath, outDir, classesDir,
+        resources, scala, java, test, platform, resolution, tags);
+    return new BloopConfig("1.4.0", bloopProject);
   }
 
-  private <T> void write(PrintWriter writer, Iterable<T> items, String indent, Consumer<T> write) {
-    boolean isFirst = true;
-    for (T item : items) {
-      if (!isFirst) {
-        writer.println(",");
-      }
-      writer.print(indent);
-      write.accept(item);
-      isFirst = false;
-    }
-    if (!isFirst) {
-      writer.println();
-    }
+  private List<String> substituteClasspath(List<File> classpath, Map<File,
+      List<File>> oldClassesDirToNewClassesDir) {
+    return classpath.stream().flatMap(file ->
+      oldClassesDirToNewClassesDir.getOrDefault(file, List.of(file)).stream())
+        .distinct()
+        .map(File::toString)
+        .collect(Collectors.toList());
   }
 
-  private String quote(File file) {
-    return quote(file.toString());
-  }
-
-  private String quote(String str) {
-    return "\"" + str.replace("\\", "\\\\") + "\"";
+  private String toString(File file) {
+    if (file == null) {
+      return null;
+    }
+    return file.toString();
   }
 
   private Map<File, List<File>> getOldOutputDirToNewOutputDir(
@@ -450,31 +356,28 @@ public class BloopExporter {
   }
 
   private List<GradleSourceSet> getSourceSets(File projectDir) {
-    try (ByteArrayOutputStream errorOut = new ByteArrayOutputStream()) {
-      GradleConnector connector = GradleConnector.newConnector()
-              .forProjectDirectory(projectDir);
-      try (ProjectConnection connection = connector.connect()) {
-        GetSourceSetsAction getSourceSetsAction = new GetSourceSetsAction();
-        BuildActionExecuter<GradleSourceSets> buildExecutor =
-            connection.action(getSourceSetsAction);
-        String initScriptContents = Utils.createPluginScript(null, null, null);
-        File initScript = Utils.createInitScriptFile("bloopExport", initScriptContents);
-        try {
-          return buildExecutor
-                  .setStandardError(errorOut)
-                  .addArguments("--init-script", initScript.getAbsolutePath())
-                  .addJvmArguments("-Dbsp.gradle.supportedLanguages=java,scala")
-                  .run()
-                  .getGradleSourceSets();
-        } finally {
-          if (initScript != null) {
-            initScript.delete();
-          }
+    GradleConnector connector = GradleConnector.newConnector()
+            .forProjectDirectory(projectDir);
+    try (ProjectConnection connection = connector.connect()) {
+      GetSourceSetsAction getSourceSetsAction = new GetSourceSetsAction();
+      BuildActionExecuter<GradleSourceSets> buildExecutor =
+          connection.action(getSourceSetsAction);
+      String initScriptContents = Utils.createPluginScript(null, null, null);
+      File initScript = Utils.createInitScriptFile("bloopExport", initScriptContents);
+      try {
+        return buildExecutor
+                .setStandardError(System.err)
+                .setStandardOutput(System.out)
+                .addArguments("--init-script", initScript.getAbsolutePath())
+                .addJvmArguments("-Dbsp.gradle.supportedLanguages=java,scala")
+                .run()
+                .getGradleSourceSets();
+      } finally {
+        if (initScript != null) {
+          initScript.delete();
         }
-      } catch (Exception e) {
-        throw new IllegalStateException("Error extracting config " + errorOut, e);
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw new IllegalStateException("Error extracting config", e);
     }
   }

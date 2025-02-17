@@ -51,6 +51,7 @@ dependencies {
   implementation("ch.epfl.scala:bsp4j:${project.findProperty("bspVersion") as String}")
   implementation("org.apache.commons:commons-lang3:3.17.0")
   implementation("org.gradle:gradle-tooling-api:8.12")
+  implementation("com.google.code.gson:gson:2.10.1")
 
   testImplementation(platform("org.junit:junit-bom:5.11.4"))
   testImplementation("org.junit.jupiter:junit-jupiter")
