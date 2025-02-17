@@ -40,7 +40,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ### Main class
 
-The main class of the build server is `com.microsoft.java.bs.core.Launcher`.  The latest version can be downloaded from maven `io.github.arthurm1.gradle.bsp:server:0.6.0` or local versions can be used by incrementing `version` in `gradle.properties` and then publishing to local maven using `gradlew publishToLocalMaven`.
+The main class of the build server is `com.microsoft.java.bs.core.Launcher`.  The latest version can be downloaded from maven `io.github.arthurm1.gradle.bsp:server:0.7.0` or local versions can be used by incrementing `version` in `gradle.properties` and then publishing to local maven using `gradlew publishToLocalMaven`.
 The plugin tests will always use the latest built code in `.../build/classes/java/main/...` regardless of whether the jars have been published.
 The server tests will use the published jars.
 
