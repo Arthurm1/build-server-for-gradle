@@ -482,8 +482,8 @@ class GradleApiConnectorTest {
         testTaskMap.put(fakeBt, gradleSourceSet.getTestTasks());
         gradleVersion = gradleSourceSet.getGradleVersion();
       }
-      Map<BuildTargetIdentifier, List<GradleTestEntity>> tests =
-            connector.getTestClasses(projectDir.toUri(), testTaskMap, null, null, null, gradleVersion);
+      Map<BuildTargetIdentifier, List<GradleTestEntity>> tests = connector.getTestClasses(
+          projectDir.toUri(), testTaskMap, null, null, null, gradleVersion);
       assertHasTestClass(tests, "Fake",
           "com.example.project.CalculatorTests");
       return null;

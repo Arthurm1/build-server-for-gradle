@@ -208,23 +208,23 @@ public class BloopExporter {
       File projectDir, Path bloopPath, Map<File, List<File>> oldClassesDirToNewClassesDir,
       Map<BuildTargetDependency, String> displayNames) {
 
-    List<String> sources = Stream
+    final List<String> sources = Stream
         .of(sourceSet.getSourceDirs().stream().sorted(),
             sourceSet.getGeneratedSourceDirs().stream().sorted())
         .flatMap(ss -> ss.map(File::toString))
         .distinct()
         .collect(Collectors.toList());
-    List<String> dependencies = sourceSet.getBuildTargetDependencies().stream()
+    final List<String> dependencies = sourceSet.getBuildTargetDependencies().stream()
         .map(displayNames::get)
         .sorted()
         .distinct()
         .collect(Collectors.toList());
-    List<String> compileClasspath = substituteClasspath(sourceSet.getCompileClasspath(),
+    final List<String> compileClasspath = substituteClasspath(sourceSet.getCompileClasspath(),
         oldClassesDirToNewClassesDir);
     Path projectPath = bloopPath.resolve(displayName);
-    String outDir = toString(projectPath.resolve("build").toFile());
-    String classesDir = toString(projectPath.resolve("build").resolve("classes").toFile());
-    Set<String> resources = sourceSet.getResourceDirs().stream()
+    final String outDir = toString(projectPath.resolve("build").toFile());
+    final String classesDir = toString(projectPath.resolve("build").resolve("classes").toFile());
+    final Set<String> resources = sourceSet.getResourceDirs().stream()
         .map(File::toString)
         .collect(Collectors.toSet());
     BloopScala scala;

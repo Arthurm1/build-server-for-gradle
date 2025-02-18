@@ -20,6 +20,7 @@ public class BspFileCreator {
 
   private static final String BSP_DIRNAME = ".bsp";
   private static final String BSP_FILENAME = "gradle-bsp.json";
+
   /**
    * Main entry point.
    *
@@ -49,7 +50,8 @@ public class BspFileCreator {
         classpath,
         "com.microsoft.java.bs.core.Launcher"
     );
-    BspConnectionDetails details = new BspConnectionDetails(name, argv, version, bspVersion, languages);
+    BspConnectionDetails details = new BspConnectionDetails(name, argv, version, bspVersion,
+        languages);
 
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     String json = gson.toJson(details);
