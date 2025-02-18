@@ -525,6 +525,7 @@ public class Utils {
         initscript {
           repositories {
             mavenLocal() // included so tests run and users can publish their own version
+            mavenCentral()
             maven {
               url = 'https://repo.gradle.org/gradle/libs-releases'
             }

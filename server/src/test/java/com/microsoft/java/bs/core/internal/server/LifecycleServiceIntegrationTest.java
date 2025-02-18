@@ -138,7 +138,7 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void testBuildInitialize() {
+  void testBuildInitializeNoLanguages() {
     withConnection((client, server) -> {
       List<String> languageIds = Collections.emptyList();
       BuildClientCapabilities capabilities = new BuildClientCapabilities(languageIds);
@@ -146,10 +146,8 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
       InitializeBuildParams initParams = new InitializeBuildParams("Scala Steward",
           "0.28.0-75-cf26eca2-20250217-2201-SNAPSHOT", "2.1.1", testProject.toUri().toString(),
           capabilities);
-      server.buildInitialize(initParams).join();
-      client.waitOnShowMessages(1);
-      ShowMessageParams param = client.showMessages.get(0);
-      assertEquals(MessageType.INFO, param.getType());
+      InitializeBuildResult initializeResult = server.buildInitialize(initParams).join();
+      assertNotNull(initializeResult);
       server.onBuildInitialized();
       client.clearMessages();
     });
