@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -266,20 +267,22 @@ abstract class IntegrationTest {
     System.clearProperty("bsp.plugin.reloadworkspace.disabled");
   }
 
-  protected static InitializeBuildParams getInitializeBuildParams(String projectDir) {
-    File root = Paths.get(
+  protected static Path getTestPath(String projectDir) {
+    return Paths.get(
         System.getProperty("user.dir"),
         "..",
         "testProjects",
-        projectDir).toFile();
+        projectDir);
+  }
 
+  protected static InitializeBuildParams getInitializeBuildParams(String projectDir) {
     BuildClientCapabilities capabilities =
         new BuildClientCapabilities(SupportedLanguages.allBspNames);
     return new InitializeBuildParams(
         "test-client",
         "0.1.0",
         "0.1.0",
-        root.toURI().toString(),
+        getTestPath(projectDir).toUri().toString(),
         capabilities);
   }
 
