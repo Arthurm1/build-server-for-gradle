@@ -70,22 +70,22 @@ class GradleApiConnectorTest {
     }
   }
   
-  private GradleSourceSets getGradleSourceSets(File projectDir) {
-    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toURI(),
+  private GradleSourceSets getGradleSourceSets(Path projectDir) {
+    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toUri(),
         null, null));
   }
 
   @Test
   void testGetGradleVersion() {
-    File projectDir = projectPath.resolve("gradle-4.3-with-wrapper").toFile();
-    String version = withConnector(connector -> connector.getGradleVersion(projectDir.toURI(),
-        null));
-    assertEquals("4.3", version);
+    Path projectDir = projectPath.resolve("gradle-4.3-with-wrapper");
+    GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
+    GradleSourceSet sourceSet = gradleSourceSets.getGradleSourceSets().get(0);
+    assertEquals("4.3", sourceSet.getGradleVersion());
   }
 
   @Test
   void testGetGradleSourceSets() {
-    File projectDir = projectPath.resolve("junit5-jupiter-starter-gradle").toFile();
+    Path projectDir = projectPath.resolve("junit5-jupiter-starter-gradle");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
     for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -94,8 +94,8 @@ class GradleApiConnectorTest {
       assertNull(SupportedLanguages.KOTLIN.getExtension(gradleSourceSet));
       assertEquals("junit5-jupiter-starter-gradle", gradleSourceSet.getProjectName());
       assertEquals(":", gradleSourceSet.getProjectPath());
-      assertEquals(projectDir, gradleSourceSet.getProjectDir());
-      assertEquals(projectDir, gradleSourceSet.getRootDir());
+      assertEquals(projectDir.toFile(), gradleSourceSet.getProjectDir());
+      assertEquals(projectDir.toFile(), gradleSourceSet.getRootDir());
     }
 
     assertEquals("main", findSourceSet(gradleSourceSets,
@@ -172,7 +172,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDuplicateNestedProjectNames() {
-    File projectDir = projectPath.resolve("duplicate-nested-project-names").toFile();
+    Path projectDir = projectPath.resolve("duplicate-nested-project-names");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(12, gradleSourceSets.getGradleSourceSets().size());
     findSourceSet(gradleSourceSets, "a", "main");
@@ -199,7 +199,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleHasTests() {
-    File projectDir = projectPath.resolve("test-tag").toFile();
+    Path projectDir = projectPath.resolve("test-tag");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(5, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet main = findSourceSet(gradleSourceSets, "test-tag", "main");
@@ -220,7 +220,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testCompositeBuild1() {
-    File projectDir = projectPath.resolve("composite-build-1").toFile();
+    Path projectDir = projectPath.resolve("composite-build-1");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(4, gradleSourceSets.getGradleSourceSets().size());
     findSourceSet(gradleSourceSets, "projectA", "main");
@@ -231,7 +231,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testCompositeBuild2() {
-    File projectDir = projectPath.resolve("composite-build-2").toFile();
+    Path projectDir = projectPath.resolve("composite-build-2");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(6, gradleSourceSets.getGradleSourceSets().size());
     findSourceSet(gradleSourceSets, "app", "test");
@@ -260,7 +260,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDependenciesWithTestFixtures() {
-    File projectDir = projectPath.resolve("project-dependency-test-fixtures").toFile();
+    Path projectDir = projectPath.resolve("project-dependency-test-fixtures");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(5, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet mainA = findSourceSet(gradleSourceSets, "a", "main");
@@ -283,7 +283,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDependenciesWithTestToMain() {
-    File projectDir = projectPath.resolve("project-dependency-test-to-main").toFile();
+    Path projectDir = projectPath.resolve("project-dependency-test-to-main");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet main = findSourceSet(gradleSourceSets,
@@ -297,7 +297,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDependenciesWithSourceSetOutput() {
-    File projectDir = projectPath.resolve("project-dependency-sourceset-output").toFile();
+    Path projectDir = projectPath.resolve("project-dependency-sourceset-output");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(4, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet testA = findSourceSet(gradleSourceSets, "a", "test");
@@ -312,7 +312,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDependenciesWithConfiguration() {
-    File projectDir = projectPath.resolve("project-dependency-configuration").toFile();
+    Path projectDir = projectPath.resolve("project-dependency-configuration");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(4, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet mainA = findSourceSet(gradleSourceSets, "a", "main");
@@ -322,7 +322,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDependenciesWithTestConfiguration() {
-    File projectDir = projectPath.resolve("project-dependency-test-configuration").toFile();
+    Path projectDir = projectPath.resolve("project-dependency-test-configuration");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(4, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet testA = findSourceSet(gradleSourceSets, "a", "test");
@@ -332,7 +332,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleDependenciesWithLazyArchive() {
-    File projectDir = projectPath.resolve("project-dependency-lazy-archive").toFile();
+    Path projectDir = projectPath.resolve("project-dependency-lazy-archive");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(4, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet testA = findSourceSet(gradleSourceSets, "a", "test");
@@ -342,7 +342,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleHasScala2() {
-    File projectDir = projectPath.resolve("scala-2").toFile();
+    Path projectDir = projectPath.resolve("scala-2");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet main = findSourceSet(gradleSourceSets, "scala-2", "main");
@@ -365,7 +365,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleHasScala3() {
-    File projectDir = projectPath.resolve("scala-3").toFile();
+    Path projectDir = projectPath.resolve("scala-3");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet main = findSourceSet(gradleSourceSets, "scala-3", "main");
@@ -388,21 +388,26 @@ class GradleApiConnectorTest {
   
   @Test
   void testBuildTargetTest() {
-    File projectDir = projectPath.resolve("java-tests").toFile();
+    Path projectDir = projectPath.resolve("java-tests");
     withConnector(connector -> {
+      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toUri(),
+          null, null);
+      GradleSourceSet sourceSet = gradleSourceSets.getGradleSourceSets().get(0);
+      String gradleVersion = sourceSet.getGradleVersion();
+
       Map<BuildTargetIdentifier, Map<String, Set<String>>> testClassesMap = new HashMap<>();
       BuildTargetIdentifier fakeBt = new BuildTargetIdentifier("fake");
       Map<String, Set<String>> classes = new HashMap<>();
       testClassesMap.put(fakeBt, classes);
       Set<String> methods = new HashSet<>();
       classes.put("com.example.project.PassingTests", methods);
-      StatusCode passingTest = connector.runTests(projectDir.toURI(),
-          testClassesMap, null, null, null, null, null, null, null);
+      StatusCode passingTest = connector.runTests(projectDir.toUri(),
+          testClassesMap, null, null, null, null, null, null, null, gradleVersion);
       assertEquals(StatusCode.OK, passingTest);
       classes.clear();
       classes.put("com.example.project.FailingTests", methods);
-      StatusCode failingTest = connector.runTests(projectDir.toURI(),
-          testClassesMap, null, null, null, null, null, null, null);
+      StatusCode failingTest = connector.runTests(projectDir.toUri(),
+          testClassesMap, null, null, null, null, null, null, null, gradleVersion);
       assertEquals(StatusCode.ERROR, failingTest);
       return null;
     });
@@ -410,9 +415,9 @@ class GradleApiConnectorTest {
 
   @Test
   void testGradleProperties() {
-    File projectDir = projectPath.resolve("gradle-properties").toFile();
+    Path projectDir = projectPath.resolve("gradle-properties");
     withConnector(connector -> {
-      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI(),
+      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toUri(),
           null);
       assertTrue(buildEnv.getJava().getJvmArguments().stream()
           .anyMatch(arg -> arg.contains("-Xmx1234m")));
@@ -422,7 +427,7 @@ class GradleApiConnectorTest {
     Preferences preferences = new Preferences();
     preferences.setGradleJvmArguments(new ArrayList<>());
     withConnector(connector -> {
-      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toURI(),
+      BuildEnvironment buildEnv = connector.getBuildEnvironment(projectDir.toUri(),
           null);
       assertTrue(buildEnv.getJava().getJvmArguments().stream()
           .anyMatch(arg -> arg.contains("-Xmx1234m")));
@@ -432,7 +437,7 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleHasKotlin() {
-    File projectDir = projectPath.resolve("kotlin").toFile();
+    Path projectDir = projectPath.resolve("kotlin");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
     GradleSourceSet main = findSourceSet(gradleSourceSets, "kotlin", "main");
@@ -452,36 +457,33 @@ class GradleApiConnectorTest {
   
   @Test
   void testGetJvmRunEnvironment() {
-    File projectDir = projectPath.resolve("composite-build-2").toFile();
-    withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
-          null, null);
+    Path projectDir = projectPath.resolve("composite-build-2");
+    GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
+    GradleSourceSet mainApp = gradleSourceSets.getGradleSourceSets().stream()
+        .filter(ss -> ss.getProjectName().equals("app") && ss.getSourceSetName().equals("main"))
+        .findAny().get();
 
-      GradleSourceSet mainApp = gradleSourceSets.getGradleSourceSets().stream()
-          .filter(ss -> ss.getProjectName().equals("app") && ss.getSourceSetName().equals("main"))
-          .findAny().get();
-
-      assertEquals(1, mainApp.getRunTasks().size());
-      GradleRunTask runTask = mainApp.getRunTasks().iterator().next();
-      assertEquals(mainApp.getRuntimeClasspath(), runTask.getClasspath());
-      return null;
-    });
+    assertEquals(1, mainApp.getRunTasks().size());
+    GradleRunTask runTask = mainApp.getRunTasks().iterator().next();
+    assertEquals(mainApp.getRuntimeClasspath(), runTask.getClasspath());
   }
 
   @Test
   void testGetJvmTestEnvironment() {
-    File projectDir = projectPath.resolve("junit5-jupiter-starter-gradle").toFile();
+    Path projectDir = projectPath.resolve("junit5-jupiter-starter-gradle");
     withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
+      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toUri(),
           null, null);
 
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
+      String gradleVersion = null;
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         BuildTargetIdentifier fakeBt = new BuildTargetIdentifier("Fake");
         testTaskMap.put(fakeBt, gradleSourceSet.getTestTasks());
+        gradleVersion = gradleSourceSet.getGradleVersion();
       }
       Map<BuildTargetIdentifier, List<GradleTestEntity>> tests =
-            connector.getTestClasses(projectDir.toURI(), testTaskMap, null, null, null);
+            connector.getTestClasses(projectDir.toUri(), testTaskMap, null, null, null, gradleVersion);
       assertHasTestClass(tests, "Fake",
           "com.example.project.CalculatorTests");
       return null;

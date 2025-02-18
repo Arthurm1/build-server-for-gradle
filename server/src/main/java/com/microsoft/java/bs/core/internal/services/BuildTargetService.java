@@ -671,14 +671,23 @@ public class BuildTargetService {
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
       StatusCode statusCode;
       if (!isCancelled(cancelToken)) {
-        if (TestParamsDataKind.SCALA_TEST.equals(params.getDataKind())) {
-          // existing logic for scala test (class level)
-          statusCode = runScalaTests(entry, params, compileProgressReporter, cancelToken);
-        } else if ("scala-test-suites-selection".equals(params.getDataKind())) {
-          statusCode = runScalaTestSuitesSelection(entry, params, compileProgressReporter,
-            cancelToken);
+        if (!entry.getValue().isEmpty()) {
+          GradleBuildTarget target = buildTargetManager.getGradleBuildTarget(
+              entry.getValue().iterator().next());
+          String gradleVersion = target.getSourceSet().getGradleVersion();
+          if (TestParamsDataKind.SCALA_TEST.equals(params.getDataKind())) {
+            // existing logic for scala test (class level)
+            statusCode = runScalaTests(entry.getKey(), params, compileProgressReporter,
+                cancelToken, gradleVersion);
+          } else if ("scala-test-suites-selection".equals(params.getDataKind())) {
+            statusCode = runScalaTestSuitesSelection(entry.getKey(), params,
+                compileProgressReporter, cancelToken, gradleVersion);
+          } else {
+            LOGGER.warning("Test Data Kind " + params.getDataKind() + " not supported");
+            statusCode = StatusCode.ERROR;
+          }
         } else {
-          LOGGER.warning("Test Data Kind " + params.getDataKind() + " not supported");
+          LOGGER.warning("No build targets for " + entry.getKey());
           statusCode = StatusCode.ERROR;
         }
       } else {
@@ -694,10 +703,11 @@ public class BuildTargetService {
   }
 
   private StatusCode runScalaTests(
-      Map.Entry<URI, Set<BuildTargetIdentifier>> entry,
+      URI projectUri,
       TestParams params,
       CompileProgressReporter compileProgressReporter,
-      CancellationToken cancelToken
+      CancellationToken cancelToken,
+      String gradleVersion
   ) {
     // ScalaTestParams is for a list of classes only
     ScalaTestParams testParams = JsonUtils.toModel(params.getData(), ScalaTestParams.class);
@@ -709,16 +719,17 @@ public class BuildTargetService {
       }
       testClasses.put(testClassesItem.getTarget(), classesMethods);
     }
-    return connector.runTests(entry.getKey(), testClasses, testParams.getJvmOptions(),
+    return connector.runTests(projectUri, testClasses, testParams.getJvmOptions(),
         params.getArguments(), null, client, params.getOriginId(),
-        compileProgressReporter, cancelToken);
+        compileProgressReporter, cancelToken, gradleVersion);
   }
 
   private StatusCode runScalaTestSuitesSelection(
-      Map.Entry<URI, Set<BuildTargetIdentifier>> entry,
+      URI projectUri,
       TestParams params,
       CompileProgressReporter compileProgressReporter,
-      CancellationToken cancelToken
+      CancellationToken cancelToken,
+      String gradleVersion
   ) {
     // ScalaTestSuites is for a list of classes + methods
     // Since it doesn't supply the specific BuildTarget we require a single
@@ -755,9 +766,9 @@ public class BuildTargetService {
         }
         Map<BuildTargetIdentifier, Map<String, Set<String>>> testClasses = new HashMap<>();
         testClasses.put(params.getTargets().get(0), classesMethods);
-        return connector.runTests(entry.getKey(), testClasses, testSuites.getJvmOptions(),
+        return connector.runTests(projectUri, testClasses, testSuites.getJvmOptions(),
             params.getArguments(), envVars, client, params.getOriginId(),
-            compileProgressReporter, cancelToken);
+            compileProgressReporter, cancelToken, gradleVersion);
       }
     }
   }
@@ -779,6 +790,7 @@ public class BuildTargetService {
             params.getOriginId(), getFullTaskPathMap());
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
+      String gradleVersion = null;
       for (BuildTargetIdentifier btId : entry.getValue()) {
         GradleBuildTarget target = buildTargetManager.getGradleBuildTarget(btId);
         if (target == null) {
@@ -786,13 +798,16 @@ public class BuildTargetService {
               + ". Because it cannot be found in the cache.");
           continue;
         }
+        gradleVersion = target.getSourceSet().getGradleVersion();
         testTaskMap.put(btId, target.getSourceSet().getTestTasks());
       }
-      URI projectUri = entry.getKey();
-      Map<BuildTargetIdentifier, List<GradleTestEntity>> partialMainClassesMap =
-          connector.getTestClasses(projectUri, testTaskMap, client,
-              compileProgressReporter, cancelToken);
-      mainClassesMap.putAll(partialMainClassesMap);
+      if (gradleVersion != null) {
+        URI projectUri = entry.getKey();
+        Map<BuildTargetIdentifier, List<GradleTestEntity>> partialMainClassesMap =
+            connector.getTestClasses(projectUri, testTaskMap, client,
+                compileProgressReporter, cancelToken, gradleVersion);
+        mainClassesMap.putAll(partialMainClassesMap);
+      }
     }
     List<JvmEnvironmentItem> items = new ArrayList<>();
     for (Map.Entry<BuildTargetIdentifier, List<GradleTestEntity>> entry :

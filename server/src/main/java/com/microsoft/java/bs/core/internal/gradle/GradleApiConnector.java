@@ -73,39 +73,6 @@ public class GradleApiConnector {
   }
 
   /**
-   * Extracts the GradleVersion for the given project.
-   *
-   * @param projectUri URI of the project used to fetch the gradle version.
-   * @param cancellationToken the Gradle cancellation token.
-   * @return Gradle version of the project or empty string upon failure.
-   */
-  public String getGradleVersion(URI projectUri, CancellationToken cancellationToken) {
-    try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      return getBuildEnvironment(connection, cancellationToken).getGradle().getGradleVersion();
-    } catch (BuildException e) {
-      LOGGER.severe("Failed to get Gradle version: " + e.getMessage());
-      return "";
-    }
-  }
-
-  /**
-   * Extracts the GradleVersion for the given project connection.
-   *
-   * @param connection ProjectConnection used to fetch the gradle version.
-   * @param cancellationToken the Gradle cancellation token.
-   * @return Gradle version of the project or empty string upon failure.
-   */
-  public String getGradleVersion(ProjectConnection connection,
-      CancellationToken cancellationToken) {
-    try {
-      return getBuildEnvironment(connection, cancellationToken).getGradle().getGradleVersion();
-    } catch (BuildException e) {
-      LOGGER.severe("Failed to get Gradle version: " + e.getMessage());
-      return "";
-    }
-  }
-
-  /**
    * Extracts the BuildEnvironment model for the given project.
    *
    * @param projectUri URI of the project used to fetch the gradle java home.
@@ -291,6 +258,7 @@ public class GradleApiConnector {
    * @param originId client message originId
    * @param compileProgressReporter listener to pass compile progress back to client.
    * @param cancellationToken the Gradle cancellation token.
+   * @param gradleVersion the Gradle version of this project
    * @return the result of running the tests
    */
   public StatusCode runTests(
@@ -301,12 +269,12 @@ public class GradleApiConnector {
       Map<String, String> envVars,
       BuildClient client, String originId,
       CompileProgressReporter compileProgressReporter,
-      CancellationToken cancellationToken) {
+      CancellationToken cancellationToken,
+      String gradleVersion) {
 
     StatusCode statusCode = StatusCode.OK;
     ProgressReporter reporter = new DefaultProgressReporter(client);
     try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      String gradleVersion = getGradleVersion(connection, cancellationToken);
       if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("2.6")) < 0) {
         reporter.sendError("Error running test classes: Gradle version "
             + gradleVersion + " must be >= 2.6");
@@ -394,17 +362,18 @@ public class GradleApiConnector {
    * @param client the BSP client
    * @param compileProgressReporter listener to pass compile progress back to client.
    * @param cancellationToken the Gradle cancellation token.
+   * @param gradleVersion the Gradle version of the project
    * @return the JVM test classes discovered
    */
   public Map<BuildTargetIdentifier, List<GradleTestEntity>> getTestClasses(URI projectUri,
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap, BuildClient client,
-      CompileProgressReporter compileProgressReporter, CancellationToken cancellationToken) {
+      CompileProgressReporter compileProgressReporter, CancellationToken cancellationToken,
+      String gradleVersion) {
  
     Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
     DefaultProgressReporter reporter = new DefaultProgressReporter(client);
 
     try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      String gradleVersion = getGradleVersion(connection, cancellationToken);
       // use --test-dry-run to discover tests.  Gradle version must be 8.3 or higher.
       if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("8.3")) < 0) {
         reporter.sendError("Error searching for test classes: Gradle version "
