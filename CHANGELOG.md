@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.8.0
+## What's Changed
+* enhancement - add BSP build discovery file creator by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/be08b8803a014649d0f9097ad44d2b16c100a5b9
+* fix - add missing MavenCentral repository by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/f8e79e97fbb8c972e63d808fbaf63fe971a0329f
+
 ## 0.5.0
 ## What's Changed
 * enhancement - Faster source set retrieval by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/168
