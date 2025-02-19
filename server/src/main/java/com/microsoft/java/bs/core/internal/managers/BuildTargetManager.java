@@ -82,7 +82,10 @@ public class BuildTargetManager {
           Collections.emptyList(),
           buildTargetCapabilities
       );
-      bt.setBaseDirectory(sourceSet.getRootDir().toPath().toUri().toString());
+      // Intellij BSP doesn't handle base directory with multiple targets
+      // e.g. `server [main]` and `server [test]` would have the same base dir
+      // so just leave it empty.
+      //bt.setBaseDirectory(sourceSet.getRootDir().toPath().toUri().toString());
 
       setBuildTarget(sourceSet, bt);
 
