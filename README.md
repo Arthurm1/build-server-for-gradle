@@ -36,13 +36,34 @@ Following BSP requests are supported in the current implementation:
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md)
 
+## Downloading
+
+The latest version can be downloaded from [Maven](https://central.sonatype.com/artifact/io.github.arthurm1.gradle.bsp/server/overview) or local versions can be used by downloading the [source code](https://github.com/arthurm1/build-server-for-gradle), incrementing `version` in `gradle.properties` and then publishing to Maven Local using `./gradlew publishToMavenLocal`.
+
 ## Launch the Build Server for Gradle
 
-### Main class
+### Run the Server
 
-The main class of the build server is `com.microsoft.java.bs.core.Launcher`.  The latest version can be downloaded from maven `io.github.arthurm1.gradle.bsp:server:0.7.0` or local versions can be used by incrementing `version` in `gradle.properties` and then publishing to local maven using `gradlew publishToLocalMaven`.
-The plugin tests will always use the latest built code in `.../build/classes/java/main/...` regardless of whether the jars have been published.
-The server tests will use the published jars.
+The main class of the build server is `com.microsoft.java.bs.core.Launcher`.
+
+E.g. using [Coursier](https://get-coursier.io/) where XXXX is the latest version...
+
+```
+coursier launch io.github.arthurm1.gradle.bsp:server:XXXX -r https://repo.gradle.org/gradle/libs-releases -M com.microsoft.java.bs.core.Launcher
+```
+
+
+### Creating the BSP connection file (optional)
+
+See [Build Server Discovery](https://build-server-protocol.github.io/docs/overview/server-discovery#the-bsp-connection-details)
+The main class `com.microsoft.java.bs.core.BspFileCreator` will produce a BSP Connection file `.bsp/gradle-bsp.json`.
+Run from the Gradle project directory.
+
+E.g. using [Coursier](https://get-coursier.io/) where XXXX is the latest version...
+
+```
+coursier launch io.github.arthurm1.gradle.bsp:server:XXXX -r https://repo.gradle.org/gradle/libs-releases -M com.microsoft.java.bs.core.BspFileCreator
+```
 
 ### BSP message logging
 
@@ -57,6 +78,19 @@ A [Preferences](./server/src/main/java/com/microsoft/java/bs/core/internal/model
 The Gradle Build Server supports two types of transport methods: standard input/output and named pipe (unix socket). By default, the server uses the standard input/output transport if no arguments are specified.
 
 To use the named pipe (unix socket) transport, start the server with the argument `--pipe=<pipeName>`. If the `--pipe=` option is provided but `pipeName` left empty, the server defaults to using the standard input/output transport.
+
+## Export to Bloop files (optional)
+
+See [Bloop](https://scalacenter.github.io/bloop/)
+The main class `com.microsoft.java.bs.core.BloopExporter` will export the project as Bloop files in `.bloop/*.json`.
+Be aware that existing project files in the `.bloop` directory will be overwritten and old project files will not be deleted.
+Run from the Gradle project directory.
+
+E.g. using [Coursier](https://get-coursier.io/) where XXXX is the latest version...
+
+```
+coursier launch io.github.arthurm1.gradle.bsp:server:XXXX -r https://repo.gradle.org/gradle/libs-releases -M com.microsoft.java.bs.core.BloopExporter
+```
 
 ## Contributing
 

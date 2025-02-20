@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.9.0
+## What's Changed
+* fix - ensure BSP server works with Intellij by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/fe07d24d41deaf4f82dbba6c2107eba81d13bf0f and https://github.com/Arthurm1/build-server-for-gradle/commit/07c6576fcb9ba863bf1a38ce039a4d76fab77f1a and https://github.com/Arthurm1/build-server-for-gradle/commit/10ed7b92b38c6a11fe8d5a2946f8b0421a8d4c70
+* fix - use correct java executable depending on OS by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/6d2bfacd534b9417a8dbc6dd42e98df7299cb64a
+
 ## 0.8.0
 ## What's Changed
 * enhancement - add BSP build discovery file creator by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/be08b8803a014649d0f9097ad44d2b16c100a5b9
