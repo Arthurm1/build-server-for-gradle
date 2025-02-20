@@ -163,9 +163,12 @@ public class BuildTargetService {
    * @param cancelToken token to cancel Gradle command
    */
   public void reloadWorkspace(CancellationToken cancelToken) {
-    List<BuildTargetChangeInfo> changedTargets = updateBuildTargets(cancelToken);
-    if (!changedTargets.isEmpty()) {
-      notifyBuildTargetsChanged(changedTargets);
+    // if the workspace hasn't been retrieved yet then do nothing here.
+    if (!firstTime) {
+      List<BuildTargetChangeInfo> changedTargets = updateBuildTargets(cancelToken);
+      if (!changedTargets.isEmpty()) {
+        notifyBuildTargetsChanged(changedTargets);
+      }
     }
   }
 
