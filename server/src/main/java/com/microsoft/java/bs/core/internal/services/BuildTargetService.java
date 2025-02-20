@@ -312,16 +312,14 @@ public class BuildTargetService {
 
         GradleSourceSet sourceSet = target.getSourceSet();
         List<OutputPathItem> outputPaths = new ArrayList<>();
-        // Due to the BSP spec does not support additional flags for each output path,
-        // we will leverage the query of the uri to mark whether this is a source/resource
-        // output path.
-        // TODO: file a BSP spec issue to support additional flags for each output path.
 
         Set<File> sourceOutputDirs = sourceSet.getSourceOutputDirs();
         if (sourceOutputDirs != null) {
+          String suffix = preferenceManager.getPreferences().getUseQualifiedOutputPaths()
+              ? "?kind=source" : "";
           for (File sourceOutputDir : sourceOutputDirs) {
             outputPaths.add(new OutputPathItem(
-                sourceOutputDir.toPath().toUri() + "?kind=source",
+                sourceOutputDir.toPath().toUri() + suffix,
                 OutputPathItemKind.DIRECTORY
             ));
           }
@@ -329,9 +327,11 @@ public class BuildTargetService {
 
         Set<File> resourceOutputDirs = sourceSet.getResourceOutputDirs();
         if (resourceOutputDirs != null) {
+          String suffix = preferenceManager.getPreferences().getUseQualifiedOutputPaths() 
+              ? "?kind=resource" : "";
           for (File resourceOutputDir : resourceOutputDirs) {
             outputPaths.add(new OutputPathItem(
-                resourceOutputDir.toPath().toUri() + "?kind=resource",
+                resourceOutputDir.toPath().toUri() + suffix,
                 OutputPathItemKind.DIRECTORY
             ));
           }

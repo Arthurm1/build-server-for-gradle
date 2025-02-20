@@ -111,6 +111,10 @@ public class LifecycleService {
         // do nothing - unspecified or unhandled datakind
         preferences = new Preferences();
       }
+      // turn off qualified output paths if Intellij.  It can't handle Uri with query section
+      if (params.getDisplayName().equals("IntelliJ-BSP")) {
+        preferences.setUseQualifiedOutputPaths(false);
+      }
     } else {
       preferences = new Preferences();
     }

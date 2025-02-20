@@ -18,6 +18,7 @@ public class Preferences {
 
   /**
    * Whether to use Gradle from the 'gradle-wrapper.properties' file.
+   * On by default.
    */
   private boolean isWrapperEnabled;
 
@@ -48,6 +49,14 @@ public class Preferences {
   private List<String> gradleJvmArguments;
 
   /**
+   * Append a query to the output paths Uri specifying sources or resources.
+   * vscode-gradle requires the output paths to be qualified.
+   * intellij will fail if output paths are qualified
+   * On by default.
+   */
+  private boolean useQualifiedOutputPaths;
+
+  /**
    * A map of the JDKs on the machine. The key is the major JDK version,
    * for example: "1.8", "17", etc. The value is the installation path of the
    * JDK. When this preference is available, the Build Server will find the
@@ -71,6 +80,7 @@ public class Preferences {
    */
   public Preferences() {
     isWrapperEnabled = true;
+    useQualifiedOutputPaths = true;
   }
 
   /**
@@ -197,6 +207,24 @@ public class Preferences {
    */
   public void setGradleJvmArguments(List<String> gradleJvmArguments) {
     this.gradleJvmArguments = gradleJvmArguments;
+  }
+
+  /**
+   * should output path Uris be appended with query indicating sources or resources.
+   *
+   * @return flag indicating specify output paths
+   */
+  public boolean getUseQualifiedOutputPaths() {
+    return useQualifiedOutputPaths;
+  }
+
+  /**
+   * Append a query to the output paths Uri specifying sources or resources.
+   *
+   * @param useQualifiedOutputPaths flag indicating specify output paths
+   */
+  public void setUseQualifiedOutputPaths(boolean useQualifiedOutputPaths) {
+    this.useQualifiedOutputPaths = useQualifiedOutputPaths;
   }
 
   /**
