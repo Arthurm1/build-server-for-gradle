@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
@@ -62,7 +63,8 @@ public class BuildTargetManager {
    * @param gradleSourceSets the new source sets.
    * @return A list containing identifiers of changed build targets.
    */
-  public List<BuildTargetChangeInfo> store(GradleSourceSets gradleSourceSets) {
+  public List<BuildTargetChangeInfo> store(GradleSourceSets gradleSourceSets,
+      Function<GradleSourceSet, String> displayNameMaker) {
     Map<BuildTargetIdentifier, GradleBuildTarget> newCache = new HashMap<>();
     Map<BuildTargetDependency, BuildTargetIdentifier> dependencyToBuildTargetId = new HashMap<>();
     for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -82,10 +84,7 @@ public class BuildTargetManager {
           Collections.emptyList(),
           buildTargetCapabilities
       );
-      // Intellij BSP doesn't handle base directory with multiple targets
-      // e.g. `server [main]` and `server [test]` would have the same base dir
-      // so just leave it empty.
-      //bt.setBaseDirectory(sourceSet.getRootDir().toPath().toUri().toString());
+      bt.setBaseDirectory(sourceSet.getRootDir().toPath().toUri().toString());
 
       setBuildTarget(sourceSet, bt);
 
@@ -95,7 +94,7 @@ public class BuildTargetManager {
       BuildTargetDependency dependency = new DefaultBuildTargetDependency(sourceSet);
       dependencyToBuildTargetId.put(dependency, btId);
     }
-    makeDisplayNameUnique(newCache.values());
+    makeDisplayNameUnique(newCache.values(), displayNameMaker);
     updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);
 
     this.sourceDirsMap = calculateSourceDirsMap(newCache.values());
@@ -148,32 +147,14 @@ public class BuildTargetManager {
   }
 
   /**
-   * Returns the gradle project path without the initial {@code :}.
-   *
-   * @param projectPath project path to operate upon
-   */
-  private String stripPathPrefix(String projectPath) {
-    if (projectPath != null && projectPath.startsWith(":")) {
-      return projectPath.substring(1);
-    }
-    return projectPath;
-  }
-
-  /**
    * Make project display names unique.
    *
    * @param buildTargets all the build targets
    */
-  private void makeDisplayNameUnique(Collection<GradleBuildTarget> buildTargets) {
+  private void makeDisplayNameUnique(Collection<GradleBuildTarget> buildTargets,
+      Function<GradleSourceSet, String> displayNameMaker) {
     for (GradleBuildTarget buildTarget : buildTargets) {
-      GradleSourceSet sourceSet = buildTarget.getSourceSet();
-      String projectName = stripPathPrefix(sourceSet.getProjectPath());
-      if (projectName == null || projectName.isEmpty()) {
-        projectName = sourceSet.getProjectName();
-      }
-      String sourceSetName = sourceSet.getSourceSetName();
-      String displayName = projectName + " [" + sourceSetName + ']';
-      displayName = displayName.replace(":", " ");
+      String displayName = displayNameMaker.apply(buildTarget.getSourceSet());
       buildTarget.getBuildTarget().setDisplayName(displayName);
     }
   }

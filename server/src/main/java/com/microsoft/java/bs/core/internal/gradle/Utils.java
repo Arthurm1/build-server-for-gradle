@@ -13,8 +13,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import org.gradle.internal.impldep.org.apache.commons.lang.StringUtils;
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildActionExecuter;
@@ -58,6 +60,61 @@ public class Utils {
    */
   public static String getJavaExeName() {
     return isWindows() ? "java.exe" : "java";
+  }
+
+  /**
+   * Returns the gradle project path without the initial {@code :}.
+   *
+   * @param projectPath project path to operate upon
+   */
+  private static String stripPathPrefix(String projectPath) {
+    if (projectPath != null && projectPath.startsWith(":")) {
+      return projectPath.substring(1);
+    }
+    return projectPath;
+  }
+
+  /**
+   * Create a Build target display name of the format `projectName [sourceSetName]`
+   * @param sourceSet Gradle source set
+   * @return display name for build target
+   */
+  private static String bracketDisplayNaming(GradleSourceSet sourceSet) {
+    String projectName = stripPathPrefix(sourceSet.getProjectPath());
+    if (projectName == null || projectName.isEmpty()) {
+      projectName = sourceSet.getProjectName();
+    }
+    String sourceSetName = sourceSet.getSourceSetName();
+    String displayName = projectName + " [" + sourceSetName + ']';
+    return displayName.replace(":", " ");
+  }
+
+  /**
+   * Create a Build target display name of the format `projectName.sourceSetName`
+   * @param sourceSet Gradle source set
+   * @return display name for build target
+   */
+  private static String dotDisplayNaming(GradleSourceSet sourceSet) {
+    String projectName = stripPathPrefix(sourceSet.getProjectPath());
+    if (projectName == null || projectName.isEmpty()) {
+      projectName = sourceSet.getProjectName();
+    }
+    String sourceSetName = sourceSet.getSourceSetName();
+    String displayName = projectName + '.' + sourceSetName;
+    return displayName.replace(":", " ");
+  }
+
+  /**
+   * Create a function that creates a display name for a build target based on the BSP client.
+   * @param preferences BSP client preferences
+   * @return function to create a display name
+   */
+  public static Function<GradleSourceSet, String> getDisplayNameMaker(Preferences preferences) {
+    if (Preferences.DOT_DISPLAY_NAMING.equals(preferences.getDisplayNaming())) {
+      return Utils::dotDisplayNaming;
+    } else {
+      return Utils::bracketDisplayNaming;
+    }
   }
 
   /**

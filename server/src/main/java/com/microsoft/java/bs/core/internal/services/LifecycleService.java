@@ -111,12 +111,39 @@ public class LifecycleService {
         // do nothing - unspecified or unhandled datakind
         preferences = new Preferences();
       }
-      // turn off qualified output paths if Intellij.  It can't handle Uri with query section
-      if (params.getDisplayName().equals("IntelliJ-BSP")) {
-        preferences.setUseQualifiedOutputPaths(false);
-      }
     } else {
       preferences = new Preferences();
+    }
+    // setup defaults if the BSP client hasn't specified these values
+    // use wrapper as default unless client has specified otherwise
+    if (preferences.isWrapperEnabled() == null) {
+      preferences.setWrapperEnabled(true);
+    }
+    if (params.getDisplayName().equals("IntelliJ-BSP")) {
+      // turn off qualified output paths.  Intellij can't handle Uri with query section
+      if (preferences.getUseQualifiedOutputPaths() == null) {
+        preferences.setUseQualifiedOutputPaths(false);
+      }
+      // turn off base dirs.  Intellij can't handle multiple targets under 1 dir
+      if (preferences.getIncludeTargetBaseDirectory() == null) {
+        preferences.setIncludeTargetBaseDirectory(false);
+      }
+      // dot naming looks better on Intellij
+      if (preferences.getDisplayNaming() == null) {
+        preferences.setDisplayNaming(Preferences.DOT_DISPLAY_NAMING);
+      }
+    } else {
+      if (preferences.getUseQualifiedOutputPaths() == null) {
+        preferences.setUseQualifiedOutputPaths(true);
+      }
+      // most clients want base directory
+      if (preferences.getIncludeTargetBaseDirectory() == null) {
+        preferences.setIncludeTargetBaseDirectory(true);
+      }
+      // non-intellij defaults to bracket naming
+      if (preferences.getDisplayNaming() == null) {
+        preferences.setDisplayNaming(Preferences.BRACKET_DISPLAY_NAMING);
+      }
     }
 
     preferenceManager.setPreferences(preferences);

@@ -11,6 +11,12 @@ import java.util.Map;
  */
 public class Preferences {
 
+  // display name = `projectName.sourcesetName`
+  public static final String DOT_DISPLAY_NAMING = "dot";
+
+  // display name = `projectName [sourcesetName]`
+  public static final String BRACKET_DISPLAY_NAMING = "bracket";
+
   /**
    * The location to the JVM used to run the Gradle daemon.
    */
@@ -20,7 +26,7 @@ public class Preferences {
    * Whether to use Gradle from the 'gradle-wrapper.properties' file.
    * On by default.
    */
-  private boolean isWrapperEnabled;
+  private Boolean isWrapperEnabled;
 
   /**
    * Use Gradle from the specific version if the Gradle wrapper is missing or disabled.
@@ -54,7 +60,21 @@ public class Preferences {
    * intellij will fail if output paths are qualified
    * On by default.
    */
-  private boolean useQualifiedOutputPaths;
+  private Boolean useQualifiedOutputPaths;
+
+  /**
+   * Either include the `BuildTarget#baseDirectory` or leave it blank.
+   * Intellij cannot cope with duplicate base directories which Gradle has since it uses the same
+   * base directory for each main & test source set.
+   * So leave it blank.
+   */
+  private Boolean includeTargetBaseDirectory;
+
+  /**
+   * Some BSP clients provide a better project view to users if the build target display name is
+   * constructed in a certain way so provide some options here.
+   */
+  private String displayNaming;
 
   /**
    * A map of the JDKs on the machine. The key is the major JDK version,
@@ -79,8 +99,6 @@ public class Preferences {
    * Initialize the preferences.
    */
   public Preferences() {
-    isWrapperEnabled = true;
-    useQualifiedOutputPaths = true;
   }
 
   /**
@@ -106,7 +124,7 @@ public class Preferences {
    *
    * @return flag indicating Gradle wrapper is being used
    */
-  public boolean isWrapperEnabled() {
+  public Boolean isWrapperEnabled() {
     return isWrapperEnabled;
   }
 
@@ -115,7 +133,7 @@ public class Preferences {
    *
    * @param isWrapperEnabled flag indicating Gradle wrapper is being used
    */
-  public void setWrapperEnabled(boolean isWrapperEnabled) {
+  public void setWrapperEnabled(Boolean isWrapperEnabled) {
     this.isWrapperEnabled = isWrapperEnabled;
   }
 
@@ -214,7 +232,7 @@ public class Preferences {
    *
    * @return flag indicating specify output paths
    */
-  public boolean getUseQualifiedOutputPaths() {
+  public Boolean getUseQualifiedOutputPaths() {
     return useQualifiedOutputPaths;
   }
 
@@ -223,8 +241,44 @@ public class Preferences {
    *
    * @param useQualifiedOutputPaths flag indicating specify output paths
    */
-  public void setUseQualifiedOutputPaths(boolean useQualifiedOutputPaths) {
+  public void setUseQualifiedOutputPaths(Boolean useQualifiedOutputPaths) {
     this.useQualifiedOutputPaths = useQualifiedOutputPaths;
+  }
+
+  /**
+   * Either include the `BuildTarget#baseDirectory` or leave it blank.
+   *
+   * @return flag indicating whether to include the baseDirectory
+   */
+  public Boolean getIncludeTargetBaseDirectory() {
+    return includeTargetBaseDirectory;
+  }
+
+  /**
+   * Either include the `BuildTarget#baseDirectory` or leave it blank.
+   *
+   * @param includeTargetBaseDirectory flag indicating whether to include the baseDirectory
+   */
+  public void setIncludeTargetBaseDirectory(Boolean includeTargetBaseDirectory) {
+    this.includeTargetBaseDirectory = includeTargetBaseDirectory;
+  }
+
+  /**
+   * Name for type of display naming to use per build target.
+   *
+   * @return name for type of display naming to use per build target.
+   */
+  public String getDisplayNaming() {
+    return displayNaming;
+  }
+
+  /**
+   * Name for type of display naming to use per build target.
+   *
+   * @param displayNaming name for type of display naming to use per build target.
+   */
+  public void setDisplayNaming(String displayNaming) {
+    this.displayNaming = displayNaming;
   }
 
   /**

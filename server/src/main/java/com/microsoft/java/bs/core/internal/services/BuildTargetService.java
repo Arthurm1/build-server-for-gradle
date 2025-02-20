@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
 import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
@@ -139,9 +140,11 @@ public class BuildTargetService {
   }
 
   private List<BuildTargetChangeInfo> updateBuildTargets(CancellationToken cancelToken) {
-    GradleSourceSets sourceSets = connector.getGradleSourceSets(
-        preferenceManager.getRootUri(), client, cancelToken);
-    return buildTargetManager.store(sourceSets);
+    GradleSourceSets sourceSets = connector.getGradleSourceSets(preferenceManager.getRootUri(),
+        client, cancelToken);
+    Function<GradleSourceSet, String> displayNameMaker = Utils.getDisplayNameMaker(
+        preferenceManager.getPreferences());
+    return buildTargetManager.store(sourceSets, displayNameMaker);
   }
 
   private BuildTargetManager getBuildTargetManager(CancellationToken cancelToken) {
@@ -215,8 +218,25 @@ public class BuildTargetService {
   public WorkspaceBuildTargetsResult getWorkspaceBuildTargets(CancellationToken cancelToken) {
     List<GradleBuildTarget> allTargets = getBuildTargetManager(cancelToken)
         .getAllGradleBuildTargets();
+    Function<GradleBuildTarget, BuildTarget> mapper;
+    if (preferenceManager.getPreferences().getIncludeTargetBaseDirectory()) {
+      mapper = GradleBuildTarget::getBuildTarget;
+    } else {
+      mapper = gbt -> {
+        // intellij can't handle duplicate base dirs so copy without them.
+        BuildTarget bt = gbt.getBuildTarget();
+        BuildTarget newBt = new BuildTarget(bt.getId(), bt.getTags(), bt.getLanguageIds(), bt.getDependencies(),
+            bt.getCapabilities());
+        newBt.setDisplayName(bt.getDisplayName());
+        newBt.setBaseDirectory(null);
+        newBt.setDataKind(bt.getDataKind());
+        newBt.setData(bt.getData());
+        return newBt;
+      };
+    }
+
     List<BuildTarget> targets = allTargets.stream()
-        .map(GradleBuildTarget::getBuildTarget)
+        .map(mapper)
         .collect(Collectors.toList());
     return new WorkspaceBuildTargetsResult(targets);
   }
