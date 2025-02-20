@@ -15,6 +15,8 @@ import java.nio.channels.SocketChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutionException;
 
+import com.microsoft.java.bs.core.internal.gradle.Utils;
+
 /**
  * A named pipe stream implementation.
  */
@@ -71,10 +73,6 @@ public class NamedPipeStream {
     return getSelectedStream().getOutputStream();
   }
 
-  private static boolean isWindows() {
-    return System.getProperty("os.name").toLowerCase().contains("win");
-  }
-
   /**
    * PipeStreamProvider.
    */
@@ -96,7 +94,7 @@ public class NamedPipeStream {
     private void initializeNamedPipe(final String pipeName) {
       File pipeFile = new File(pipeName);
       try {
-        if (isWindows()) {
+        if (Utils.isWindows()) {
           attemptWindowsConnection(pipeFile);
         } else {
           attemptUnixConnection(pipeFile);

@@ -47,6 +47,20 @@ public class Utils {
   private static final String GRADLE_USER_HOME = "GRADLE_USER_HOME";
 
   /**
+   * Is the OS Windows.
+   */
+  public static boolean isWindows() {
+    return System.getProperty("os.name").toLowerCase().contains("win");
+  }
+
+  /**
+   * What is the platform dependent name for the Java executable
+   */
+  public static String getJavaExeName() {
+    return isWindows() ? "java.exe" : "java";
+  }
+
+  /**
    * Get the Gradle connector for the project.
    *
    * @param project The project.

@@ -4,6 +4,7 @@ import ch.epfl.scala.bsp4j.BspConnectionDetails;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,7 +43,7 @@ public class BspFileCreator {
     String bspVersion = BuildInfo.bspVersion;
     List<String> languages = SupportedLanguages.allBspNames;
     String javaHome = System.getProperty("java.home");
-    Path javaExe = Path.of(javaHome, "bin", "java.exe");
+    Path javaExe = Path.of(javaHome, "bin", Utils.getJavaExeName());
     String classpath = System.getProperty("java.class.path");
     List<String> argv = List.of(
         javaExe.toString(),
