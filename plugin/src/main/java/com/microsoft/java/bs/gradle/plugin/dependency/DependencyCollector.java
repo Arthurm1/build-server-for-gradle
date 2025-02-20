@@ -47,6 +47,13 @@ public class DependencyCollector {
 
   private static final String UNKNOWN = "unknown";
 
+  private static List<Class<? extends org.gradle.api.component.Artifact>> artifactTypes;
+  static {
+    artifactTypes = new ArrayList<>();
+    artifactTypes.add(JavadocArtifact.class);
+    artifactTypes.add(SourcesArtifact.class);
+  }
+
   /**
    * Resolve and collect dependencies from a collection of Configuration names.
    */
@@ -116,9 +123,20 @@ public class DependencyCollector {
       return getFileArtifactDependency((OpaqueComponentArtifactIdentifier) id, artifactFile);
     }
     if (id instanceof ComponentFileArtifactIdentifier) {
+      if (isGradleAPIDependency(id, artifactFile)) {
+        System.err.println("Component " + artifactFile + " " + id.getClass());
+      }
       return getFileArtifactDependency((ComponentFileArtifactIdentifier) id, artifactFile);
     }
     return null;
+  }
+
+  private static boolean isGradleAPIDependency(ComponentArtifactIdentifier id, File artifactFile) {
+    String componentIdentifier = id.getComponentIdentifier().getDisplayName();
+    return (componentIdentifier.equals("Gradle API")
+        || componentIdentifier.equals("Gradle Kotlin DSL")
+        || componentIdentifier.equals("Local Groovy"))
+        && artifactFile.getName().startsWith("groovy-");
   }
 
   private static List<ResolvedArtifactResult> getConfigurationArtifacts(Configuration config) {
@@ -134,14 +152,12 @@ public class DependencyCollector {
   private static DefaultGradleModuleDependency getModuleArtifactDependency(
       DependencyHandler dependencies, ModuleComponentArtifactIdentifier artifactIdentifier,
       File resolvedArtifactFile) {
-    @SuppressWarnings({"unchecked", "UnstableApiUsage"})
+
+    @SuppressWarnings({"UnstableApiUsage"})
     ArtifactResolutionResult resolutionResult = dependencies
         .createArtifactResolutionQuery()
         .forComponents(artifactIdentifier.getComponentIdentifier())
-        .withArtifacts(
-          JvmLibrary.class /* componentType */,
-          JavadocArtifact.class, SourcesArtifact.class /*artifactTypes*/
-        )
+        .withArtifacts(JvmLibrary.class, artifactTypes)
         .execute();
 
     List<Artifact> artifacts = new LinkedList<>();
