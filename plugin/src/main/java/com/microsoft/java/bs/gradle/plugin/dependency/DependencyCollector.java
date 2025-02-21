@@ -21,6 +21,7 @@ import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.artifacts.query.ArtifactResolutionQuery;
 import org.gradle.api.artifacts.result.ArtifactResolutionResult;
 import org.gradle.api.artifacts.result.ArtifactResult;
 import org.gradle.api.artifacts.result.ComponentArtifactsResult;
@@ -153,12 +154,22 @@ public class DependencyCollector {
       DependencyHandler dependencies, ModuleComponentArtifactIdentifier artifactIdentifier,
       File resolvedArtifactFile) {
 
-    @SuppressWarnings({"UnstableApiUsage"})
-    ArtifactResolutionResult resolutionResult = dependencies
+    ArtifactResolutionQuery query = dependencies
         .createArtifactResolutionQuery()
-        .forComponents(artifactIdentifier.getComponentIdentifier())
-        .withArtifacts(JvmLibrary.class, artifactTypes)
-        .execute();
+        .forComponents(artifactIdentifier.getComponentIdentifier());
+
+    if (GradleVersion.current().compareTo(GradleVersion.version("4.5")) >= 0) {
+      @SuppressWarnings({"UnstableApiUsage"})
+      ArtifactResolutionQuery withArtifacts = query.withArtifacts(JvmLibrary.class, artifactTypes);
+      query = withArtifacts;
+    } else {
+      @SuppressWarnings({"UnstableApiUsage", "unchecked"})
+      ArtifactResolutionQuery withArtifacts = query.withArtifacts(JvmLibrary.class,
+          JavadocArtifact.class, SourcesArtifact.class);
+      query = withArtifacts;
+    }
+
+    ArtifactResolutionResult resolutionResult = query.execute();
 
     List<Artifact> artifacts = new LinkedList<>();
     if (resolvedArtifactFile != null) {
