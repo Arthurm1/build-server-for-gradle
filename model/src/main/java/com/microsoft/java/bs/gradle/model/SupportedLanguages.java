@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.gradle.model;
 
+import com.microsoft.java.bs.gradle.model.impl.DefaultAntlrLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultJavaLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultScalaLanguage;
@@ -16,16 +17,17 @@ import java.util.stream.Collectors;
  * The supported languages.
  */
 public class SupportedLanguages {
+  public static final DefaultAntlrLanguage ANTLR = new DefaultAntlrLanguage();
   public static final DefaultJavaLanguage JAVA = new DefaultJavaLanguage();
   public static final DefaultScalaLanguage SCALA = new DefaultScalaLanguage();
   public static final DefaultGroovyLanguage GROOVY = new DefaultGroovyLanguage();
   public static final DefaultKotlinLanguage KOTLIN = new DefaultKotlinLanguage();
 
-  public static final List<SupportedLanguage<?>> all;
   public static final List<String> allBspNames;
 
   static {
-    all = new LinkedList<>();
+    List<SupportedLanguage<? extends LanguageExtension>> all = new LinkedList<>();
+    all.add(ANTLR);
     all.add(JAVA);
     all.add(SCALA);
     all.add(GROOVY);

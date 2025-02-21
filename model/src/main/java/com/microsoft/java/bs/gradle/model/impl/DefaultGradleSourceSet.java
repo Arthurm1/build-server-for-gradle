@@ -122,6 +122,10 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
       return new DefaultKotlinExtension(object.getAsKotlinExtension());
     }
 
+    if (object.isAntlrExtension()) {
+      return new DefaultAntlrExtension(object.getAsAntlrExtension());
+    }
+
     throw new IllegalArgumentException("No conversion methods defined for object: " + object);
   }
 

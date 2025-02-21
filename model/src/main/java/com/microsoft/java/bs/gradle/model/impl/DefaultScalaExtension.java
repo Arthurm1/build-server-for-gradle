@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.AntlrExtension;
 import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
@@ -200,6 +201,11 @@ public class DefaultScalaExtension implements ScalaExtension {
   }
 
   @Override
+  public boolean isAntlrExtension() {
+    return false;
+  }
+
+  @Override
   public JavaExtension getAsJavaExtension() {
     return null;
   }
@@ -216,6 +222,11 @@ public class DefaultScalaExtension implements ScalaExtension {
 
   @Override
   public KotlinExtension getAsKotlinExtension() {
+    return null;
+  }
+
+  @Override
+  public AntlrExtension getAsAntlrExtension() {
     return null;
   }
 }

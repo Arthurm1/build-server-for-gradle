@@ -14,11 +14,11 @@ import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 
 /**
- * Default implementation of {@link GroovyExtension}.
+ * Default implementation of {@link AntlrExtension}.
  */
-public class DefaultGroovyExtension implements GroovyExtension {
+public class DefaultAntlrExtension implements AntlrExtension {
   private static final long serialVersionUID = 1L;
-  
+
   private Set<File> sourceDirs;
 
   private Set<File> generatedSourceDirs;
@@ -27,18 +27,18 @@ public class DefaultGroovyExtension implements GroovyExtension {
 
   private File classesDir;
 
-  public DefaultGroovyExtension() {}
+  public DefaultAntlrExtension() {}
 
   /**
    * Copy constructor.
    *
-   * @param groovyExtension the GroovyExtension to copy from.
+   * @param antlrExtension the antlrExtension to copy from.
    */
-  public DefaultGroovyExtension(GroovyExtension groovyExtension) {
-    this.sourceDirs = groovyExtension.getSourceDirs();
-    this.generatedSourceDirs = groovyExtension.getGeneratedSourceDirs();
-    this.compileTaskName = groovyExtension.getCompileTaskName();
-    this.classesDir = groovyExtension.getClassesDir();
+  public DefaultAntlrExtension(AntlrExtension antlrExtension) {
+    this.sourceDirs = antlrExtension.getSourceDirs();
+    this.generatedSourceDirs = antlrExtension.getGeneratedSourceDirs();
+    this.compileTaskName = antlrExtension.getCompileTaskName();
+    this.classesDir = antlrExtension.getClassesDir();
   }
 
   @Override
@@ -93,16 +93,16 @@ public class DefaultGroovyExtension implements GroovyExtension {
     if (getClass() != obj.getClass()) {
       return false;
     }
-    DefaultGroovyExtension other = (DefaultGroovyExtension) obj;
+    DefaultAntlrExtension other = (DefaultAntlrExtension) obj;
     return Objects.equals(sourceDirs, other.sourceDirs)
-            && Objects.equals(generatedSourceDirs, other.generatedSourceDirs)
-            && Objects.equals(compileTaskName, other.compileTaskName)
-            && Objects.equals(classesDir, other.classesDir);
+        && Objects.equals(generatedSourceDirs, other.generatedSourceDirs)
+        && Objects.equals(compileTaskName, other.compileTaskName)
+        && Objects.equals(classesDir, other.classesDir);
   }
 
   @Override
   public String toString() {
-    return "DefaultGroovyExtension: SourceDirs:" + sourceDirs
+    return "DefaultAntlrExtension: SourceDirs:" + sourceDirs
         + " GeneratedSourceDirs:" + generatedSourceDirs
         + " CompileTaskName:" + compileTaskName
         + " ClassesDir:" + classesDir;
@@ -120,7 +120,7 @@ public class DefaultGroovyExtension implements GroovyExtension {
 
   @Override
   public boolean isGroovyExtension() {
-    return true;
+    return false;
   }
 
   @Override
@@ -130,7 +130,7 @@ public class DefaultGroovyExtension implements GroovyExtension {
 
   @Override
   public boolean isAntlrExtension() {
-    return false;
+    return true;
   }
 
   @Override
@@ -145,7 +145,7 @@ public class DefaultGroovyExtension implements GroovyExtension {
 
   @Override
   public GroovyExtension getAsGroovyExtension() {
-    return this;
+    return null;
   }
 
   @Override
@@ -155,6 +155,6 @@ public class DefaultGroovyExtension implements GroovyExtension {
 
   @Override
   public AntlrExtension getAsAntlrExtension() {
-    return null;
+    return this;
   }
 }

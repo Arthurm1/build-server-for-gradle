@@ -19,6 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import com.microsoft.java.bs.gradle.model.AntlrExtension;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.GroovyExtension;
@@ -68,7 +69,7 @@ class GradleBuildServerPluginTest {
           .addJvmArguments("-Dbsp.gradle.supportedLanguages="
             + String.join(",", SupportedLanguages.allBspNames))
           // Add back in to remote debug
-          //.addJvmArguments("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
+          //.addJvmArguments("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
           .setStandardOutput(System.out)
           .setStandardError(System.err);
 
@@ -905,6 +906,49 @@ class GradleBuildServerPluginTest {
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
               gradleSourceSet.getSourceSetName())));
         }
+      }
+    });
+  }
+
+  @ParameterizedTest(name = "testAntlrModelBuilder {0}")
+  @MethodSource("versionsFrom7_1")
+  void testAntlrModelBuilder(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("antlr", gradleVersion, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertEquals("antlr", gradleSourceSet.getProjectName());
+        assertEquals(":", gradleSourceSet.getProjectPath());
+        assertTrue(gradleSourceSet.getSourceSetName().equals("main")
+                || gradleSourceSet.getSourceSetName().equals("test"));
+        assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
+                || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
+        assertTrue(gradleSourceSet.getCompileClasspath().isEmpty());
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+                .anyMatch(file -> file.toPath().endsWith("java")));
+        assertTrue(gradleSourceSet.getSourceDirs().stream()
+                .anyMatch(file -> file.toPath().endsWith("antlr")));
+        // annotation processor dirs weren't auto created before 5.2
+        if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
+          assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
+        }
+        assertFalse(gradleSourceSet.getResourceDirs().isEmpty());
+        assertNotNull(gradleSourceSet.getSourceOutputDirs());
+        assertNotNull(gradleSourceSet.getResourceOutputDirs());
+        assertNotNull(gradleSourceSet.getBuildTargetDependencies());
+        assertNotNull(gradleSourceSet.getModuleDependencies());
+        JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
+        assertNotNull(javaExtension);
+        assertNotNull(javaExtension.getJavaHome());
+        assertNotNull(javaExtension.getJavaVersion());
+
+        AntlrExtension antlrExtension = SupportedLanguages.ANTLR.getExtension(gradleSourceSet);
+        assertNotNull(antlrExtension);
+
+        assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
+            .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
+            gradleSourceSet.getSourceSetName()))));
+        assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
+            gradleSourceSet.getSourceSetName())));
       }
     });
   }

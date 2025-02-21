@@ -109,7 +109,9 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
 
         srcDirs.addAll(extension.getSourceDirs());
         generatedSrcDirs.addAll(extension.getGeneratedSourceDirs());
-        sourceOutputDirs.add(extension.getClassesDir());
+        if (extension.getClassesDir() != null) {
+          sourceOutputDirs.add(extension.getClassesDir());
+        }
 
         extensions.put(languageModelBuilder.getLanguageId(), extension);
       }

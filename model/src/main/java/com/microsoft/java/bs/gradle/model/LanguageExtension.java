@@ -72,6 +72,13 @@ public interface LanguageExtension extends Serializable {
   boolean isKotlinExtension();
 
   /**
+   * Checks if the implementing class is a {@link AntlrExtension}.
+   *
+   * @return true if the extension is for Antlr, false otherwise.
+   */
+  boolean isAntlrExtension();
+
+  /**
    * Attempts to cast the current object to a {@link JavaExtension} instance.
    * <p>
    * This method should ideally be used only when the implementing class
@@ -119,5 +126,17 @@ public interface LanguageExtension extends Serializable {
    *        or null if the cast fails.
    */
   KotlinExtension getAsKotlinExtension();
+
+  /**
+   * Attempts to cast the current object to a {@link AntlrExtension} instance.
+   * <p>
+   * This method should ideally be used only when the implementing class
+   * is known to be a {@link AntlrExtension}.
+   * </p>
+   *
+   * @return the current object cast to a {@link AntlrExtension} instance,
+   *        or null if the cast fails.
+   */
+  AntlrExtension getAsAntlrExtension();
 
 }
