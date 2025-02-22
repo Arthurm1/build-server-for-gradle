@@ -21,6 +21,8 @@ import com.microsoft.java.bs.gradle.plugin.utils.AndroidUtils;
 import com.microsoft.java.bs.gradle.plugin.utils.SourceSetUtils;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.copy.DefaultCopySpec;
@@ -283,8 +285,20 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   }
 
   private Set<GradleModuleDependency> getModuleDependencies(Project project, SourceSet sourceSet) {
-    Set<String> configurationNames = getClasspathConfigurationNames(sourceSet);
-    return DependencyCollector.getModuleDependencies(project, configurationNames);
+    Set<Configuration> configurations = new HashSet<>();
+    DependencyHandler dependencyHandler = project.getDependencies();
+    for (String name : getClasspathConfigurationNames(sourceSet)) {
+      Configuration configuration = project.getConfigurations().getByName(name);
+      configurations.add(configuration);
+    }
+    Set<GradleModuleDependency> moduleDependencies = DependencyCollector.getModuleDependencies(
+        dependencyHandler, configurations);
+
+    // some jars are internal to Gradle
+    // e.g. DependencyFactory#(gradleApi, gradleTestKit,  localGroovy)
+    // do best effort to download the sources from maven
+    return DependencyCollector.downloadGroovySources(project.getConfigurations(),
+        project.getRepositories(), dependencyHandler, moduleDependencies);
   }
 
   // remove source set dirs from modules
