@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.11.0
+## What's Changed
+* enhancement - download sources for built-in Gradle jars by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/d0976cc84624287b6c26d3581adaf55e08d0813c
+* enhancement - support ANTLR by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/424c49fe6a15051b1b9eb50816566c2bfe6b467a
+
 ## 0.10.0
 ## What's Changed
 * enhancement - allow BSP client config of display name and base dir usage by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/12ecf16363567905cf65b45ce0dc0d463483ce1f
