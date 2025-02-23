@@ -16,8 +16,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-import org.gradle.internal.impldep.org.apache.commons.lang.StringUtils;
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.BuildLauncher;
@@ -28,9 +26,11 @@ import org.gradle.tooling.ModelBuilder;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.TestLauncher;
 import org.gradle.util.GradleVersion;
+import org.apache.commons.lang3.StringUtils;
 
 import com.microsoft.java.bs.core.BuildInfo;
 import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 
 /**
  * Gradle Tooling API utils.
