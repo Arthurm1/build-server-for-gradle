@@ -957,8 +957,10 @@ class GradleBuildServerPluginTest {
     return versionProvider("8.7", 17);
   }
 
+  // Android tests have issues running concurrently
   @ParameterizedTest(name = "testAndroid {0}")
   @MethodSource("androidVersions")
+  @Execution(ExecutionMode.SAME_THREAD)
   void testAndroid(GradleVersion gradleVersion) throws IOException {
     withSourceSets("android-test", gradleVersion, gradleSourceSets -> {
       List<GradleSourceSet> sourceSets = gradleSourceSets.getGradleSourceSets();
