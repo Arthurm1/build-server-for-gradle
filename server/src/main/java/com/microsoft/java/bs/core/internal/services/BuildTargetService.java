@@ -88,6 +88,8 @@ import ch.epfl.scala.bsp4j.RunParamsDataKind;
 import ch.epfl.scala.bsp4j.RunResult;
 import ch.epfl.scala.bsp4j.ScalaMainClass;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
+import ch.epfl.scala.bsp4j.ScalaTestClassesParams;
+import ch.epfl.scala.bsp4j.ScalaTestClassesResult;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
 import ch.epfl.scala.bsp4j.ScalaTestSuites;
@@ -803,6 +805,33 @@ public class BuildTargetService {
    * @param cancelToken token to cancel Gradle command
    * @return the targets test environments
    */
+  public ScalaTestClassesResult getBuildTargetScalaTestClasses(
+      ScalaTestClassesParams params, CancellationToken cancelToken) {
+    // just wrap getBuildTargetJvmTestEnvironment
+    JvmTestEnvironmentParams wrapParams = new JvmTestEnvironmentParams(params.getTargets());
+    wrapParams.setOriginId(params.getOriginId());
+    JvmTestEnvironmentResult wrapResult = getBuildTargetJvmTestEnvironment(
+      wrapParams, cancelToken);
+    List<ScalaTestClassesItem> testClasses = new ArrayList<>();
+    for (JvmEnvironmentItem item : wrapResult.getItems()) {
+      List<String> classes = new ArrayList<>();
+      for (JvmMainClass mainClass : item.getMainClasses()) {
+        classes.add(mainClass.getClassName());
+      }
+      ScalaTestClassesItem wrapItem = new ScalaTestClassesItem(item.getTarget(), classes);
+
+      testClasses.add(wrapItem);
+    }
+    return new ScalaTestClassesResult(testClasses);
+  }
+
+  /**
+   * get the test classes.
+   *
+   * @param params targets to get the test classes for
+   * @param cancelToken token to cancel Gradle command
+   * @return the targets test environments
+   */
   public JvmTestEnvironmentResult getBuildTargetJvmTestEnvironment(
       JvmTestEnvironmentParams params, CancellationToken cancelToken) {
     Map<BuildTargetIdentifier, List<GradleTestEntity>> mainClassesMap = new HashMap<>();
@@ -832,7 +861,10 @@ public class BuildTargetService {
         mainClassesMap.putAll(partialMainClassesMap);
       }
     }
-    List<JvmEnvironmentItem> items = new ArrayList<>();
+    // implementing multiple test tasks in Gradle that point to the same source
+    // can cause duplicates (e.g. if the build defined the same set of tests to
+    // run under jdk11 for 1 task and jdk17 for another task.  So use a Set instead of List
+    Set<JvmEnvironmentItem> items = new HashSet<>();
     for (Map.Entry<BuildTargetIdentifier, List<GradleTestEntity>> entry :
         mainClassesMap.entrySet()) {
       for (GradleTestEntity gradleTestEntity : entry.getValue()) {
@@ -854,7 +886,7 @@ public class BuildTargetService {
         items.add(item);
       }
     }
-    return new JvmTestEnvironmentResult(items);
+    return new JvmTestEnvironmentResult(new ArrayList<>(items));
   }
 
   /**

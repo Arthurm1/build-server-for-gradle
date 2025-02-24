@@ -244,13 +244,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<ScalaTestClassesResult> buildTargetScalaTestClasses(
       ScalaTestClassesParams params) {
-    // There is no `buildTargetScalaTestClassesProvider` flag for the client to
-    // know if this is supported
-    // Rather than sending exceptions back, just send an error message.
-    LOGGER.warning("'buildTarget/ScalaTestClasses' not supported");
-    List<ScalaTestClassesItem> items = new ArrayList<>();
-    ScalaTestClassesResult result = new ScalaTestClassesResult(items);
-    return CompletableFuture.completedFuture(result);
+    return handleRequest("buildTarget/scalaTestClasses", cancelToken ->
+        buildTargetService.getBuildTargetScalaTestClasses(params, cancelToken));
   }
 
   @Override

@@ -29,6 +29,7 @@ Following BSP requests are supported in the current implementation:
 - `buildTarget/run`
 - `buildTarget/jvmRunEnvironment`
 - `buildTarget/jvmTestEnvironment`
+- `buildTarget/scalaTestClasses`
 - `workspace/buildTargets`
 - `workspace/reload`
 
