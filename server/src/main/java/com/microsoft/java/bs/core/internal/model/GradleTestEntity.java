@@ -66,4 +66,10 @@ public class GradleTestEntity {
     return Objects.equals(gradleTestTask, other.gradleTestTask)
         && Objects.equals(testClasses, other.testClasses);
   }
+
+  @Override
+  public String toString() {
+    return "GradleTestEntity: GradleTestTask:" + gradleTestTask
+        + " TestClasses:" + testClasses;
+  }
 }

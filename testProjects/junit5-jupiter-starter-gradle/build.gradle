@@ -1,12 +1,10 @@
 plugins {
 	id 'java'
-	id 'java-gradle-plugin'
 }
 
 repositories {
 	mavenCentral()
 }
-
 
 if (org.gradle.util.GradleVersion.current().compareTo(org.gradle.util.GradleVersion.version("4.6")) >= 0) {
 	dependencies {

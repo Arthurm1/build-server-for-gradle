@@ -78,6 +78,10 @@ class BuildTargetServiceTest {
     connector = mock(GradleApiConnector.class);
     preferenceManager = mock(PreferenceManager.class);
     Preferences preferences = new Preferences();
+    preferences.setWrapperEnabled(true);
+    preferences.setUseQualifiedOutputPaths(true);
+    preferences.setIncludeTargetBaseDirectory(true);
+    preferences.setDisplayNaming(Preferences.BRACKET_DISPLAY_NAMING);
     when(preferenceManager.getPreferences()).thenReturn(preferences);
   }
 

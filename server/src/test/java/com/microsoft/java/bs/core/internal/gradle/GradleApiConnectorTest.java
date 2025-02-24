@@ -62,6 +62,10 @@ class GradleApiConnectorTest {
     PreferenceManager preferenceManager = new PreferenceManager();
     preferenceManager.setPreferences(preferences);
     preferenceManager.setClientSupportedLanguages(SupportedLanguages.allBspNames);
+    preferences.setWrapperEnabled(true);
+    preferences.setUseQualifiedOutputPaths(true);
+    preferences.setIncludeTargetBaseDirectory(true);
+    preferences.setDisplayNaming(Preferences.BRACKET_DISPLAY_NAMING);
     GradleApiConnector connector = new GradleApiConnector(preferenceManager);
     try {
       return function.apply(connector);
@@ -77,10 +81,10 @@ class GradleApiConnectorTest {
 
   @Test
   void testGetGradleVersion() {
-    Path projectDir = projectPath.resolve("gradle-4.3-with-wrapper");
+    Path projectDir = projectPath.resolve("gradle-7.3-with-wrapper");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
     GradleSourceSet sourceSet = gradleSourceSets.getGradleSourceSets().get(0);
-    assertEquals("4.3", sourceSet.getGradleVersion());
+    assertEquals("7.3", sourceSet.getGradleVersion());
   }
 
   @Test
@@ -107,50 +111,50 @@ class GradleApiConnectorTest {
   @Test
   void testAndroidSourceSets() {
     File projectDir = projectPath.resolve("android-test").toFile();
-    PreferenceManager preferenceManager = new PreferenceManager();
-    preferenceManager.setPreferences(new Preferences());
-    GradleApiConnector connector = new GradleApiConnector(preferenceManager);
-    GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
-        null, null);
-    assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
-    findSourceSet(gradleSourceSets, "app", "debug");
-    GradleSourceSet appDebugUnitTest =
-        findSourceSet(gradleSourceSets, "app", "debugUnitTest");
-    assertTrue(appDebugUnitTest.hasTests());
-    assertEquals(1, appDebugUnitTest.getTestTasks().size());
-    assertHasTaskPath(appDebugUnitTest.getTestTasks(), ":app:testDebugUnitTest");
-    findSourceSet(gradleSourceSets, "app", "debugAndroidTest");
-    findSourceSet(gradleSourceSets, "app", "release");
-    GradleSourceSet appReleaseUnitTest =
-        findSourceSet(gradleSourceSets, "app", "releaseUnitTest");
-    assertTrue(appReleaseUnitTest.hasTests());
-    assertEquals(1, appReleaseUnitTest.getTestTasks().size());
-    assertHasTaskPath(appReleaseUnitTest.getTestTasks(), ":app:testReleaseUnitTest");
-    findSourceSet(gradleSourceSets, "mylibrary", "debug");
-    GradleSourceSet libraryDebugUnitTest =
-        findSourceSet(gradleSourceSets, "mylibrary", "debugUnitTest");
-    assertTrue(libraryDebugUnitTest.hasTests());
-    assertEquals(1, libraryDebugUnitTest.getTestTasks().size());
-    assertHasTaskPath(libraryDebugUnitTest.getTestTasks(), ":mylibrary:testDebugUnitTest");
-    findSourceSet(gradleSourceSets, "mylibrary", "debugAndroidTest");
-    findSourceSet(gradleSourceSets, "mylibrary", "release");
-    GradleSourceSet libraryReleaseUnitTest =
-        findSourceSet(gradleSourceSets, "mylibrary", "releaseUnitTest");
-    assertTrue(libraryReleaseUnitTest.hasTests());
-    assertEquals(1, libraryReleaseUnitTest.getTestTasks().size());
-    assertHasTaskPath(libraryReleaseUnitTest.getTestTasks(), ":mylibrary:testReleaseUnitTest");
+    withConnector(connector -> {
+      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
+          null, null);
+      assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
+      findSourceSet(gradleSourceSets, "app", "debug");
+      GradleSourceSet appDebugUnitTest =
+          findSourceSet(gradleSourceSets, "app", "debugUnitTest");
+      assertTrue(appDebugUnitTest.hasTests());
+      assertEquals(1, appDebugUnitTest.getTestTasks().size());
+      assertHasTaskPath(appDebugUnitTest.getTestTasks(), ":app:testDebugUnitTest");
+      findSourceSet(gradleSourceSets, "app", "debugAndroidTest");
+      findSourceSet(gradleSourceSets, "app", "release");
+      GradleSourceSet appReleaseUnitTest =
+          findSourceSet(gradleSourceSets, "app", "releaseUnitTest");
+      assertTrue(appReleaseUnitTest.hasTests());
+      assertEquals(1, appReleaseUnitTest.getTestTasks().size());
+      assertHasTaskPath(appReleaseUnitTest.getTestTasks(), ":app:testReleaseUnitTest");
+      findSourceSet(gradleSourceSets, "mylibrary", "debug");
+      GradleSourceSet libraryDebugUnitTest =
+          findSourceSet(gradleSourceSets, "mylibrary", "debugUnitTest");
+      assertTrue(libraryDebugUnitTest.hasTests());
+      assertEquals(1, libraryDebugUnitTest.getTestTasks().size());
+      assertHasTaskPath(libraryDebugUnitTest.getTestTasks(), ":mylibrary:testDebugUnitTest");
+      findSourceSet(gradleSourceSets, "mylibrary", "debugAndroidTest");
+      findSourceSet(gradleSourceSets, "mylibrary", "release");
+      GradleSourceSet libraryReleaseUnitTest =
+          findSourceSet(gradleSourceSets, "mylibrary", "releaseUnitTest");
+      assertTrue(libraryReleaseUnitTest.hasTests());
+      assertEquals(1, libraryReleaseUnitTest.getTestTasks().size());
+      assertHasTaskPath(libraryReleaseUnitTest.getTestTasks(), ":mylibrary:testReleaseUnitTest");
 
-    Set<GradleModuleDependency> combinedModuleDependencies = new HashSet<>();
-    for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
-      combinedModuleDependencies.addAll(sourceSet.getModuleDependencies());
-    }
-    // This test can vary depending on the environment due to generated files.
-    // Specifically R file and Android Components. For eg:
-    // 1. When android-test project has not been or doesn't have the resources compiled
-    //    the R.jar files don't exist for the build targets and are not included.
-    // 2. ANDROID_HOME is not configured in which case the Android Component classpath
-    //    is not added to module dependencies.
-    assertTrue(combinedModuleDependencies.size() >= 82);
+      Set<GradleModuleDependency> combinedModuleDependencies = new HashSet<>();
+      for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
+        combinedModuleDependencies.addAll(sourceSet.getModuleDependencies());
+      }
+      // This test can vary depending on the environment due to generated files.
+      // Specifically R file and Android Components. For eg:
+      // 1. When android-test project has not been or doesn't have the resources compiled
+      //    the R.jar files don't exist for the build targets and are not included.
+      // 2. ANDROID_HOME is not configured in which case the Android Component classpath
+      //    is not added to module dependencies.
+      assertTrue(combinedModuleDependencies.size() >= 82);
+      return null;
+    });
   }
 
   private GradleSourceSet findSourceSet(GradleSourceSets gradleSourceSets,

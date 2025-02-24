@@ -21,7 +21,7 @@ class UtilsTest {
       System.getProperty("user.dir"),
       "..",
       "testProjects",
-      "gradle-4.3-with-wrapper"
+      "gradle-7.3-with-wrapper"
   ).toFile();
 
   @Test

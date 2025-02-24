@@ -106,15 +106,24 @@ public class Utils {
 
   /**
    * Create a function that creates a display name for a build target based on the BSP client.
-   * @param preferences BSP client preferences
+   * @param displayNaming display naming type
    * @return function to create a display name
    */
-  public static Function<GradleSourceSet, String> getDisplayNameMaker(Preferences preferences) {
-    if (Preferences.DOT_DISPLAY_NAMING.equals(preferences.getDisplayNaming())) {
+  public static Function<GradleSourceSet, String> getDisplayNameMaker(String displayNaming) {
+    if (Preferences.DOT_DISPLAY_NAMING.equals(displayNaming)) {
       return Utils::dotDisplayNaming;
     } else {
       return Utils::bracketDisplayNaming;
     }
+  }
+
+  /**
+   * Create a function that creates a display name for a build target based on the BSP client.
+   * @param preferences BSP client preferences
+   * @return function to create a display name
+   */
+  public static Function<GradleSourceSet, String> getDisplayNameMaker(Preferences preferences) {
+    return getDisplayNameMaker(preferences.getDisplayNaming());
   }
 
   /**

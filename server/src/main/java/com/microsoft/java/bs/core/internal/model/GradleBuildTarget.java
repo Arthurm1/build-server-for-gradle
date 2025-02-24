@@ -85,4 +85,10 @@ public class GradleBuildTarget {
     return Objects.equals(buildTarget, other.buildTarget)
         && Objects.equals(sourceSet, other.sourceSet);
   }
+
+  @Override
+  public String toString() {
+    return "GradleBuildTarget: BuildTarget:" + buildTarget
+        + " SourceSet:" + sourceSet;
+  }
 }

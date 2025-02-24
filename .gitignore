@@ -13,8 +13,10 @@ hs_err_pid*
 # gradle
 /.gradle/
 /*/*/.gradle/
+/testProjects/*/*/.gradle/
 /*/build/
 /testProjects/*/build/
+/testProjects/*/*/build/
 /build/*
 
 # buildship

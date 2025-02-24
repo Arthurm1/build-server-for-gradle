@@ -14,23 +14,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.microsoft.java.bs.core.internal.gradle.Utils;
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
+import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
+import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
-import org.junit.jupiter.api.Test;
-
-import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
-import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
 
 import ch.epfl.scala.bsp4j.BuildTarget;
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
 import ch.epfl.scala.bsp4j.extended.JvmBuildTargetEx;
+import org.junit.jupiter.api.Test;
 
 class BuildTargetManagerTest {
 
@@ -44,7 +44,7 @@ class BuildTargetManagerTest {
     DefaultGradleSourceSets gradleSourceSets =
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets);
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTarget = list.get(0).getBuildTarget();
@@ -60,7 +60,7 @@ class BuildTargetManagerTest {
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets);
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTarget = list.get(0).getBuildTarget();
@@ -77,7 +77,7 @@ class BuildTargetManagerTest {
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets);
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTarget = list.get(0).getBuildTarget();
@@ -111,7 +111,7 @@ class BuildTargetManagerTest {
         List.of(gradleSourceSetFoo, gradleSourceSetBar));
 
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets);
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTargetFoo = list.stream()

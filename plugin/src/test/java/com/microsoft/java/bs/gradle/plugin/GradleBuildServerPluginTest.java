@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.util.GradleVersion;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -112,8 +114,10 @@ class GradleBuildServerPluginTest {
       gradleLock.lock();
       try {
         GradleConnector connector = GradleConnector.newConnector()
-            .forProjectDirectory(projectDir)
-            .useGradleVersion(gradleVersion.getVersion());
+            .forProjectDirectory(projectDir);
+        if (gradleVersion != null) {
+          connector.useGradleVersion(gradleVersion.getVersion());
+        }
         try (ProjectConnection connect = connector.connect()) {
           consumer.accept(connect);
         } finally {
@@ -133,7 +137,9 @@ class GradleBuildServerPluginTest {
     withConnection(projectDir, gradleVersion, connect -> {
       GradleSourceSets gradleSourceSets = getGradleSourceSets(connect);
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
-        assertEquals(gradleVersion.getVersion(), gradleSourceSet.getGradleVersion());
+        if (gradleVersion != null) {
+          assertEquals(gradleVersion.getVersion(), gradleSourceSet.getGradleVersion());
+        }
         assertEquals(projectDir, gradleSourceSet.getRootDir());
       }
       consumer.accept(gradleSourceSets);
@@ -216,6 +222,17 @@ class GradleBuildServerPluginTest {
      .filter(version -> gradleVersion == null
          || version.gradleVersion.compareTo(gradleVersion) >= 0)
      .map(version -> version.gradleVersion);
+  }
+
+  @Test
+  void testWrapper() throws IOException {
+    assumeTrue(getJavaVersion() < 18);
+    withSourceSets("gradle-7.3-with-wrapper", null, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertEquals("7.3", sourceSet.getGradleVersion());
+      }
+    });
   }
 
   static Stream<GradleVersion> allVersions() {

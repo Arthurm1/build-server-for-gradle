@@ -1318,7 +1318,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnFinishReports(2);
       client.waitOnCompileTasks(1);
       client.waitOnCompileReports(1);
-      client.waitOnStdOut(20);
+      client.waitOnStdOut(18);
       client.waitOnStdErr(2);
       client.waitOnTestStarts(0);
       client.waitOnTestFinishes(0);
