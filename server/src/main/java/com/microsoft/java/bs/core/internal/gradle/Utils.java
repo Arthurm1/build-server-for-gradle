@@ -441,7 +441,7 @@ public class Utils {
     // can't pass arguments to tasks e.g. "--test-dry-run"
     // so manipulate test task using init script.
     return """
-        gradle.projectsLoaded {
+        gradle.projectsEvaluated {
           rootProject {
             tasks.getByPath('$taskPath')?.setDryRun(true)
           }
