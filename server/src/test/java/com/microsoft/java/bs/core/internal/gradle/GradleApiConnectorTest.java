@@ -20,8 +20,19 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import ch.epfl.scala.bsp4j.BuildClient;
+import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
+import ch.epfl.scala.bsp4j.LogMessageParams;
+import ch.epfl.scala.bsp4j.PrintParams;
+import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
+import ch.epfl.scala.bsp4j.ShowMessageParams;
+import ch.epfl.scala.bsp4j.TaskFinishParams;
+import ch.epfl.scala.bsp4j.TaskProgressParams;
+import ch.epfl.scala.bsp4j.TaskStartParams;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
@@ -78,7 +89,60 @@ class GradleApiConnectorTest {
         null, null));
   }
 
+  private static class ConsoleBuildClient implements BuildClient {
+
+    @Override
+    public void onBuildShowMessage(ShowMessageParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onBuildLogMessage(LogMessageParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onBuildPublishDiagnostics(PublishDiagnosticsParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onBuildTargetDidChange(DidChangeBuildTarget params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onBuildTaskStart(TaskStartParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onBuildTaskProgress(TaskProgressParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onBuildTaskFinish(TaskFinishParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onRunPrintStdout(PrintParams params) {
+      System.out.println(params);
+    }
+
+    @Override
+    public void onRunPrintStderr(PrintParams params) {
+      System.out.println(params);
+    }
+  }
+
+  private BuildClient getConsoleClient() {
+    return new ConsoleBuildClient();
+  }
+
   @Test
+  @EnabledForJreRange(max = JRE.JAVA_17)
   void testGetGradleVersion() {
     Path projectDir = projectPath.resolve("gradle-7.3-with-wrapper");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
@@ -401,12 +465,12 @@ class GradleApiConnectorTest {
       Set<String> methods = new HashSet<>();
       classes.put("com.example.project.PassingTests", methods);
       StatusCode passingTest = connector.runTests(projectDir.toUri(),
-          testClassesMap, null, null, null, null, null, null, null, gradleVersion);
+          testClassesMap, null, null, null, getConsoleClient(), null, null, null, gradleVersion);
       assertEquals(StatusCode.OK, passingTest);
       classes.clear();
       classes.put("com.example.project.FailingTests", methods);
       StatusCode failingTest = connector.runTests(projectDir.toUri(),
-          testClassesMap, null, null, null, null, null, null, null, gradleVersion);
+          testClassesMap, null, null, null, getConsoleClient(), null, null, null, gradleVersion);
       assertEquals(StatusCode.ERROR, failingTest);
       return null;
     });
@@ -472,7 +536,7 @@ class GradleApiConnectorTest {
     Path projectDir = projectPath.resolve("junit5-jupiter-starter-gradle");
     withConnector(connector -> {
       GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toUri(),
-          null, null);
+          getConsoleClient(), null);
 
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
       String gradleVersion = null;
@@ -482,7 +546,7 @@ class GradleApiConnectorTest {
         gradleVersion = gradleSourceSet.getGradleVersion();
       }
       Map<BuildTargetIdentifier, List<GradleTestEntity>> tests = connector.getTestClasses(
-          projectDir.toUri(), testTaskMap, null, null, null, gradleVersion);
+          projectDir.toUri(), testTaskMap, getConsoleClient(), null, null, gradleVersion);
       assertHasTestClass(tests, "Fake",
           "com.example.project.CalculatorTests");
       return null;

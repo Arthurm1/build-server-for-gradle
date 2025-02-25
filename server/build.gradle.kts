@@ -44,6 +44,12 @@ tasks.named<Test>("test") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+  dependsOn(":model:publishToMavenLocal")
+  dependsOn(":plugin:publishToMavenLocal")
+  dependsOn("publishToMavenLocal")
 }
 
 dependencies {

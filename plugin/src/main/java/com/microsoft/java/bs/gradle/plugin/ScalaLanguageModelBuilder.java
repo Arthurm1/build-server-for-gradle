@@ -181,16 +181,13 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
     args.addAll(additionalArgs);
 
     // scalaCompilerPlugins was added in Gradle 6.4
-    try {
-      Method getScalaCompilerPlugins = ScalaCompile.class
-          .getDeclaredMethod("getScalaCompilerPlugins");
-      FileCollection fileCollection = (FileCollection) getScalaCompilerPlugins.invoke(scalaCompile);
-      for (File file : fileCollection) {
-        args.add("-Xplugin:" + file.getPath());
+    if (GradleVersion.current().compareTo(GradleVersion.version("6.4")) >= 0) {
+      FileCollection fileCollection = scalaCompile.getScalaCompilerPlugins();
+      if (fileCollection != null) {
+        for (File file : fileCollection) {
+          args.add("-Xplugin:" + file.getPath());
+        }
       }
-    } catch (NoSuchMethodException | InvocationTargetException
-        | IllegalArgumentException | IllegalAccessException e) {
-      // do nothing
     }
 
     return args;

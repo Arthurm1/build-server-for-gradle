@@ -133,7 +133,7 @@ abstract class IntegrationTest {
       waitOnMessages("Test Finishes", size, testFinishes::size);
     }
 
-    void waitOnDiagnostics(int size) {
+    protected void waitOnDiagnostics(int size) {
       waitOnMessages("Diagnostics", size, diagnostics::size);
     }
 
@@ -143,7 +143,7 @@ abstract class IntegrationTest {
           .count();
     }
 
-    private boolean waitOnSupplier(Supplier<Boolean> supplier) {
+    protected boolean waitOnSupplier(Supplier<Boolean> supplier) {
       // set to 5000ms because it seems reasonable
       long timeoutMs = 5000;
       long endTime = System.currentTimeMillis() + timeoutMs;

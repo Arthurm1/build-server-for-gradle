@@ -240,8 +240,9 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           .map(BuildTarget::getId)
           .collect(Collectors.toList());
       assertEquals(2, btIds.size());
-      client.waitOnStartReports(1);
-      client.waitOnFinishReports(1);
+      // can include downloads so can be 1 -> 6
+      client.waitOnSupplier(() -> !client.startReports.isEmpty());
+      client.waitOnSupplier(() -> !client.finishReports.isEmpty());
       client.waitOnCompileTasks(0);
       client.waitOnCompileReports(0);
       client.waitOnLogMessages(0);
@@ -1318,15 +1319,13 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnFinishReports(2);
       client.waitOnCompileTasks(1);
       client.waitOnCompileReports(1);
-      client.waitOnStdOut(18);
-      client.waitOnStdErr(2);
+      client.waitOnSupplier(() -> client.stdOut.stream().anyMatch(message ->
+          message.getMessage().equals("Sysout test")));
+      client.waitOnSupplier(() -> client.stdErr.stream().anyMatch(message ->
+          message.getMessage().equals("Syserr test")));
       client.waitOnTestStarts(0);
       client.waitOnTestFinishes(0);
       client.waitOnTestReports(0);
-      assertTrue(client.stdErr.stream().anyMatch(message ->
-          message.getMessage().equals("Syserr test")));
-      assertTrue(client.stdOut.stream().anyMatch(message ->
-          message.getMessage().equals("Sysout test")));
       for (CompileReport message : client.compileReports) {
         assertFalse(message.getNoOp());
       }

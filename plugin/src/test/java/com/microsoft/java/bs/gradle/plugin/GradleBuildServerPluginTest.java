@@ -239,7 +239,7 @@ class GradleBuildServerPluginTest {
     return versionProvider("2.12", null);
   }
 
-  @ParameterizedTest(name = "testModelBuilder {0}")
+  @ParameterizedTest(name = "testModelBuilder {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("junit5-jupiter-starter-gradle", gradleVersion, gradleSourceSets -> {
@@ -269,17 +269,17 @@ class GradleBuildServerPluginTest {
         assertNotNull(gradleSourceSet.getBuildTargetDependencies());
         assertNotNull(gradleSourceSet.getModuleDependencies());
         assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-            dependency -> dependency.getModule().equals("a.jar")
-        ));
+            dependency -> dependency.getModule().equals("a.jar")),
+            () -> gradleSourceSet.getModuleDependencies().toString());
 
         if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
           assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-              dependency -> dependency.getModule().contains("gradle-api")
-          ));
+              dependency -> dependency.getModule().contains("gradle-api")),
+              () -> gradleSourceSet.getModuleDependencies().toString());
         } else {
           assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-              dependency -> dependency.getModule().contains("gradle-tooling-api")
-          ));
+              dependency -> dependency.getModule().contains("gradle-tooling-api")),
+              () -> gradleSourceSet.getModuleDependencies().toString());
         }
 
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
@@ -308,7 +308,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testGetSourceContainerFromOldGradle {0}")
+  @ParameterizedTest(name = "testGetSourceContainerFromOldGradle {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testMissingRepository(GradleVersion gradleVersion) throws IOException {
     withSourceSets("missing-repository", gradleVersion, gradleSourceSets -> {
@@ -316,7 +316,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testGetSourceContainerFromOldGradle {0}")
+  @ParameterizedTest(name = "testGetSourceContainerFromOldGradle {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testGetSourceContainerFromOldGradle(GradleVersion gradleVersion) throws IOException {
     withSourceSets("non-java", gradleVersion, gradleSourceSets -> {
@@ -324,7 +324,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testGetOutputLocationFromOldGradle {0}")
+  @ParameterizedTest(name = "testGetOutputLocationFromOldGradle {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testGetOutputLocationFromOldGradle(GradleVersion gradleVersion) throws IOException {
     withSourceSets("legacy-gradle", gradleVersion, gradleSourceSets -> {
@@ -332,7 +332,8 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testGetAnnotationProcessorGeneratedLocation {0}")
+  @ParameterizedTest(name = "testGetAnnotationProcessorGeneratedLocation {0}",
+      allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testGetAnnotationProcessorGeneratedLocation(GradleVersion gradleVersion) throws IOException {
     // this test case is to ensure that the plugin won't throw no such method error
@@ -342,7 +343,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testSourceInference {0}")
+  @ParameterizedTest(name = "testSourceInference {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testSourceInference(GradleVersion gradleVersion) throws IOException {
     File projectDir = projectPath.resolve("infer-source-roots").toFile();
@@ -369,7 +370,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testJavaCompilerArgs1 {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgs1 {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testJavaCompilerArgs1(GradleVersion gradleVersion) throws IOException {
     // Gradle uses 1.9 in earlier versions to indicate JDK 9
@@ -408,7 +409,7 @@ class GradleBuildServerPluginTest {
   }
 
   // JavaCompile#options#release was added in Gradle 6.6
-  @ParameterizedTest(name = "testJavaCompilerArgs2 {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgs2 {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom6_6")
   void testJavaCompilerArgs2(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-2", gradleVersion, gradleSourceSets -> {
@@ -432,7 +433,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testJavaCompilerArgs3 {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgs3 {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testJavaCompilerArgs3(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-3", gradleVersion, gradleSourceSets -> {
@@ -455,7 +456,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testJavaCompilerArgs4 {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgs4 {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testJavaCompilerArgs4(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-4", gradleVersion, gradleSourceSets -> {
@@ -478,7 +479,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testJavaCompilerArgs5 {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgs5 {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testJavaCompilerArgs5(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-5", gradleVersion, gradleSourceSets -> {
@@ -506,7 +507,7 @@ class GradleBuildServerPluginTest {
   }
 
   // Gradle doesn't set source/target unless specified until version 2.14
-  @ParameterizedTest(name = "testJavaCompilerArgs6 {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgs6 {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom2_14")
   void testJavaCompilerArgs6(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-6", gradleVersion, gradleSourceSets -> {
@@ -533,7 +534,7 @@ class GradleBuildServerPluginTest {
   }
 
   // FoojayToolchainsPlugin needs Gradle version 7.6 or higher
-  @ParameterizedTest(name = "testJavaCompilerArgsToolchain {0}")
+  @ParameterizedTest(name = "testJavaCompilerArgsToolchain {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom7_6")
   void testJavaCompilerArgsToolchain(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-compilerargs-toolchain", gradleVersion, gradleSourceSets -> {
@@ -560,7 +561,7 @@ class GradleBuildServerPluginTest {
   }
 
   // `java` cannot be used before 5.0
-  @ParameterizedTest(name = "testJavaSourceTarget {0}")
+  @ParameterizedTest(name = "testJavaSourceTarget {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom5_0")
   void testJavaSourceTarget(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-source-target", gradleVersion, gradleSourceSets -> {
@@ -583,7 +584,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testScala2ModelBuilder {0}")
+  @ParameterizedTest(name = "testScala2ModelBuilder {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testScala2ModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("scala-2", gradleVersion, gradleSourceSets -> {
@@ -617,13 +618,13 @@ class GradleBuildServerPluginTest {
         assertNotNull(javaExtension.getJavaVersion());
 
         assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-                dependency -> dependency.getModule().equals("scala-library")
-        ));
+                dependency -> dependency.getModule().equals("scala-library")),
+            () -> gradleSourceSet.getModuleDependencies().toString());
         assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
             dependency -> dependency.getArtifacts().stream()
               .anyMatch(artifact -> artifact.getUri().toString()
-                .contains("scala-library-2.13.12.jar"))
-        ));
+                .contains("scala-library-2.13.12.jar"))),
+            () -> gradleSourceSet.getModuleDependencies().toString());
         ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(gradleSourceSet);
         assertNotNull(scalaExtension);
         assertEquals("org.scala-lang", scalaExtension.getScalaOrganization());
@@ -682,7 +683,7 @@ class GradleBuildServerPluginTest {
   }
 
   // Scala 3 was added in Gradle 7.3
-  @ParameterizedTest(name = "testScala3ModelBuilder {0}")
+  @ParameterizedTest(name = "testScala3ModelBuilder {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom7_3")
   void testScala3ModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("scala-3", gradleVersion, gradleSourceSets -> {
@@ -715,8 +716,8 @@ class GradleBuildServerPluginTest {
         assertNotNull(javaExtension.getJavaVersion());
 
         assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-                dependency -> dependency.getModule().contains("scala3-library_3")
-        ));
+            dependency -> dependency.getModule().contains("scala3-library_3")),
+            () -> gradleSourceSet.getModuleDependencies().toString());
 
         ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(gradleSourceSet);
         assertNotNull(scalaExtension);
@@ -764,7 +765,7 @@ class GradleBuildServerPluginTest {
     return versionProvider("7.4", null);
   }
 
-  @ParameterizedTest(name = "testNebulaPlugin_11_10 {0}")
+  @ParameterizedTest(name = "testNebulaPlugin_11_10 {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom7_4")
   void testNebulaPlugin_11_10(GradleVersion gradleVersion) throws IOException {
     withSourceSets("nebula-plugin-11-10", gradleVersion, gradleSourceSets -> {
@@ -780,7 +781,7 @@ class GradleBuildServerPluginTest {
     return versionProvider("5.2", null);
   }
 
-  @ParameterizedTest(name = "testNebulaPlugin_11_5 {0}")
+  @ParameterizedTest(name = "testNebulaPlugin_11_5 {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom5_2")
   void testNebulaPlugin_11_5(GradleVersion gradleVersion) throws IOException {
     withSourceSets("nebula-plugin-11-5", gradleVersion, gradleSourceSets -> {
@@ -798,7 +799,7 @@ class GradleBuildServerPluginTest {
 
   // can't find a valid compatibility matrix for gradle and kotlin plugin versions
   // Gradle>7.1 seems to support kotlin-gradle-plugin 1.9.21
-  @ParameterizedTest(name = "testKotlinModelBuilder {0}")
+  @ParameterizedTest(name = "testKotlinModelBuilder {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom7_1")
   void testKotlinModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("kotlin", gradleVersion, gradleSourceSets -> {
@@ -829,8 +830,8 @@ class GradleBuildServerPluginTest {
         assertNotNull(javaExtension.getJavaVersion());
 
         assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-                dependency -> dependency.getModule().contains("kotlin-stdlib")
-        ));
+            dependency -> dependency.getModule().contains("kotlin-stdlib")),
+            () -> gradleSourceSet.getModuleDependencies().toString());
 
         KotlinExtension kotlinExtension = SupportedLanguages.KOTLIN.getExtension(gradleSourceSet);
         assertNotNull(kotlinExtension);
@@ -868,7 +869,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testGroovyModelBuilder {0}")
+  @ParameterizedTest(name = "testGroovyModelBuilder {0}", allowZeroInvocations=true)
   @MethodSource("allVersions")
   void testGroovyModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("groovy", gradleVersion, gradleSourceSets -> {
@@ -927,7 +928,7 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testAntlrModelBuilder {0}")
+  @ParameterizedTest(name = "testAntlrModelBuilder {0}", allowZeroInvocations=true)
   @MethodSource("versionsFrom7_1")
   void testAntlrModelBuilder(GradleVersion gradleVersion) throws IOException {
     withSourceSets("antlr", gradleVersion, gradleSourceSets -> {
@@ -975,7 +976,7 @@ class GradleBuildServerPluginTest {
   }
 
   // Android tests have issues running concurrently
-  @ParameterizedTest(name = "testAndroid {0}")
+  @ParameterizedTest(name = "testAndroid {0}", allowZeroInvocations=true)
   @MethodSource("androidVersions")
   @Execution(ExecutionMode.SAME_THREAD)
   void testAndroid(GradleVersion gradleVersion) throws IOException {
@@ -1097,8 +1098,8 @@ class GradleBuildServerPluginTest {
         assertFalse(gradleSourceSet.getModuleDependencies().isEmpty(), gradleSourceSet::toString);
         assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
             dependency -> dependency.getArtifacts().stream().anyMatch(
-                artifact -> artifact.getUri().toString().endsWith("/android.jar")
-            )));
+                artifact -> artifact.getUri().toString().endsWith("/android.jar"))),
+            () -> gradleSourceSet.getModuleDependencies().toString());
         assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
             .anyMatch(file -> file.toPath().endsWith("classes")));
 
