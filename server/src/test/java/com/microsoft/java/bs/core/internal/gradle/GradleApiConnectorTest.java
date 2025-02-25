@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -110,51 +109,47 @@ class GradleApiConnectorTest {
 
   @Test
   void testAndroidSourceSets() {
-    File projectDir = projectPath.resolve("android-test").toFile();
-    withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toURI(),
-          null, null);
-      assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
-      findSourceSet(gradleSourceSets, "app", "debug");
-      GradleSourceSet appDebugUnitTest =
-          findSourceSet(gradleSourceSets, "app", "debugUnitTest");
-      assertTrue(appDebugUnitTest.hasTests());
-      assertEquals(1, appDebugUnitTest.getTestTasks().size());
-      assertHasTaskPath(appDebugUnitTest.getTestTasks(), ":app:testDebugUnitTest");
-      findSourceSet(gradleSourceSets, "app", "debugAndroidTest");
-      findSourceSet(gradleSourceSets, "app", "release");
-      GradleSourceSet appReleaseUnitTest =
-          findSourceSet(gradleSourceSets, "app", "releaseUnitTest");
-      assertTrue(appReleaseUnitTest.hasTests());
-      assertEquals(1, appReleaseUnitTest.getTestTasks().size());
-      assertHasTaskPath(appReleaseUnitTest.getTestTasks(), ":app:testReleaseUnitTest");
-      findSourceSet(gradleSourceSets, "mylibrary", "debug");
-      GradleSourceSet libraryDebugUnitTest =
-          findSourceSet(gradleSourceSets, "mylibrary", "debugUnitTest");
-      assertTrue(libraryDebugUnitTest.hasTests());
-      assertEquals(1, libraryDebugUnitTest.getTestTasks().size());
-      assertHasTaskPath(libraryDebugUnitTest.getTestTasks(), ":mylibrary:testDebugUnitTest");
-      findSourceSet(gradleSourceSets, "mylibrary", "debugAndroidTest");
-      findSourceSet(gradleSourceSets, "mylibrary", "release");
-      GradleSourceSet libraryReleaseUnitTest =
-          findSourceSet(gradleSourceSets, "mylibrary", "releaseUnitTest");
-      assertTrue(libraryReleaseUnitTest.hasTests());
-      assertEquals(1, libraryReleaseUnitTest.getTestTasks().size());
-      assertHasTaskPath(libraryReleaseUnitTest.getTestTasks(), ":mylibrary:testReleaseUnitTest");
+    Path projectDir = projectPath.resolve("android-test");
+    GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
+    assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
+    findSourceSet(gradleSourceSets, "app", "debug");
+    GradleSourceSet appDebugUnitTest =
+        findSourceSet(gradleSourceSets, "app", "debugUnitTest");
+    assertTrue(appDebugUnitTest.hasTests());
+    assertEquals(1, appDebugUnitTest.getTestTasks().size());
+    assertHasTaskPath(appDebugUnitTest.getTestTasks(), ":app:testDebugUnitTest");
+    findSourceSet(gradleSourceSets, "app", "debugAndroidTest");
+    findSourceSet(gradleSourceSets, "app", "release");
+    GradleSourceSet appReleaseUnitTest =
+        findSourceSet(gradleSourceSets, "app", "releaseUnitTest");
+    assertTrue(appReleaseUnitTest.hasTests());
+    assertEquals(1, appReleaseUnitTest.getTestTasks().size());
+    assertHasTaskPath(appReleaseUnitTest.getTestTasks(), ":app:testReleaseUnitTest");
+    findSourceSet(gradleSourceSets, "mylibrary", "debug");
+    GradleSourceSet libraryDebugUnitTest =
+        findSourceSet(gradleSourceSets, "mylibrary", "debugUnitTest");
+    assertTrue(libraryDebugUnitTest.hasTests());
+    assertEquals(1, libraryDebugUnitTest.getTestTasks().size());
+    assertHasTaskPath(libraryDebugUnitTest.getTestTasks(), ":mylibrary:testDebugUnitTest");
+    findSourceSet(gradleSourceSets, "mylibrary", "debugAndroidTest");
+    findSourceSet(gradleSourceSets, "mylibrary", "release");
+    GradleSourceSet libraryReleaseUnitTest =
+        findSourceSet(gradleSourceSets, "mylibrary", "releaseUnitTest");
+    assertTrue(libraryReleaseUnitTest.hasTests());
+    assertEquals(1, libraryReleaseUnitTest.getTestTasks().size());
+    assertHasTaskPath(libraryReleaseUnitTest.getTestTasks(), ":mylibrary:testReleaseUnitTest");
 
-      Set<GradleModuleDependency> combinedModuleDependencies = new HashSet<>();
-      for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
-        combinedModuleDependencies.addAll(sourceSet.getModuleDependencies());
-      }
-      // This test can vary depending on the environment due to generated files.
-      // Specifically R file and Android Components. For eg:
-      // 1. When android-test project has not been or doesn't have the resources compiled
-      //    the R.jar files don't exist for the build targets and are not included.
-      // 2. ANDROID_HOME is not configured in which case the Android Component classpath
-      //    is not added to module dependencies.
-      assertTrue(combinedModuleDependencies.size() >= 82);
-      return null;
-    });
+    Set<GradleModuleDependency> combinedModuleDependencies = new HashSet<>();
+    for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
+      combinedModuleDependencies.addAll(sourceSet.getModuleDependencies());
+    }
+    // This test can vary depending on the environment due to generated files.
+    // Specifically R file and Android Components. For eg:
+    // 1. When android-test project has not been or doesn't have the resources compiled
+    //    the R.jar files don't exist for the build targets and are not included.
+    // 2. ANDROID_HOME is not configured in which case the Android Component classpath
+    //    is not added to module dependencies.
+    assertTrue(combinedModuleDependencies.size() >= 82);
   }
 
   private GradleSourceSet findSourceSet(GradleSourceSets gradleSourceSets,

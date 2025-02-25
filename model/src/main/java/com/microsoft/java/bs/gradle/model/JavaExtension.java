@@ -14,25 +14,25 @@ public interface JavaExtension extends LanguageExtension {
   /**
    * JDK home file location.
    */
-  public File getJavaHome();
+  File getJavaHome();
 
   /**
    * The java version this target is supposed to use.
    */
-  public String getJavaVersion();
+  String getJavaVersion();
 
   /**
    * The source compatibility of the source set.
    */
-  public String getSourceCompatibility();
+  String getSourceCompatibility();
 
   /**
    * The target compatibility of the source set.
    */
-  public String getTargetCompatibility();
+  String getTargetCompatibility();
 
   /**
    * The list of compiler arguments.
    */
-  public List<String> getCompilerArgs();
+  List<String> getCompilerArgs();
 }

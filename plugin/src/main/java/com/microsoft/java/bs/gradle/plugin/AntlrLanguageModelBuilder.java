@@ -17,7 +17,6 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultAntlrExtension;
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.plugins.antlr.AntlrSourceDirectorySet;
 import org.gradle.util.GradleVersion;
 

@@ -62,7 +62,6 @@ import ch.epfl.scala.bsp4j.ScalaBuildServer;
 import ch.epfl.scala.bsp4j.ScalaMainClassesItem;
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams;
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult;
-import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestClassesParams;
 import ch.epfl.scala.bsp4j.ScalaTestClassesResult;
 import ch.epfl.scala.bsp4j.ScalacOptionsParams;

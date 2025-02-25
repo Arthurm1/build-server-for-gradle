@@ -25,5 +25,5 @@ public enum GradleBuildKind {
   /**
    * From the used TAPI.
    */
-  TAPI;
+  TAPI
 }

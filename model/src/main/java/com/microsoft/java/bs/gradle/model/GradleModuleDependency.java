@@ -10,11 +10,11 @@ import java.util.List;
  * Represents a set of artifact dependency.
  */
 public interface GradleModuleDependency extends Serializable {
-  public String getGroup();
+  String getGroup();
 
-  public String getModule();
+  String getModule();
 
-  public String getVersion();
+  String getVersion();
 
-  public List<Artifact> getArtifacts();
+  List<Artifact> getArtifacts();
 }
