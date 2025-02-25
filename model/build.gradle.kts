@@ -15,5 +15,5 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
-  implementation("org.gradle:gradle-tooling-api:8.12")
+  implementation("org.gradle:gradle-tooling-api:8.13")
 }

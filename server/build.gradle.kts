@@ -50,10 +50,10 @@ dependencies {
   implementation(project(":model"))
   implementation("ch.epfl.scala:bsp4j:${project.findProperty("bspVersion") as String}")
   implementation("org.apache.commons:commons-lang3:3.17.0")
-  implementation("org.gradle:gradle-tooling-api:8.12")
+  implementation("org.gradle:gradle-tooling-api:8.13")
   implementation("com.google.code.gson:gson:2.10.1")
 
-  testImplementation(platform("org.junit:junit-bom:5.11.4"))
+  testImplementation(platform("org.junit:junit-bom:5.12.0"))
   testImplementation("org.junit.jupiter:junit-jupiter")
   testImplementation("org.mockito:mockito-core:5.15.2")
   testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")

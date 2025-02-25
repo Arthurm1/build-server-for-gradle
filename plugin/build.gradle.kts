@@ -100,6 +100,6 @@ dependencies {
   // Java toolchain must be switched to JDK 17 for this to compile
   // compileOnly("com.android.application:com.android.application.gradle.plugin:8.5.1")
   // compileOnly("com.android.library:com.android.library.gradle.plugin:8.5.1")
-  testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+  testImplementation("org.junit.jupiter:junit-jupiter:5.12.0")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
