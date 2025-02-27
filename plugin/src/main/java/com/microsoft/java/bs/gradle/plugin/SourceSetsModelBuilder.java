@@ -37,6 +37,7 @@ import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.copy.DefaultCopySpec;
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -228,7 +229,6 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     if (!runtimeClasspath.isEmpty()) {
       Set<JavaExec> tasks = Utils.tasksWithType(project, JavaExec.class);
       for (JavaExec task : tasks) {
-        
         List<File> classpath = new LinkedList<>();
         try {
           classpath.addAll(task.getClasspath().getFiles());
@@ -238,7 +238,13 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
         boolean isForThisSourceSet = classpath.equals(runtimeClasspath);
         if (isForThisSourceSet) {
           String taskPath = task.getPath();
-          List<String> jvmOptions = task.getAllJvmArgs();
+          List<String> jvmOptions = new ArrayList<>(task.getAllJvmArgs());
+          if (GradleVersion.current().compareTo(GradleVersion.version("8.1")) >= 0) {
+            ListProperty<String> additionalJvmArgs = task.getJvmArguments();
+            if (additionalJvmArgs.isPresent()) {
+              jvmOptions.addAll(additionalJvmArgs.get());
+            }
+          }
           File workingDirectory = task.getWorkingDir();
           Map<String, String> environmentVariables = task.getEnvironment().entrySet()
               .stream()
