@@ -27,6 +27,9 @@ import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.artifacts.query.ArtifactResolutionQuery;
@@ -36,9 +39,6 @@ import org.gradle.api.artifacts.result.ComponentArtifactsResult;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import org.gradle.api.specs.Specs;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier;
-import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifier;
 import org.gradle.jvm.JvmLibrary;
 import org.gradle.language.base.artifact.SourcesArtifact;
 import org.gradle.language.java.artifact.JavadocArtifact;
@@ -253,18 +253,19 @@ public class DependencyCollector {
   }
 
   private static DefaultGradleModuleDependency getArtifact(DependencyHandler dependencies,
-      ComponentArtifactIdentifier id, File artifactFile) {
-    if (id instanceof ModuleComponentArtifactIdentifier) {
-      return getModuleArtifactDependency(dependencies, (ModuleComponentArtifactIdentifier) id,
+      ComponentArtifactIdentifier componentArtifactIdentifier, File artifactFile) {
+    if (componentArtifactIdentifier == null) {
+      return null;
+    }
+    ComponentIdentifier id = componentArtifactIdentifier.getComponentIdentifier();
+    if (id instanceof ProjectComponentIdentifier) {
+      return null;
+    }
+    if (id instanceof ModuleComponentIdentifier) {
+      return getModuleArtifactDependency(dependencies, (ModuleComponentIdentifier) id,
         artifactFile);
     }
-    if (id instanceof OpaqueComponentArtifactIdentifier) {
-      return getFileArtifactDependency((OpaqueComponentArtifactIdentifier) id, artifactFile);
-    }
-    if (id instanceof ComponentFileArtifactIdentifier) {
-      return getFileArtifactDependency((ComponentFileArtifactIdentifier) id, artifactFile);
-    }
-    return null;
+    return getFileArtifactDependency(id.getDisplayName(), artifactFile);
   }
 
   private static List<ResolvedArtifactResult> getConfigurationArtifacts(Configuration config) {
@@ -278,12 +279,12 @@ public class DependencyCollector {
   }
 
   private static DefaultGradleModuleDependency getModuleArtifactDependency(
-      DependencyHandler dependencies, ModuleComponentArtifactIdentifier artifactIdentifier,
+      DependencyHandler dependencies, ModuleComponentIdentifier componentIdentifier,
       File resolvedArtifactFile) {
 
     ArtifactResolutionQuery query = dependencies
         .createArtifactResolutionQuery()
-        .forComponents(artifactIdentifier.getComponentIdentifier());
+        .forComponents(componentIdentifier);
 
     if (GradleVersion.current().compareTo(GradleVersion.version("4.5")) >= 0) {
       @SuppressWarnings({"UnstableApiUsage"})
@@ -315,9 +316,9 @@ public class DependencyCollector {
     }
 
     return new DefaultGradleModuleDependency(
-        artifactIdentifier.getComponentIdentifier().getGroup(),
-        artifactIdentifier.getComponentIdentifier().getModule(),
-        artifactIdentifier.getComponentIdentifier().getVersion(),
+        componentIdentifier.getGroup(),
+        componentIdentifier.getModule(),
+        componentIdentifier.getVersion(),
         artifacts
     );
   }
@@ -340,22 +341,6 @@ public class DependencyCollector {
     return getFileArtifactDependency(
             resolvedArtifactFile.getName(),
             resolvedArtifactFile
-    );
-  }
-
-  private static DefaultGradleModuleDependency getFileArtifactDependency(
-      ComponentFileArtifactIdentifier artifactIdentifier, File resolvedArtifactFile) {
-    return getFileArtifactDependency(
-        artifactIdentifier.getCapitalizedDisplayName(),
-        resolvedArtifactFile
-    );
-  }
-
-  private static DefaultGradleModuleDependency getFileArtifactDependency(
-      OpaqueComponentArtifactIdentifier artifactIdentifier, File resolvedArtifactFile) {
-    return getFileArtifactDependency(
-        artifactIdentifier.getCapitalizedDisplayName(),
-        resolvedArtifactFile
     );
   }
 
