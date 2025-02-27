@@ -238,6 +238,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   }
 
   @Override
+  @Deprecated
   public CompletableFuture<ScalaTestClassesResult> buildTargetScalaTestClasses(
       ScalaTestClassesParams params) {
     return handleRequest("buildTarget/scalaTestClasses", cancelToken ->
@@ -245,6 +246,7 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   }
 
   @Override
+  @Deprecated
   public CompletableFuture<ScalaMainClassesResult> buildTargetScalaMainClasses(
       ScalaMainClassesParams params) {
     // There is no `buildTargetScalaMainClassesProvider` flag for the client to
