@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.microsoft.java.bs.gradle.model.AntlrExtension;
@@ -23,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1132,6 +1134,31 @@ class GradleBuildServerPluginTest {
         assertEquals(4, kotlinExtension.getSourceDirs().size());
       }
     });
+  }
+
+  @ParameterizedTest(name = "testAnnotationProcessor {0}", allowZeroInvocations = true)
+  @MethodSource("allVersions")
+  void testAnnotationProcessor(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("java-annotationprocessor", gradleVersion, gradleSourceSets -> {
+      GradleSourceSet main = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "java-annotationprocessor", "main");
+
+      assertTrue(hasPathEntry(main.getCompileClasspath(), "value-2.8.2.jar"));
+      assertFalse(hasPathEntry(main.getRuntimeClasspath(), "value-2.8.2.jar"));
+
+      JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(main);
+      int idx = javaExtension.getCompilerArgs().indexOf("-processorpath");
+      if (idx >= 0) {
+        assertTrue(javaExtension.getCompilerArgs().get(idx + 1).endsWith("value-2.8.2.jar"));
+      } else {
+        fail("No processor path");
+      }
+    });
+  }
+
+  private boolean hasPathEntry(Collection<File> paths, String firstPath, String... morePaths) {
+    return paths.stream()
+        .anyMatch(file -> file.toPath().endsWith(Paths.get(firstPath, morePaths)));
   }
 
   private GradleSourceSet findSourceSet(List<GradleSourceSet> sourceSets,

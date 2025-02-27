@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -230,6 +231,12 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
         // do nothing
       }
     }
+    if (GradleVersion.current().compareTo(GradleVersion.version("3.4")) >= 0) {
+      if (options.getAnnotationProcessorPath() != null) {
+        specs.setAnnotationProcessorPath(new ArrayList<>(
+            options.getAnnotationProcessorPath().getFiles()));
+      }
+    }
 
     // check the project hasn't already got the target or source defined in the
     // compiler args so they're not overwritten below
@@ -259,6 +266,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
         specs.setTargetCompatibility(targetCompatibility);
       }
     }
+
     return specs;
   }
 
@@ -266,8 +274,6 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
    * Get the compilation arguments of the source set.
    */
   public static List<String> getCompilerArgs(JavaCompile javaCompile) {
-    CompileOptions options = javaCompile.getOptions();
-
     try {
       DefaultJavaCompileSpec specs = getJavaCompileSpec(javaCompile);
 
@@ -283,6 +289,7 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
       // This will miss a lot of arguments derived from the CompileOptions e.g. sourceCompatibility
       // Arguments must be cast and converted to String because Groovy can use GStringImpl
       // which then throws IllegalArgumentException when passed back over the tooling connection.
+      CompileOptions options = javaCompile.getOptions();
       List<Object> compilerArgs = new LinkedList<>(options.getCompilerArgs());
       return compilerArgs
           .stream()
