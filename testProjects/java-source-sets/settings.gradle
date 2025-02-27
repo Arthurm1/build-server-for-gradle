@@ -1,0 +1,3 @@
+rootProject.name = 'project-source-sets'
+include('a')
+include('b')

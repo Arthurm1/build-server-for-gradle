@@ -292,7 +292,7 @@ class GradleApiConnectorTest {
   void testCompositeBuild2() {
     Path projectDir = projectPath.resolve("composite-build-2");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
-    assertEquals(6, gradleSourceSets.getGradleSourceSets().size());
+    assertEquals(10, gradleSourceSets.getGradleSourceSets().size());
     findSourceSet(gradleSourceSets, "app", "test");
     findSourceSet(gradleSourceSets, "string-utils", "test");
     findSourceSet(gradleSourceSets, "number-utils", "test");
@@ -518,13 +518,19 @@ class GradleApiConnectorTest {
   void testGetJvmRunEnvironment() {
     Path projectDir = projectPath.resolve("composite-build-2");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
-    GradleSourceSet mainApp = gradleSourceSets.getGradleSourceSets().stream()
-        .filter(ss -> ss.getProjectName().equals("app") && ss.getSourceSetName().equals("main"))
-        .findAny().get();
-
+    GradleSourceSet mainApp = findSourceSet(gradleSourceSets, "app", "main");
     assertEquals(1, mainApp.getRunTasks().size());
     GradleRunTask runTask = mainApp.getRunTasks().iterator().next();
     assertEquals(mainApp.getRuntimeClasspath(), runTask.getClasspath());
+    assertEquals("org.sample.myapp.Main", runTask.getMainClass());
+    GradleSourceSet mainApp2 = findSourceSet(gradleSourceSets, "app2", "main");
+    assertEquals(1, mainApp2.getRunTasks().size());
+    GradleRunTask runTask2 = mainApp2.getRunTasks().iterator().next();
+    assertEquals("org.sample.myapp.Main2", runTask2.getMainClass());
+    GradleSourceSet mainApp3 = findSourceSet(gradleSourceSets, "app3", "main");
+    assertEquals(1, mainApp3.getRunTasks().size());
+    GradleRunTask runTask3 = mainApp3.getRunTasks().iterator().next();
+    assertNull(runTask3.getMainClass());
   }
 
   @Test

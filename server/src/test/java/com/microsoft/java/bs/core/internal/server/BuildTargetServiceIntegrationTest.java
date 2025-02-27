@@ -333,7 +333,6 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.clearMessages();
     });
   }
-  
 
   @Test
   void testRetrievingJunitTestNames() {
@@ -381,6 +380,10 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       assertTestExists(testItem, "com.example.project.NestedTests");
       JvmEnvironmentItem extraTestItem = extraTestItemOpt.get();
       assertTestExists(extraTestItem, "com.example.project.ExtraTests");
+      assertTrue(extraTestItem.getJvmOptions().contains("-XX:+UseG1GC"));
+      assertTrue(extraTestItem.getJvmOptions().contains("-Xms1g"));
+      assertTrue(extraTestItem.getJvmOptions().contains("-Xmx2g"));
+      assertTrue(extraTestItem.getJvmOptions().contains("-Dproperty=value"));
 
       client.waitOnStartReports(18);
       client.waitOnFinishReports(18);

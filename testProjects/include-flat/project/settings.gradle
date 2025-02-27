@@ -1,0 +1,3 @@
+rootProject.name = 'include-flat'
+includeFlat 'a'
+includeFlat 'b'

@@ -4,6 +4,7 @@ plugins {
 
 application {
     mainClass = 'org.sample.myapp.Main'
+    applicationDefaultJvmArgs = ["-Dgreeting.language=en", "-Xmx16g"]
 }
 
 dependencies {

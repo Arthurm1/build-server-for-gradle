@@ -1,0 +1,30 @@
+import org.gradle.util.GradleVersion
+
+plugins {
+  id 'java'
+  id 'scala'
+}
+
+sourceSets.main {
+  java {
+    srcDirs = ['src/main/java']
+  }
+  scala {
+    srcDirs = ['src/main/scala']
+  }
+  resources {
+    srcDirs = ['src/main/resources']
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  // Gradle switched from `compile` to `implementation`
+  if (GradleVersion.current().compareTo(GradleVersion.version("3.4")) >= 0)
+    implementation('org.scala-lang:scala-library:2.13.12')
+  else
+    compile('org.scala-lang:scala-library:2.13.12')
+}

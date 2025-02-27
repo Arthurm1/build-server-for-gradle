@@ -1,0 +1,13 @@
+import org.gradle.util.GradleVersion
+
+plugins {
+  id 'java'
+}
+
+dependencies {
+  // Gradle switched from `compile` to `implementation`
+  if (GradleVersion.current().compareTo(GradleVersion.version("3.4")) >= 0)
+    implementation project(':a')
+  else
+    compile project(':a')
+}

@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.microsoft.java.bs.gradle.model.AntlrExtension;
+import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.GroovyExtension;
@@ -19,6 +20,7 @@ import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
+import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -186,6 +189,7 @@ class GradleBuildServerPluginTest {
       // tooling api jar name changed from gradle-tooling-api to gradle-api in 3.0
       new GradleJreVersion("3.0", 8),
       // artifacts view added in 4.0
+      // CompileOptions#getAnnotationProcessorPath added in 3.4
       // RuntimeClasspathConfigurationName added to sourceset in 3.4
       // Test#getTestClassesDir -> Test#getTestClassesDirs in 4.0
       // sourceSet#getJava#getOutputDir added in 4.0
@@ -256,8 +260,7 @@ class GradleBuildServerPluginTest {
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
         assertFalse(gradleSourceSet.getRuntimeClasspath().isEmpty());
         assertEquals(1, gradleSourceSet.getSourceDirs().size());
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("java")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -272,9 +275,13 @@ class GradleBuildServerPluginTest {
             dependency -> dependency.getModule().equals("a.jar")),
             () -> gradleSourceSet.getModuleDependencies().toString());
 
-        if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
+        if (gradleVersion.compareTo(GradleVersion.version("3.0")) > 0) {
           assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
-              dependency -> dependency.getModule().contains("gradle-api")),
+                  dependency -> dependency.getModule().equals("Gradle API")),
+              () -> gradleSourceSet.getModuleDependencies().toString());
+        } else if (gradleVersion.compareTo(GradleVersion.version("3.0")) == 0) {
+          assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
+                  dependency -> dependency.getModule().equals("gradle-api-3.0.jar")),
               () -> gradleSourceSet.getModuleDependencies().toString());
         } else {
           assertTrue(gradleSourceSet.getModuleDependencies().stream().anyMatch(
@@ -292,15 +299,13 @@ class GradleBuildServerPluginTest {
         
         // dirs not split by language before 4.0
         if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "java",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
               gradleSourceSet.getSourceSetName())));
         } else {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
               gradleSourceSet.getSourceSetName())));
         }
@@ -355,10 +360,8 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         assertEquals(1, gradleSourceSet.getSourceDirs().size());
         generatedSourceDirCount += gradleSourceSet.getGeneratedSourceDirs().size();
-        assertTrue(gradleSourceSet.getGeneratedSourceDirs().stream().anyMatch(
-            dir -> dir.getAbsolutePath().replaceAll("\\\\", "/")
-                .endsWith("build/generated/sources")
-        ));
+        assertTrue(hasPathEntry(gradleSourceSet.getGeneratedSourceDirs(),
+            "build", "generated", "sources"));
       }
       
       // annotation processor dirs weren't auto created before 5.2
@@ -385,15 +388,15 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--release"), () -> "Available args: " + args);
         if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
-          assertTrue(args.contains("|-source|1.8"), () -> "Available args: " + args);
+          assertTrue(hasArgEntry(args, "-source", "1.8"), () -> "Available args: " + args);
         }
-        assertTrue(args.contains("|-target|" + targetVersion), () -> "Available args: " + args);
-        assertTrue(args.contains("|-Xlint:all"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-target", targetVersion), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Xlint:all"), () -> "Available args: " + args);
         if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
           assertEquals("1.8", javaExtension.getSourceCompatibility(),
               () -> "Available args: " + args);
@@ -417,13 +420,13 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|--release|9"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-Xlint:all"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "--release", "9"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Xlint:all"), () -> "Available args: " + args);
         String version9 = gradleVersion.compareTo(GradleVersion.version("8.0")) >= 0 ? "9" : "1.9";
         assertEquals(version9, javaExtension.getSourceCompatibility(),
                 () -> "Available args: " + args);
@@ -441,13 +444,13 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|--release|9"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-Xlint:all"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "--release", "9"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Xlint:all"), () -> "Available args: " + args);
         assertFalse(javaExtension.getSourceCompatibility().isEmpty(),
                 () -> "Available args: " + args);
         assertFalse(javaExtension.getTargetCompatibility().isEmpty(),
@@ -464,13 +467,13 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|--source|1.8"), () -> "Available args: " + args);
-        assertTrue(args.contains("|--target|9"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-Xlint:all"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--release"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "--source", "1.8"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "--target", "9"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Xlint:all"), () -> "Available args: " + args);
         assertFalse(javaExtension.getSourceCompatibility().isEmpty(),
                 () -> "Available args: " + args);
         assertFalse(javaExtension.getTargetCompatibility().isEmpty(),
@@ -487,13 +490,13 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-source|1.8"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-target|9"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-Xlint:all"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--release"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-source", "1.8"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-target", "9"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Xlint:all"), () -> "Available args: " + args);
         assertFalse(javaExtension.getSourceCompatibility().isEmpty(),
                 () -> "Available args: " + args);
         assertFalse(javaExtension.getTargetCompatibility().isEmpty(),
@@ -515,12 +518,12 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-source|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-target|"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--release"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-source"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-target"), () -> "Available args: " + args);
         assertFalse(javaExtension.getSourceCompatibility().isEmpty(),
             () -> "Available args: " + args);
         assertFalse(javaExtension.getTargetCompatibility().isEmpty(),
@@ -542,12 +545,12 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-source|17|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-target|17|"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--release"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-source", "17"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-target", "17"), () -> "Available args: " + args);
         assertFalse(javaExtension.getSourceCompatibility().isEmpty(),
             () -> "Available args: " + args);
         assertFalse(javaExtension.getTargetCompatibility().isEmpty(),
@@ -569,12 +572,12 @@ class GradleBuildServerPluginTest {
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
         assertNotNull(javaExtension);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|-target|"), () -> "Available args: " + args);
-        assertTrue(args.contains("|--release|11"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "-target"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "--release", "11"), () -> "Available args: " + args);
         String version9 = gradleVersion.compareTo(GradleVersion.version("8.0")) >= 0 ? "9" : "1.9";
         assertEquals(version9, javaExtension.getSourceCompatibility(),
                 () -> "Available args: " + args);
@@ -598,10 +601,8 @@ class GradleBuildServerPluginTest {
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
         assertFalse(gradleSourceSet.getRuntimeClasspath().isEmpty());
         assertEquals(2, gradleSourceSet.getSourceDirs().size());
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("java")));
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("scala")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "scala"));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -631,44 +632,37 @@ class GradleBuildServerPluginTest {
         assertEquals("2.13.12", scalaExtension.getScalaVersion());
         assertEquals("2.13", scalaExtension.getScalaBinaryVersion());
         List<String> args = scalaExtension.getScalaCompilerArgs();
-        assertTrue(args.contains("-deprecation"), () -> "Available args: " + args);
-        assertTrue(args.contains("-unchecked"), () -> "Available args: " + args);
-        assertTrue(args.contains("-g:notailcalls"), () -> "Available args: " + args);
-        assertTrue(args.contains("-optimise"), () -> "Available args: " + args);
-        assertTrue(args.contains("-encoding"), () -> "Available args: " + args);
-        assertTrue(args.contains("utf8"), () -> "Available args: " + args);
-        assertTrue(args.contains("-verbose"), () -> "Available args: " + args);
-        assertTrue(args.contains("-Ylog:erasure"), () -> "Available args: " + args);
-        assertTrue(args.contains("-Ylog:lambdalift"), () -> "Available args: " + args);
-        assertTrue(args.contains("-foo"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-deprecation"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-unchecked"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-g:notailcalls"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-optimise"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-encoding"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "utf8"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-verbose"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Ylog:erasure"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Ylog:lambdalift"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-foo"), () -> "Available args: " + args);
 
-        assertTrue(gradleSourceSet.getCompileClasspath().stream().anyMatch(
-                file -> file.getName().equals("scala-library-2.13.12.jar")));
-        assertTrue(gradleSourceSet.getRuntimeClasspath().stream().anyMatch(
-                file -> file.getName().equals("scala-library-2.13.12.jar")));
+        assertTrue(hasPathEntry(gradleSourceSet.getCompileClasspath(),
+            "scala-library-2.13.12.jar"));
+        assertTrue(hasPathEntry(gradleSourceSet.getRuntimeClasspath(),
+            "scala-library-2.13.12.jar"));
         assertFalse(scalaExtension.getScalaJars().isEmpty());
-        assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
-                file -> file.getName().equals("scala-compiler-2.13.12.jar")));
-        assertFalse(scalaExtension.getScalaCompilerArgs().isEmpty());
-        assertTrue(scalaExtension.getScalaCompilerArgs().stream()
-                .anyMatch(arg -> arg.equals("-deprecation")));
+        assertTrue(hasPathEntry(scalaExtension.getScalaJars(), "scala-compiler-2.13.12.jar"));
 
         // dirs not split by language before 4.0
         if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
-              gradleSourceSet.getSourceSetName()))));
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "scala",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "java",
+              gradleSourceSet.getSourceSetName()));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "scala",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
               gradleSourceSet.getSourceSetName())));
           assertTrue(scalaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "scala",
               gradleSourceSet.getSourceSetName())));
         } else {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(scalaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
               gradleSourceSet.getSourceSetName())));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
@@ -697,10 +691,8 @@ class GradleBuildServerPluginTest {
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
         assertFalse(gradleSourceSet.getRuntimeClasspath().isEmpty());
         assertEquals(2, gradleSourceSet.getSourceDirs().size());
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("java")));
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("scala")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "scala"));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -725,34 +717,28 @@ class GradleBuildServerPluginTest {
         assertEquals("3.3.1", scalaExtension.getScalaVersion());
         assertEquals("3.3", scalaExtension.getScalaBinaryVersion());
         List<String> args = scalaExtension.getScalaCompilerArgs();
-        assertTrue(args.contains("-deprecation"), () -> "Available args: " + args);
-        assertTrue(args.contains("-unchecked"), () -> "Available args: " + args);
-        assertTrue(args.contains("-g:notailcalls"), () -> "Available args: " + args);
-        assertTrue(args.contains("-optimise"), () -> "Available args: " + args);
-        assertTrue(args.contains("-encoding"), () -> "Available args: " + args);
-        assertTrue(args.contains("utf8"), () -> "Available args: " + args);
-        assertTrue(args.contains("-verbose"), () -> "Available args: " + args);
-        assertTrue(args.contains("-Ylog:erasure"), () -> "Available args: " + args);
-        assertTrue(args.contains("-Ylog:lambdalift"), () -> "Available args: " + args);
-        assertTrue(args.contains("-foo"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-deprecation"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-unchecked"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-g:notailcalls"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-optimise"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-encoding"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "utf8"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-verbose"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Ylog:erasure"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-Ylog:lambdalift"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-foo"), () -> "Available args: " + args);
 
-        assertTrue(gradleSourceSet.getCompileClasspath().stream().anyMatch(
-                file -> file.getName().equals("scala3-library_3-3.3.1.jar")));
-        assertTrue(gradleSourceSet.getRuntimeClasspath().stream().anyMatch(
-                file -> file.getName().equals("scala3-library_3-3.3.1.jar")));
+        assertTrue(hasPathEntry(gradleSourceSet.getCompileClasspath(),
+            "scala3-library_3-3.3.1.jar"));
+        assertTrue(hasPathEntry(gradleSourceSet.getRuntimeClasspath(),
+            "scala3-library_3-3.3.1.jar"));
         assertFalse(scalaExtension.getScalaJars().isEmpty());
-        assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
-                file -> file.getName().equals("scala3-compiler_3-3.3.1.jar")));
-        assertFalse(scalaExtension.getScalaCompilerArgs().isEmpty());
-        assertTrue(scalaExtension.getScalaCompilerArgs().stream()
-                .anyMatch(arg -> arg.equals("-deprecation")));
+        assertTrue(hasPathEntry(scalaExtension.getScalaJars(), "scala3-compiler_3-3.3.1.jar"));
 
-        assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
-            gradleSourceSet.getSourceSetName()))));
-        assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "scala",
-            gradleSourceSet.getSourceSetName()))));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "java",
+            gradleSourceSet.getSourceSetName()));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "scala",
+            gradleSourceSet.getSourceSetName()));
         assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
             gradleSourceSet.getSourceSetName())));
         assertTrue(scalaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "scala",
@@ -814,10 +800,8 @@ class GradleBuildServerPluginTest {
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"),
                 "Task name is: " + gradleSourceSet.getClassesTaskName());
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("java")));
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("kotlin")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "kotlin"));
         assertFalse(gradleSourceSet.getGeneratedSourceDirs().isEmpty());
         assertFalse(gradleSourceSet.getResourceDirs().isEmpty());
         assertNotNull(gradleSourceSet.getSourceOutputDirs());
@@ -838,28 +822,25 @@ class GradleBuildServerPluginTest {
         assertEquals("1.2", kotlinExtension.getKotlinApiVersion());
         assertEquals("1.3", kotlinExtension.getKotlinLanguageVersion());
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
-        assertTrue(gradleSourceSet.getCompileClasspath().stream().anyMatch(
-                file -> file.getName().equals("kotlin-stdlib-1.9.21.jar")));
+        assertTrue(hasPathEntry(gradleSourceSet.getCompileClasspath(),
+            "kotlin-stdlib-1.9.21.jar"));
         assertFalse(kotlinExtension.getKotlincOptions().isEmpty());
         assertTrue(kotlinExtension.getKotlincOptions().stream()
-                .anyMatch(arg -> arg.equals("-opt-in=org.mylibrary.OptInAnnotation")));
+            .anyMatch(arg -> arg.equals("-opt-in=org.mylibrary.OptInAnnotation")));
                 
         // dirs not split by language before 4.0
         if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
-              gradleSourceSet.getSourceSetName()))));
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "kotlin",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "java",
+              gradleSourceSet.getSourceSetName()));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "kotlin",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
               gradleSourceSet.getSourceSetName())));
           assertTrue(kotlinExtension.getClassesDir().toPath().endsWith(
               Paths.get("classes", "kotlin", gradleSourceSet.getSourceSetName())));
         } else {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(kotlinExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
               gradleSourceSet.getSourceSetName())));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
@@ -882,10 +863,8 @@ class GradleBuildServerPluginTest {
         assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertFalse(gradleSourceSet.getCompileClasspath().isEmpty());
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-                .anyMatch(file -> file.toPath().endsWith("java")));
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-                .anyMatch(file -> file.toPath().endsWith("groovy")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "groovy"));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -905,20 +884,17 @@ class GradleBuildServerPluginTest {
 
         // dirs not split by language before 4.0
         if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
-              gradleSourceSet.getSourceSetName()))));
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "groovy",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "java",
+              gradleSourceSet.getSourceSetName()));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "groovy",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
               gradleSourceSet.getSourceSetName())));
           assertTrue(groovyExtension.getClassesDir().toPath().endsWith(
               Paths.get("classes", "groovy", gradleSourceSet.getSourceSetName())));
         } else {
-          assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-              .anyMatch(file -> file.toPath().endsWith(Paths.get("classes",
-              gradleSourceSet.getSourceSetName()))));
+          assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes",
+              gradleSourceSet.getSourceSetName()));
           assertTrue(groovyExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
               gradleSourceSet.getSourceSetName())));
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
@@ -941,10 +917,8 @@ class GradleBuildServerPluginTest {
         assertTrue(gradleSourceSet.getClassesTaskName().equals(":classes")
                 || gradleSourceSet.getClassesTaskName().equals(":testClasses"));
         assertTrue(gradleSourceSet.getCompileClasspath().isEmpty());
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-                .anyMatch(file -> file.toPath().endsWith("java")));
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-                .anyMatch(file -> file.toPath().endsWith("antlr")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "antlr"));
         // annotation processor dirs weren't auto created before 5.2
         if (gradleVersion.compareTo(GradleVersion.version("5.2")) >= 0) {
           assertEquals(2, gradleSourceSet.getGeneratedSourceDirs().size());
@@ -962,9 +936,8 @@ class GradleBuildServerPluginTest {
         AntlrExtension antlrExtension = SupportedLanguages.ANTLR.getExtension(gradleSourceSet);
         assertNotNull(antlrExtension);
 
-        assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith(Paths.get("classes", "java",
-            gradleSourceSet.getSourceSetName()))));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes", "java",
+            gradleSourceSet.getSourceSetName()));
         assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes", "java",
             gradleSourceSet.getSourceSetName())));
       }
@@ -1064,7 +1037,8 @@ class GradleBuildServerPluginTest {
           findSourceSet(sourceSets, "mylibrary", "debugUnitTest");
       assertEquals(":mylibrary", mylibraryDebugUnitTest.getProjectPath());
       assertEquals(mylibraryDir, mylibraryDebugUnitTest.getProjectDir());
-      assertEquals(":mylibrary:assembleDebugUnitTest", mylibraryDebugUnitTest.getClassesTaskName());
+      assertEquals(":mylibrary:assembleDebugUnitTest",
+          mylibraryDebugUnitTest.getClassesTaskName());
       assertEquals(4, mylibraryDebugUnitTest.getCompileClasspath().size());
       assertEquals(0, mylibraryDebugUnitTest.getRuntimeClasspath().size());
       assertEquals(4, mylibraryDebugUnitTest.getSourceDirs().size());
@@ -1082,11 +1056,9 @@ class GradleBuildServerPluginTest {
       assertEquals(1, mylibraryReleaseUnitTest.getResourceOutputDirs().size());
 
       for (GradleSourceSet gradleSourceSet : sourceSets) {
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith(Paths.get("java"))),
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "java"),
             gradleSourceSet::toString);
-        assertTrue(gradleSourceSet.getSourceDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith(Paths.get("kotlin"))),
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceDirs(), "kotlin"),
             gradleSourceSet::toString);
 
         assertEquals(1, gradleSourceSet.getGeneratedSourceDirs().size(), gradleSourceSet::toString);
@@ -1100,8 +1072,7 @@ class GradleBuildServerPluginTest {
             dependency -> dependency.getArtifacts().stream().anyMatch(
                 artifact -> artifact.getUri().toString().endsWith("/android.jar"))),
             () -> gradleSourceSet.getModuleDependencies().toString());
-        assertTrue(gradleSourceSet.getSourceOutputDirs().stream()
-            .anyMatch(file -> file.toPath().endsWith("classes")));
+        assertTrue(hasPathEntry(gradleSourceSet.getSourceOutputDirs(), "classes"));
 
         JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(gradleSourceSet);
 
@@ -1111,16 +1082,15 @@ class GradleBuildServerPluginTest {
         assertNotNull(javaExtension.getSourceCompatibility(), gradleSourceSet::toString);
         assertNotNull(javaExtension.getTargetCompatibility(), gradleSourceSet::toString);
         assertEquals(2, javaExtension.getSourceDirs().size(), gradleSourceSet::toString);
-        assertNotNull(javaExtension.getCompilerArgs(), gradleSourceSet::toString);
-        String args = "|" + String.join("|", javaExtension.getCompilerArgs());
-        assertFalse(args.contains("|--source|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--target|"), () -> "Available args: " + args);
-        assertFalse(args.contains("|--release|"), () -> "Available args: " + args);
+        Collection<String> args = javaExtension.getCompilerArgs();
+        assertFalse(hasArgEntry(args, "--source"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--target"), () -> "Available args: " + args);
+        assertFalse(hasArgEntry(args, "--release"), () -> "Available args: " + args);
         if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
-          assertTrue(args.contains("|-source|1.8"), () -> "Available args: " + args);
+          assertTrue(hasArgEntry(args, "-source", "1.8"), () -> "Available args: " + args);
         }
-        assertTrue(args.contains("|-target|1.8"), () -> "Available args: " + args);
-        assertTrue(args.contains("|-bootclasspath"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-target", "1.8"), () -> "Available args: " + args);
+        assertTrue(hasArgEntry(args, "-bootclasspath"), () -> "Available args: " + args);
         if (gradleVersion.compareTo(GradleVersion.version("3.0")) >= 0) {
           assertEquals("1.8", javaExtension.getSourceCompatibility(),
                   () -> "Available args: " + args);
@@ -1136,8 +1106,31 @@ class GradleBuildServerPluginTest {
     });
   }
 
-  @ParameterizedTest(name = "testAnnotationProcessor {0}", allowZeroInvocations = true)
+  @ParameterizedTest(name = "testSourcesResourcesFolders {0}", allowZeroInvocations = true)
   @MethodSource("allVersions")
+  void testSourcesResourcesFolders(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("java-source-sets", gradleVersion, gradleSourceSets -> {
+      GradleSourceSet mainA = findSourceSet(gradleSourceSets.getGradleSourceSets(), "a", "main");
+      assertEquals(2, mainA.getSourceDirs().size());
+      assertTrue(hasPathEntry(mainA.getSourceDirs(), "src", "main", "java"));
+      assertTrue(hasPathEntry(mainA.getSourceDirs(), "src", "main", "scala"));
+      assertEquals(1, mainA.getResourceDirs().size());
+      assertTrue(hasPathEntry(mainA.getResourceDirs(), "src", "main", "resources"));
+
+      GradleSourceSet mainB = findSourceSet(gradleSourceSets.getGradleSourceSets(), "b", "main");
+      assertEquals(1, mainB.getSourceDirs().size());
+      assertTrue(hasPathEntry(mainB.getSourceDirs(), "src", "main", "scala"));
+      assertEquals(1, mainB.getResourceDirs().size());
+      assertTrue(hasPathEntry(mainB.getResourceDirs(), "src", "main", "scala"));
+    });
+  }
+
+  static Stream<GradleVersion> versionsFrom4_6() {
+    return versionProvider("4.6", null);
+  }
+
+  @ParameterizedTest(name = "testAnnotationProcessor {0}", allowZeroInvocations = true)
+  @MethodSource("versionsFrom4_6")
   void testAnnotationProcessor(GradleVersion gradleVersion) throws IOException {
     withSourceSets("java-annotationprocessor", gradleVersion, gradleSourceSets -> {
       GradleSourceSet main = findSourceSet(gradleSourceSets.getGradleSourceSets(),
@@ -1156,9 +1149,58 @@ class GradleBuildServerPluginTest {
     });
   }
 
+  @ParameterizedTest(name = "testIncludeFlat {0}", allowZeroInvocations = true)
+  @MethodSource("allVersions")
+  void testIncludeFlat(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("include-flat/project", gradleVersion, gradleSourceSets -> {
+      GradleSourceSet mainA = findSourceSet(gradleSourceSets.getGradleSourceSets(), "a", "main");
+      GradleSourceSet mainB = findSourceSet(gradleSourceSets.getGradleSourceSets(), "b", "main");
+      BuildTargetDependency depA = new DefaultBuildTargetDependency(mainA);
+      assertTrue(mainB.getBuildTargetDependencies().contains(depA));
+
+      // dirs not split by language before 4.0
+      if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
+        assertTrue(hasPathEntry(mainB.getCompileClasspath(), "a", "build", "classes", "java",
+            "main"));
+        assertTrue(hasPathEntry(mainB.getRuntimeClasspath(), "a", "build", "classes", "java",
+            "main"));
+      } else {
+        assertTrue(hasPathEntry(mainB.getCompileClasspath(), "a", "build", "classes", "main"));
+        assertTrue(hasPathEntry(mainB.getRuntimeClasspath(), "a", "build", "classes", "main"));
+      }
+      assertTrue(hasPathEntry(mainB.getCompileClasspath(), "a", "build", "resources", "main"));
+      assertTrue(hasPathEntry(mainB.getRuntimeClasspath(), "a", "build", "resources", "main"));
+    });
+  }
+
   private boolean hasPathEntry(Collection<File> paths, String firstPath, String... morePaths) {
     return paths.stream()
         .anyMatch(file -> file.toPath().endsWith(Paths.get(firstPath, morePaths)));
+  }
+
+  private boolean hasArgEntry(Collection<String> paths, String firstArg, String... moreArgs) {
+    boolean found = false;
+    Iterator<String> iter = paths.iterator();
+    while (!found && iter.hasNext()) {
+      String next = iter.next();
+      if (next != null && next.equals(firstArg)) {
+        int i = 0;
+        found = true;
+        while (found && i < moreArgs.length) {
+          if (iter.hasNext()) {
+            String nextArg = iter.next();
+            if (moreArgs[i] != null && moreArgs[i].equals(nextArg)) {
+              i++;
+            } else {
+              found = false;
+            }
+          } else {
+            found = false;
+          }
+        }
+      }
+    }
+    return found;
   }
 
   private GradleSourceSet findSourceSet(List<GradleSourceSet> sourceSets,

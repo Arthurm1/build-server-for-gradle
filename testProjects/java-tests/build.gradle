@@ -35,4 +35,9 @@ tasks.register('extraTest', Test) {
     shouldRunAfter test
 
     useJUnitPlatform()
+
+    systemProperty("property", "value")
+    jvmArgs = ["-XX:+UseG1GC", "-verbose:gc"]
+    minHeapSize = "1g"
+    maxHeapSize = "2g"
 }

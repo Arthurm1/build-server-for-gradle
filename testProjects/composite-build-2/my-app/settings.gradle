@@ -1,3 +1,5 @@
 rootProject.name = 'my-app'
 
 include 'app'
+include 'app2'
+include 'app3'
