@@ -50,7 +50,7 @@ public class AntlrLanguageModelBuilder extends LanguageModelBuilder {
   public DefaultAntlrExtension getExtensionFor(Project project, SourceSet sourceSet,
                                                 Set<GradleModuleDependency> moduleDependencies) {
     Set<File> source = getSourceFolders(sourceSet);
-    if (source == null) {
+    if (source == null || source.isEmpty()) {
       return null;
     }
     DefaultAntlrExtension extension = new DefaultAntlrExtension();
