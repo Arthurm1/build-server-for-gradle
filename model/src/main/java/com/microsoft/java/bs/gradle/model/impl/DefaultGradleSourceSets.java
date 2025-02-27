@@ -5,7 +5,6 @@ package com.microsoft.java.bs.gradle.model.impl;
 
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;

@@ -5,6 +5,21 @@ package com.microsoft.java.bs.core.internal.gradle;
 
 import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
+import ch.epfl.scala.bsp4j.BuildClient;
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
+import ch.epfl.scala.bsp4j.StatusCode;
+import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
+import com.microsoft.java.bs.core.internal.reporter.AppRunReporter;
+import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
+import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
+import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
+import com.microsoft.java.bs.core.internal.reporter.TestNameRecorder;
+import com.microsoft.java.bs.core.internal.reporter.TestReportReporter;
+import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
+import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -16,10 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.lang3.exception.ExceptionUtils;
-
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.BuildException;
 import org.gradle.tooling.BuildLauncher;
@@ -33,22 +45,6 @@ import org.gradle.tooling.events.OperationType;
 import org.gradle.tooling.model.build.BuildEnvironment;
 import org.gradle.tooling.model.gradle.GradleBuild;
 import org.gradle.util.GradleVersion;
-
-import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
-import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
-import com.microsoft.java.bs.core.internal.reporter.AppRunReporter;
-import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
-import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
-import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
-import com.microsoft.java.bs.core.internal.reporter.TestNameRecorder;
-import com.microsoft.java.bs.core.internal.reporter.TestReportReporter;
-import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-import com.microsoft.java.bs.gradle.model.GradleTestTask;
-import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
-
-import ch.epfl.scala.bsp4j.BuildClient;
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
-import ch.epfl.scala.bsp4j.StatusCode;
 
 /**
  * Connect to Gradle Daemon via Gradle Tooling API.

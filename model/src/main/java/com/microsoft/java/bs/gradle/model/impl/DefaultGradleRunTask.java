@@ -3,12 +3,11 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import com.microsoft.java.bs.gradle.model.GradleRunTask;
 
 /**
  * Contains run information relating to a Gradle Run task.

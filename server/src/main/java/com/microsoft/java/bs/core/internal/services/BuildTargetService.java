@@ -5,43 +5,6 @@ package com.microsoft.java.bs.core.internal.services;
 
 import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
-import java.io.File;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
-
-import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
-import com.microsoft.java.bs.core.internal.gradle.Utils;
-import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
-import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
-import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
-import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
-import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
-import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
-import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
-import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
-import com.microsoft.java.bs.core.internal.utils.JsonUtils;
-import com.microsoft.java.bs.core.internal.utils.TelemetryUtils;
-import com.microsoft.java.bs.core.internal.utils.UriUtils;
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.GradleRunTask;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-import com.microsoft.java.bs.gradle.model.GradleTestTask;
-import com.microsoft.java.bs.gradle.model.JavaExtension;
-import com.microsoft.java.bs.gradle.model.ScalaExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildTarget;
 import ch.epfl.scala.bsp4j.BuildTargetEvent;
@@ -58,6 +21,9 @@ import ch.epfl.scala.bsp4j.DependencyModulesResult;
 import ch.epfl.scala.bsp4j.DependencySourcesItem;
 import ch.epfl.scala.bsp4j.DependencySourcesParams;
 import ch.epfl.scala.bsp4j.DependencySourcesResult;
+import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
+import ch.epfl.scala.bsp4j.InverseSourcesParams;
+import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.JavacOptionsItem;
 import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
@@ -70,9 +36,6 @@ import ch.epfl.scala.bsp4j.JvmRunEnvironmentParams;
 import ch.epfl.scala.bsp4j.JvmRunEnvironmentResult;
 import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams;
 import ch.epfl.scala.bsp4j.JvmTestEnvironmentResult;
-import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
-import ch.epfl.scala.bsp4j.InverseSourcesParams;
-import ch.epfl.scala.bsp4j.InverseSourcesResult;
 import ch.epfl.scala.bsp4j.MavenDependencyModule;
 import ch.epfl.scala.bsp4j.MavenDependencyModuleArtifact;
 import ch.epfl.scala.bsp4j.OutputPathItem;
@@ -106,6 +69,41 @@ import ch.epfl.scala.bsp4j.TestParams;
 import ch.epfl.scala.bsp4j.TestParamsDataKind;
 import ch.epfl.scala.bsp4j.TestResult;
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
+import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
+import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
+import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
+import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
+import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
+import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
+import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
+import com.microsoft.java.bs.core.internal.utils.JsonUtils;
+import com.microsoft.java.bs.core.internal.utils.TelemetryUtils;
+import com.microsoft.java.bs.core.internal.utils.UriUtils;
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
+import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.ScalaExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import java.io.File;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.tooling.CancellationToken;
 
@@ -227,8 +225,8 @@ public class BuildTargetService {
       mapper = gbt -> {
         // intellij can't handle duplicate base dirs so copy without them.
         BuildTarget bt = gbt.getBuildTarget();
-        BuildTarget newBt = new BuildTarget(bt.getId(), bt.getTags(), bt.getLanguageIds(), bt.getDependencies(),
-            bt.getCapabilities());
+        BuildTarget newBt = new BuildTarget(bt.getId(), bt.getTags(), bt.getLanguageIds(),
+            bt.getDependencies(), bt.getCapabilities());
         newBt.setDisplayName(bt.getDisplayName());
         newBt.setBaseDirectory(null);
         newBt.setDataKind(bt.getDataKind());
@@ -811,7 +809,7 @@ public class BuildTargetService {
     JvmTestEnvironmentParams wrapParams = new JvmTestEnvironmentParams(params.getTargets());
     wrapParams.setOriginId(params.getOriginId());
     JvmTestEnvironmentResult wrapResult = getBuildTargetJvmTestEnvironment(
-      wrapParams, cancelToken);
+        wrapParams, cancelToken);
     List<ScalaTestClassesItem> testClasses = new ArrayList<>();
     for (JvmEnvironmentItem item : wrapResult.getItems()) {
       List<String> classes = new ArrayList<>();

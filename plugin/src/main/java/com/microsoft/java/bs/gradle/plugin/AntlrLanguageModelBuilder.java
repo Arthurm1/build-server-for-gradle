@@ -3,24 +3,21 @@
 
 package com.microsoft.java.bs.gradle.plugin;
 
+import com.microsoft.java.bs.gradle.model.AntlrExtension;
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.SupportedLanguage;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.impl.DefaultAntlrExtension;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.AntlrExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguage;
-import com.microsoft.java.bs.gradle.model.impl.DefaultAntlrExtension;
-
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.plugins.antlr.AntlrSourceDirectorySet;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.util.GradleVersion;
-
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 
 /**
  * The language model builder for Antlr language.
@@ -60,12 +57,6 @@ public class AntlrLanguageModelBuilder extends LanguageModelBuilder {
     extension.setSourceDirs(source);
     extension.setGeneratedSourceDirs(new HashSet<>());
     // is that all there is for ANTLR?
-  /*
-    SourceSetOutput sourceSetOutput = sourceSet.getOutput();
-    Set<File> classesDirs = sourceSetOutput.getClassesDirs().getFiles();
-    if (!classesDirs.isEmpty()) {
-      extension.setClassesDir(classesDirs.iterator().next());
-    }*/
 
     return extension;
   }

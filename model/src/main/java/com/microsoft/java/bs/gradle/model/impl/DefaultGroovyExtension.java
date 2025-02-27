@@ -3,15 +3,14 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
-import java.io.File;
-import java.util.Objects;
-import java.util.Set;
-
 import com.microsoft.java.bs.gradle.model.AntlrExtension;
 import com.microsoft.java.bs.gradle.model.GroovyExtension;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.KotlinExtension;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
+import java.io.File;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Default implementation of {@link GroovyExtension}.

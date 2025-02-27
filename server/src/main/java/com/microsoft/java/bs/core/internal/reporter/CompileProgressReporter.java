@@ -3,10 +3,6 @@
 
 package com.microsoft.java.bs.core.internal.reporter;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.CompileReport;
@@ -18,7 +14,9 @@ import ch.epfl.scala.bsp4j.TaskId;
 import ch.epfl.scala.bsp4j.TaskProgressParams;
 import ch.epfl.scala.bsp4j.TaskStartDataKind;
 import ch.epfl.scala.bsp4j.TaskStartParams;
-
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.gradle.tooling.events.FailureResult;
 import org.gradle.tooling.events.FinishEvent;
 import org.gradle.tooling.events.OperationResult;

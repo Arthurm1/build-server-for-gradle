@@ -4,7 +4,6 @@
 package com.microsoft.java.bs.gradle.plugin;
 
 import javax.inject.Inject;
-
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;

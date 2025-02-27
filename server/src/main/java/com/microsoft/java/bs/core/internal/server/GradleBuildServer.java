@@ -5,29 +5,6 @@ package com.microsoft.java.bs.core.internal.server;
 
 import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.logging.Level;
-
-import ch.epfl.scala.bsp4j.JvmCompileClasspathParams;
-import ch.epfl.scala.bsp4j.JvmCompileClasspathResult;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
-import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
-import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
-import org.gradle.tooling.CancellationToken;
-import org.gradle.tooling.CancellationTokenSource;
-import org.gradle.tooling.GradleConnector;
-
-import com.microsoft.java.bs.core.internal.log.BspTraceEntity;
-import com.microsoft.java.bs.core.internal.services.BuildTargetService;
-import com.microsoft.java.bs.core.internal.services.LifecycleService;
-import com.microsoft.java.bs.core.internal.utils.concurrent.CancellableFuture;
-
 import ch.epfl.scala.bsp4j.BuildServer;
 import ch.epfl.scala.bsp4j.CleanCacheParams;
 import ch.epfl.scala.bsp4j.CleanCacheResult;
@@ -47,6 +24,8 @@ import ch.epfl.scala.bsp4j.JavaBuildServer;
 import ch.epfl.scala.bsp4j.JavacOptionsParams;
 import ch.epfl.scala.bsp4j.JavacOptionsResult;
 import ch.epfl.scala.bsp4j.JvmBuildServer;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathParams;
+import ch.epfl.scala.bsp4j.JvmCompileClasspathResult;
 import ch.epfl.scala.bsp4j.JvmRunEnvironmentParams;
 import ch.epfl.scala.bsp4j.JvmRunEnvironmentResult;
 import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams;
@@ -71,6 +50,24 @@ import ch.epfl.scala.bsp4j.SourcesResult;
 import ch.epfl.scala.bsp4j.TestParams;
 import ch.epfl.scala.bsp4j.TestResult;
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
+import com.microsoft.java.bs.core.internal.log.BspTraceEntity;
+import com.microsoft.java.bs.core.internal.services.BuildTargetService;
+import com.microsoft.java.bs.core.internal.services.LifecycleService;
+import com.microsoft.java.bs.core.internal.utils.concurrent.CancellableFuture;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.logging.Level;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
+import org.gradle.tooling.CancellationToken;
+import org.gradle.tooling.CancellationTokenSource;
+import org.gradle.tooling.GradleConnector;
 
 /**
  * The implementation of the Build Server Protocol.

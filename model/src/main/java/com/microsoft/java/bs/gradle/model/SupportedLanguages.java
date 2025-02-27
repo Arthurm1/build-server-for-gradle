@@ -4,11 +4,10 @@
 package com.microsoft.java.bs.gradle.model;
 
 import com.microsoft.java.bs.gradle.model.impl.DefaultAntlrLanguage;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGroovyLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultJavaLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultScalaLanguage;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGroovyLanguage;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;

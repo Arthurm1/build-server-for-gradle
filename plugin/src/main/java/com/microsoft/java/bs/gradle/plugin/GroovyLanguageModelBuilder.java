@@ -3,18 +3,17 @@
 
 package com.microsoft.java.bs.gradle.plugin;
 
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GroovyExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguage;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGroovyExtension;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.GroovyExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguage;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGroovyExtension;
-import com.microsoft.java.bs.gradle.plugin.utils.Utils;
-
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.tasks.GroovySourceDirectorySet;
@@ -22,8 +21,6 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.compile.AbstractCompile;
 import org.gradle.api.tasks.compile.GroovyCompile;
 import org.gradle.util.GradleVersion;
-
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 
 /**
  * The language model builder for Groovy language.

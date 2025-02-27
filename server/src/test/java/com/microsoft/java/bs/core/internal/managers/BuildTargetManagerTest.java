@@ -6,6 +6,21 @@ package com.microsoft.java.bs.core.internal.managers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.epfl.scala.bsp4j.BuildTarget;
+import ch.epfl.scala.bsp4j.JvmBuildTarget;
+import ch.epfl.scala.bsp4j.extended.JvmBuildTargetEx;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
+import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
+import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
+import com.microsoft.java.bs.gradle.model.LanguageExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
+import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
@@ -13,23 +28,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import com.microsoft.java.bs.core.internal.gradle.Utils;
-import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
-import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
-import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
-import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
-import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
-import com.microsoft.java.bs.gradle.model.GradleTestTask;
-import com.microsoft.java.bs.gradle.model.LanguageExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-
-import ch.epfl.scala.bsp4j.BuildTarget;
-import ch.epfl.scala.bsp4j.JvmBuildTarget;
-import ch.epfl.scala.bsp4j.extended.JvmBuildTargetEx;
 import org.junit.jupiter.api.Test;
 
 class BuildTargetManagerTest {

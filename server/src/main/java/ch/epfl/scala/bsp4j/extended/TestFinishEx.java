@@ -3,14 +3,12 @@
 
 package ch.epfl.scala.bsp4j.extended;
 
+import ch.epfl.scala.bsp4j.TestFinish;
+import ch.epfl.scala.bsp4j.TestStatus;
 import java.util.Objects;
-
 import org.eclipse.lsp4j.jsonrpc.validation.NonNull;
 import org.eclipse.xtext.xbase.lib.Pure;
 import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
-
-import ch.epfl.scala.bsp4j.TestFinish;
-import ch.epfl.scala.bsp4j.TestStatus;
 
 /**
  * Extended {@link TestFinish}, which contains the Suite, class, method.

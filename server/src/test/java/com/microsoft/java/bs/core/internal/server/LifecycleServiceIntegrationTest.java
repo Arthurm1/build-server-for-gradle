@@ -1,5 +1,9 @@
 package com.microsoft.java.bs.core.internal.server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import ch.epfl.scala.bsp4j.BuildClientCapabilities;
 import ch.epfl.scala.bsp4j.InitializeBuildParams;
 import ch.epfl.scala.bsp4j.InitializeBuildResult;
@@ -7,9 +11,6 @@ import ch.epfl.scala.bsp4j.MessageType;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
-
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -20,10 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class LifecycleServiceIntegrationTest extends IntegrationTest {
 

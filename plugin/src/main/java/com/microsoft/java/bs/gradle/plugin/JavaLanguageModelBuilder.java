@@ -3,6 +3,12 @@
 
 package com.microsoft.java.bs.gradle.plugin;
 
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguage;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -17,14 +23,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.JavaExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguage;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-import com.microsoft.java.bs.gradle.model.impl.DefaultJavaExtension;
-import com.microsoft.java.bs.gradle.plugin.utils.Utils;
-
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.internal.tasks.compile.DefaultJavaCompileSpec;

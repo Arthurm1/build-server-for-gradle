@@ -3,6 +3,17 @@
 
 package com.microsoft.java.bs.core;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
+import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.ScalaExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
+import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,22 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
-
-import com.microsoft.java.bs.core.internal.gradle.Utils;
-import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-import com.microsoft.java.bs.gradle.model.JavaExtension;
-import com.microsoft.java.bs.gradle.model.ScalaExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-import com.microsoft.java.bs.gradle.model.actions.GetSourceSetsAction;
-import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
 
 /**
  * class to export Gradle config to Bloop files.

@@ -3,16 +3,19 @@
 
 package com.microsoft.java.bs.core.internal.reporter;
 
+import ch.epfl.scala.bsp4j.BuildClient;
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
+import ch.epfl.scala.bsp4j.StatusCode;
+import ch.epfl.scala.bsp4j.TaskFinishParams;
 import ch.epfl.scala.bsp4j.TaskId;
 import ch.epfl.scala.bsp4j.TaskStartParams;
+import ch.epfl.scala.bsp4j.TestReport;
 import ch.epfl.scala.bsp4j.TestStatus;
 import ch.epfl.scala.bsp4j.extended.TestFinishEx;
 import ch.epfl.scala.bsp4j.extended.TestName;
 import ch.epfl.scala.bsp4j.extended.TestStartEx;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import org.gradle.tooling.TestFailure;
 import org.gradle.tooling.events.FinishEvent;
 import org.gradle.tooling.events.OperationDescriptor;
@@ -24,12 +27,6 @@ import org.gradle.tooling.events.test.JvmTestOperationDescriptor;
 import org.gradle.tooling.events.test.TestFailureResult;
 import org.gradle.tooling.events.test.TestSkippedResult;
 import org.gradle.tooling.events.test.TestSuccessResult;
-
-import ch.epfl.scala.bsp4j.BuildClient;
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
-import ch.epfl.scala.bsp4j.StatusCode;
-import ch.epfl.scala.bsp4j.TaskFinishParams;
-import ch.epfl.scala.bsp4j.TestReport;
 
 /**
  * Implements {@link ProgressReporter} to record test results.

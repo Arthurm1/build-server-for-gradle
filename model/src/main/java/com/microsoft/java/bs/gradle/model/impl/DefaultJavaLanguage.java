@@ -6,7 +6,6 @@ package com.microsoft.java.bs.gradle.model.impl;
 import com.microsoft.java.bs.gradle.model.JavaExtension;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguage;
-
 import java.util.Map;
 
 /**

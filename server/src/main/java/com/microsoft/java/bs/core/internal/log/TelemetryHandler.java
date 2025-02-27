@@ -3,15 +3,13 @@
 
 package com.microsoft.java.bs.core.internal.log;
 
-import java.util.Map;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
-
-import com.google.gson.Gson;
-
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MessageType;
+import com.google.gson.Gson;
+import java.util.Map;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 /**
  * The log appender to send bi data.

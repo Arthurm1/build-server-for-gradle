@@ -1,10 +1,9 @@
 package ch.epfl.scala.bsp4j.extended;
 
-import java.util.List;
-import java.util.Objects;
-
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Should be possible to remove this when Kotlin is finalised in BSP spec.

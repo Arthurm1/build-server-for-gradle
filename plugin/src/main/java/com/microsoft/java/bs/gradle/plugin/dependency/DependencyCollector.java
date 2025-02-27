@@ -3,6 +3,10 @@
 
 package com.microsoft.java.bs.gradle.plugin.dependency;
 
+import com.microsoft.java.bs.gradle.model.Artifact;
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +21,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.gradle.api.GradleException;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
@@ -39,11 +42,6 @@ import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifi
 import org.gradle.jvm.JvmLibrary;
 import org.gradle.language.base.artifact.SourcesArtifact;
 import org.gradle.language.java.artifact.JavadocArtifact;
-
-import com.microsoft.java.bs.gradle.model.Artifact;
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
 import org.gradle.util.GradleVersion;
 
 /**
@@ -54,6 +52,7 @@ public class DependencyCollector {
   private static final String UNKNOWN = "unknown";
 
   private static final List<Class<? extends org.gradle.api.component.Artifact>> artifactTypes;
+
   static {
     artifactTypes = new ArrayList<>();
     artifactTypes.add(JavadocArtifact.class);
@@ -97,7 +96,8 @@ public class DependencyCollector {
   }
 
   /**
-   * Create Dependency for each input dependency based on extracted jar name and version
+   * Create Dependency for each input dependency based on extracted jar name and version.
+   *
    * @param dependencyHandler Gradle DependencyHandler
    * @param dependencies Gradle built-in jar only dependencies
    * @return Maven dependencies
@@ -130,7 +130,7 @@ public class DependencyCollector {
               } else if (module.startsWith("kotlin")) {
                 group = "org.jetbrains.kotlin";
               } else if (module.equals("gradle-api")
-                || module.equals("gradle-test-kit")) {
+                  || module.equals("gradle-test-kit")) {
                 // these seem to be a version behind so the latest Gradle may not be present
                 group = "dev.gradleplugins";
               } else if (module.equals("javaparser-core")) {
@@ -146,12 +146,13 @@ public class DependencyCollector {
   }
 
   /**
-   * Takes a collection of dependencies and attempts to download missing build-in Gradle sources.
-   * Returns original collection if no built-in sources are missing
+   * Takes a collection of dependencies and attempts to download missing built-in Gradle sources.
+   * Returns original collection if no built-in sources are missing.
+   *
    * @param configurationContainer configuration container
    * @param repositoryHandler project repositoryHandler
    * @param dependencyHandler project dependencyHandler
-   * @param moduleDependencies set of dependencies that potentially have missing Gradle build-in sources
+   * @param moduleDependencies set of dependencies that might have missing Gradle built-in sources
    * @return full set of dependencies with the sources if download is required/possible
    */
   public static Set<GradleModuleDependency> downloadGroovySources(

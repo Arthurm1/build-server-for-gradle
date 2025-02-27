@@ -8,12 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.microsoft.java.bs.core.internal.model.Preferences;
 import java.io.File;
 import java.nio.file.Paths;
-
 import org.junit.jupiter.api.Test;
-
-import com.microsoft.java.bs.core.internal.model.Preferences;
 
 class UtilsTest {
 

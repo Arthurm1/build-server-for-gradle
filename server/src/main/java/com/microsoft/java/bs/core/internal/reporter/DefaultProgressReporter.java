@@ -3,18 +3,17 @@
 
 package com.microsoft.java.bs.core.internal.reporter;
 
-import org.gradle.tooling.events.FailureResult;
-import org.gradle.tooling.events.FinishEvent;
-import org.gradle.tooling.events.OperationResult;
-import org.gradle.tooling.events.ProgressEvent;
-import org.gradle.tooling.events.StartEvent;
-
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.StatusCode;
 import ch.epfl.scala.bsp4j.TaskFinishParams;
 import ch.epfl.scala.bsp4j.TaskId;
 import ch.epfl.scala.bsp4j.TaskProgressParams;
 import ch.epfl.scala.bsp4j.TaskStartParams;
+import org.gradle.tooling.events.FailureResult;
+import org.gradle.tooling.events.FinishEvent;
+import org.gradle.tooling.events.OperationResult;
+import org.gradle.tooling.events.ProgressEvent;
+import org.gradle.tooling.events.StartEvent;
 
 /**
  * A default implementation of {@link ProgressReporter}.

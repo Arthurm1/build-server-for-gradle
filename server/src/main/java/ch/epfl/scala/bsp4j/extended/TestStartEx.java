@@ -3,13 +3,11 @@
 
 package ch.epfl.scala.bsp4j.extended;
 
+import ch.epfl.scala.bsp4j.TestStart;
 import java.util.Objects;
-
 import org.eclipse.lsp4j.jsonrpc.validation.NonNull;
 import org.eclipse.xtext.xbase.lib.Pure;
 import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
-
-import ch.epfl.scala.bsp4j.TestStart;
 
 /**
  * Extended {@link TestStart}, which contains the Suite, class, method.

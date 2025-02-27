@@ -3,6 +3,25 @@
 
 package com.microsoft.java.bs.core.internal.managers;
 
+import ch.epfl.scala.bsp4j.BuildTarget;
+import ch.epfl.scala.bsp4j.BuildTargetCapabilities;
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
+import ch.epfl.scala.bsp4j.BuildTargetTag;
+import ch.epfl.scala.bsp4j.JvmBuildTarget;
+import ch.epfl.scala.bsp4j.ScalaBuildTarget;
+import ch.epfl.scala.bsp4j.ScalaPlatform;
+import ch.epfl.scala.bsp4j.extended.JvmBuildTargetEx;
+import ch.epfl.scala.bsp4j.extended.KotlinBuildTarget;
+import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
+import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
+import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.JavaExtension;
+import com.microsoft.java.bs.gradle.model.KotlinExtension;
+import com.microsoft.java.bs.gradle.model.ScalaExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
@@ -17,28 +36,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import ch.epfl.scala.bsp4j.JvmBuildTarget;
-import ch.epfl.scala.bsp4j.ScalaBuildTarget;
-import ch.epfl.scala.bsp4j.ScalaPlatform;
-import ch.epfl.scala.bsp4j.extended.KotlinBuildTarget;
-
-import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
-import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
-import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-import com.microsoft.java.bs.gradle.model.JavaExtension;
-import com.microsoft.java.bs.gradle.model.KotlinExtension;
-import com.microsoft.java.bs.gradle.model.ScalaExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-import com.microsoft.java.bs.gradle.model.impl.DefaultBuildTargetDependency;
-
-import ch.epfl.scala.bsp4j.BuildTarget;
-import ch.epfl.scala.bsp4j.BuildTargetCapabilities;
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
-import ch.epfl.scala.bsp4j.BuildTargetTag;
-import ch.epfl.scala.bsp4j.extended.JvmBuildTargetEx;
 
 /**
  * Build targets manager.

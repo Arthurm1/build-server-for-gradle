@@ -3,12 +3,11 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import com.microsoft.java.bs.gradle.model.GradleTestTask;
 
 /**
  * Contains test information relating to a Gradle Test task.

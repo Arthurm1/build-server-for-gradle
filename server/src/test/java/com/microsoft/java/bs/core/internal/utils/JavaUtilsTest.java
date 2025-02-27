@@ -1,14 +1,5 @@
 package com.microsoft.java.bs.core.internal.utils;
 
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import static com.microsoft.java.bs.core.internal.utils.JavaUtils.getJavaVersionFromFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,6 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
 
 class JavaUtilsTest {
 
@@ -31,12 +29,11 @@ class JavaUtilsTest {
     ProcessBuilder mockBuilder = mock(ProcessBuilder.class);
     when(mockBuilder.redirectErrorStream(true)).thenReturn(mockBuilder);
     when(mockBuilder.start()).thenReturn(mockProcess);
-    String actualVersion = getJavaVersionFromFile(mockBuilder);
+    String actualVersion = JavaUtils.getJavaVersionFromFile(mockBuilder);
 
     assertEquals(expectedVersion.split("\"")[1], actualVersion);
 
     verify(mockProcess).destroy();
-
   }
 
   @Test
@@ -46,7 +43,7 @@ class JavaUtilsTest {
     when(mockBuilder.redirectErrorStream(true)).thenReturn(mockBuilder);
     when(mockBuilder.start()).thenThrow(new IOException("Simulated Process Failure"));
 
-    assertThrows(IOException.class, () -> getJavaVersionFromFile(mockBuilder));
+    assertThrows(IOException.class, () -> JavaUtils.getJavaVersionFromFile(mockBuilder));
 
   }
 
@@ -57,7 +54,7 @@ class JavaUtilsTest {
     ProcessBuilder processBuilder =
         new ProcessBuilder(tempDirectory.toString() + "/bin/java", "-version");
 
-    assertThrows(IOException.class, () -> getJavaVersionFromFile(processBuilder));
+    assertThrows(IOException.class, () -> JavaUtils.getJavaVersionFromFile(processBuilder));
     Files.deleteIfExists(tempDirectory);
 
   }

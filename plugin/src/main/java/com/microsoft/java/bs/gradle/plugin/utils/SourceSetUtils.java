@@ -7,7 +7,6 @@ import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.KotlinLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.LanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.ScalaLanguageModelBuilder;
-
 import java.util.LinkedList;
 import java.util.List;
 

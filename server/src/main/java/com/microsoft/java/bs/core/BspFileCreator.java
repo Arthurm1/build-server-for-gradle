@@ -3,9 +3,8 @@ package com.microsoft.java.bs.core;
 import ch.epfl.scala.bsp4j.BspConnectionDetails;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.core.internal.gradle.Utils;
-
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;

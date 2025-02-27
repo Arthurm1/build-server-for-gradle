@@ -5,27 +5,6 @@ package com.microsoft.java.bs.core.internal.services;
 
 import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.Runtime.Version;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.logging.Level;
-
-import com.microsoft.java.bs.core.BuildInfo;
-import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
-import com.microsoft.java.bs.core.internal.gradle.GradleBuildKind;
-import com.microsoft.java.bs.core.internal.gradle.Utils;
-import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
-import com.microsoft.java.bs.core.internal.model.Preferences;
-import com.microsoft.java.bs.core.internal.utils.JsonUtils;
-import com.microsoft.java.bs.core.internal.utils.JavaUtils;
-import com.microsoft.java.bs.core.internal.utils.TelemetryUtils;
-import com.microsoft.java.bs.core.internal.utils.UriUtils;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildServerCapabilities;
 import ch.epfl.scala.bsp4j.CompileProvider;
@@ -35,9 +14,26 @@ import ch.epfl.scala.bsp4j.MessageType;
 import ch.epfl.scala.bsp4j.RunProvider;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import ch.epfl.scala.bsp4j.TestProvider;
-
 import com.google.gson.JsonSyntaxException;
-
+import com.microsoft.java.bs.core.BuildInfo;
+import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
+import com.microsoft.java.bs.core.internal.gradle.GradleBuildKind;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
+import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.core.internal.utils.JavaUtils;
+import com.microsoft.java.bs.core.internal.utils.JsonUtils;
+import com.microsoft.java.bs.core.internal.utils.TelemetryUtils;
+import com.microsoft.java.bs.core.internal.utils.UriUtils;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import java.io.File;
+import java.io.IOException;
+import java.lang.Runtime.Version;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.logging.Level;
 import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.model.build.BuildEnvironment;
 

@@ -1,7 +1,12 @@
 package com.microsoft.java.bs.core.internal.server;
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import ch.epfl.scala.bsp4j.BuildTarget;
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.CleanCacheParams;
 import ch.epfl.scala.bsp4j.CleanCacheResult;
 import ch.epfl.scala.bsp4j.CompileParams;
@@ -30,12 +35,12 @@ import ch.epfl.scala.bsp4j.RunResult;
 import ch.epfl.scala.bsp4j.ScalaMainClass;
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
+import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
 import ch.epfl.scala.bsp4j.ScalaTestSuites;
 import ch.epfl.scala.bsp4j.SourceItem;
 import ch.epfl.scala.bsp4j.SourcesItem;
 import ch.epfl.scala.bsp4j.SourcesParams;
 import ch.epfl.scala.bsp4j.SourcesResult;
-import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
 import ch.epfl.scala.bsp4j.StatusCode;
 import ch.epfl.scala.bsp4j.TaskFinishParams;
 import ch.epfl.scala.bsp4j.TestParams;
@@ -49,9 +54,6 @@ import ch.epfl.scala.bsp4j.extended.TestName;
 import ch.epfl.scala.bsp4j.extended.TestStartEx;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
-
-import org.junit.jupiter.api.Test;
-
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -62,11 +64,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
 
 class BuildTargetServiceIntegrationTest extends IntegrationTest {
 

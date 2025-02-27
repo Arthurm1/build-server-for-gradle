@@ -3,11 +3,10 @@
 
 package com.microsoft.java.bs.core.internal.managers;
 
+import com.microsoft.java.bs.core.internal.model.Preferences;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
-
-import com.microsoft.java.bs.core.internal.model.Preferences;
 
 /**
  * Manage the preferences of the build server.

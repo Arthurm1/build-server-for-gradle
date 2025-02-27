@@ -3,12 +3,11 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.Artifact;
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.Artifact;
 
 /**
  * Default implementation of {@link GradleModuleDependency}.

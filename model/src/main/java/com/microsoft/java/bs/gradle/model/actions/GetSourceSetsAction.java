@@ -15,12 +15,6 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultGradleRunTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
-
-import org.gradle.tooling.BuildAction;
-import org.gradle.tooling.BuildController;
-import org.gradle.tooling.model.Model;
-import org.gradle.tooling.model.gradle.GradleBuild;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,6 +25,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.gradle.tooling.BuildAction;
+import org.gradle.tooling.BuildController;
+import org.gradle.tooling.model.Model;
+import org.gradle.tooling.model.gradle.GradleBuild;
 
 /**
  * {@link BuildAction} that retrieves {@link DefaultGradleSourceSet} from a Gradle build,

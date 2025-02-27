@@ -3,16 +3,15 @@
 
 package com.microsoft.java.bs.core.internal.log;
 
+import ch.epfl.scala.bsp4j.BuildClient;
+import ch.epfl.scala.bsp4j.LogMessageParams;
+import ch.epfl.scala.bsp4j.MessageType;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
-
-import ch.epfl.scala.bsp4j.BuildClient;
-import ch.epfl.scala.bsp4j.LogMessageParams;
-import ch.epfl.scala.bsp4j.MessageType;
 
 /**
  * The log appender to log server events to client.

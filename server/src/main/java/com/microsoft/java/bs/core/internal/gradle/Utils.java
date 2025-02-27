@@ -3,7 +3,9 @@
 
 package com.microsoft.java.bs.core.internal.gradle;
 
-
+import com.microsoft.java.bs.core.BuildInfo;
+import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import org.apache.commons.lang3.StringUtils;
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.BuildLauncher;
@@ -26,11 +28,6 @@ import org.gradle.tooling.ModelBuilder;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.TestLauncher;
 import org.gradle.util.GradleVersion;
-import org.apache.commons.lang3.StringUtils;
-
-import com.microsoft.java.bs.core.BuildInfo;
-import com.microsoft.java.bs.core.internal.model.Preferences;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 
 /**
  * Gradle Tooling API utils.
@@ -56,7 +53,7 @@ public class Utils {
   }
 
   /**
-   * What is the platform dependent name for the Java executable
+   * What is the platform dependent name for the Java executable.
    */
   public static String getJavaExeName() {
     return isWindows() ? "java.exe" : "java";
@@ -75,7 +72,8 @@ public class Utils {
   }
 
   /**
-   * Create a Build target display name of the format `projectName [sourceSetName]`
+   * Create a Build target display name of the format `projectName [sourceSetName]`.
+   *
    * @param sourceSet Gradle source set
    * @return display name for build target
    */
@@ -90,7 +88,8 @@ public class Utils {
   }
 
   /**
-   * Create a Build target display name of the format `projectName.sourceSetName`
+   * Create a Build target display name of the format `projectName.sourceSetName`.
+   *
    * @param sourceSet Gradle source set
    * @return display name for build target
    */
@@ -106,6 +105,7 @@ public class Utils {
 
   /**
    * Create a function that creates a display name for a build target based on the BSP client.
+   *
    * @param displayNaming display naming type
    * @return function to create a display name
    */
@@ -119,6 +119,7 @@ public class Utils {
 
   /**
    * Create a function that creates a display name for a build target based on the BSP client.
+   *
    * @param preferences BSP client preferences
    * @return function to create a display name
    */

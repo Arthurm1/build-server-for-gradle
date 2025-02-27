@@ -6,7 +6,6 @@ package com.microsoft.java.bs.core.internal.reporter;
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.PrintParams;
 import ch.epfl.scala.bsp4j.TaskId;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;

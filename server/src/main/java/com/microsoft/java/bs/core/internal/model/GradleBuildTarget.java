@@ -3,11 +3,9 @@
 
 package com.microsoft.java.bs.core.internal.model;
 
-import java.util.Objects;
-
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-
 import ch.epfl.scala.bsp4j.BuildTarget;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import java.util.Objects;
 
 /**
  * Represents a Gradle build target.

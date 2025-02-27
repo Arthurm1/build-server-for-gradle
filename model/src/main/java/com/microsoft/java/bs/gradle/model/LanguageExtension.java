@@ -80,8 +80,8 @@ public interface LanguageExtension extends Serializable {
 
   /**
    * Attempts to cast the current object to a {@link JavaExtension} instance.
-   * <p>
-   * This method should ideally be used only when the implementing class
+   *
+   * <p>This method should ideally be used only when the implementing class
    * is known to be a {@link JavaExtension}.
    * </p>
    *
@@ -92,8 +92,8 @@ public interface LanguageExtension extends Serializable {
 
   /**
    * Attempts to cast the current object to a {@link ScalaExtension} instance.
-   * <p>
-   * This method should ideally be used only when the implementing class
+   *
+   * <p>This method should ideally be used only when the implementing class
    * is known to be a {@link ScalaExtension}.
    * </p>
    *
@@ -104,8 +104,8 @@ public interface LanguageExtension extends Serializable {
 
   /**
    * Attempts to cast the current object to a {@link GroovyExtension} instance.
-   * <p>
-   * This method should ideally be used only when the implementing class
+   *
+   * <p>This method should ideally be used only when the implementing class
    * is known to be a {@link GroovyExtension}.
    * </p>
    *
@@ -117,8 +117,8 @@ public interface LanguageExtension extends Serializable {
 
   /**
    * Attempts to cast the current object to a {@link KotlinExtension} instance.
-   * <p>
-   * This method should ideally be used only when the implementing class
+   *
+   * <p>This method should ideally be used only when the implementing class
    * is known to be a {@link KotlinExtension}.
    * </p>
    *
@@ -129,8 +129,8 @@ public interface LanguageExtension extends Serializable {
 
   /**
    * Attempts to cast the current object to a {@link AntlrExtension} instance.
-   * <p>
-   * This method should ideally be used only when the implementing class
+   *
+   * <p>This method should ideally be used only when the implementing class
    * is known to be a {@link AntlrExtension}.
    * </p>
    *

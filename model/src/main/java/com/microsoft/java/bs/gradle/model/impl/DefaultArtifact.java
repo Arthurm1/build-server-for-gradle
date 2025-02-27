@@ -3,10 +3,9 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
+import com.microsoft.java.bs.gradle.model.Artifact;
 import java.net.URI;
 import java.util.Objects;
-
-import com.microsoft.java.bs.gradle.model.Artifact;
 
 /**
  * Default implementation of {@link Artifact}.

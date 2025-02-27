@@ -1,8 +1,7 @@
 package ch.epfl.scala.bsp4j.extended;
 
-import java.util.Objects;
-
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
+import java.util.Objects;
 
 /**
  * Extended {@link JvmBuildTarget}, which contains the Gradle version.

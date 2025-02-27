@@ -1,11 +1,11 @@
 package com.microsoft.java.bs.core.internal.utils;
 
-import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.Runtime.Version;
+import javax.annotation.Nonnull;
 
 /**
  * Utility class for Java.

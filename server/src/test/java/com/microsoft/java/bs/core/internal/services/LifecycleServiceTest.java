@@ -6,24 +6,21 @@ package com.microsoft.java.bs.core.internal.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
+import ch.epfl.scala.bsp4j.BuildClientCapabilities;
+import ch.epfl.scala.bsp4j.InitializeBuildParams;
+import ch.epfl.scala.bsp4j.InitializeBuildResult;
+import com.microsoft.java.bs.core.BuildInfo;
+import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
+import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
-import com.microsoft.java.bs.core.BuildInfo;
-import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
-import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
-import com.microsoft.java.bs.core.internal.model.Preferences;
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
-
-import ch.epfl.scala.bsp4j.BuildClientCapabilities;
-import ch.epfl.scala.bsp4j.InitializeBuildParams;
-import ch.epfl.scala.bsp4j.InitializeBuildResult;
 
 class LifecycleServiceTest {
 

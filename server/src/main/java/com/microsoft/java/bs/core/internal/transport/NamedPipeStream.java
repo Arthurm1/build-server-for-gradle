@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.core.internal.transport;
 
+import com.microsoft.java.bs.core.internal.gradle.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,8 +15,6 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutionException;
-
-import com.microsoft.java.bs.core.internal.gradle.Utils;
 
 /**
  * A named pipe stream implementation.

@@ -3,12 +3,11 @@
 
 package com.microsoft.java.bs.gradle.plugin.utils;
 
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 import java.util.Set;
+import org.gradle.api.Project;
+import org.gradle.api.Task;
 
 /**
  * Helper functions.

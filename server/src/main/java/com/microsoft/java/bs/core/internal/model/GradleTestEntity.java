@@ -3,10 +3,9 @@
 
 package com.microsoft.java.bs.core.internal.model;
 
-import java.util.Set;
-import java.util.Objects;
-
 import com.microsoft.java.bs.gradle.model.GradleTestTask;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Contains test information relating to a Gradle Test task.

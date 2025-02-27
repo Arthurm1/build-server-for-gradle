@@ -3,18 +3,16 @@
 
 package com.microsoft.java.bs.core.internal.reporter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import org.gradle.tooling.events.OperationDescriptor;
-import org.gradle.tooling.events.ProgressListener;
-import org.gradle.tooling.events.task.TaskOperationDescriptor;
-
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.MessageType;
 import ch.epfl.scala.bsp4j.TaskId;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import org.gradle.tooling.events.OperationDescriptor;
+import org.gradle.tooling.events.ProgressListener;
+import org.gradle.tooling.events.task.TaskOperationDescriptor;
 
 /**
  * An extension of {@link ProgressListener} that allows sending errors.

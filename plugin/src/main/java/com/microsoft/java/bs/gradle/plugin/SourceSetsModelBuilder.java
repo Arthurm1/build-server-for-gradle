@@ -3,6 +3,20 @@
 
 package com.microsoft.java.bs.gradle.plugin;
 
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.GradleRunTask;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+import com.microsoft.java.bs.gradle.model.GradleTestTask;
+import com.microsoft.java.bs.gradle.model.LanguageExtension;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleRunTask;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
+import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
+import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
+import com.microsoft.java.bs.gradle.plugin.utils.AndroidUtils;
+import com.microsoft.java.bs.gradle.plugin.utils.SourceSetUtils;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,9 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.microsoft.java.bs.gradle.plugin.utils.AndroidUtils;
-import com.microsoft.java.bs.gradle.plugin.utils.SourceSetUtils;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -33,19 +44,6 @@ import org.gradle.api.tasks.bundling.AbstractArchiveTask;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.tooling.provider.model.ToolingModelBuilder;
 import org.gradle.util.GradleVersion;
-
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.GradleRunTask;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
-import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-import com.microsoft.java.bs.gradle.model.GradleTestTask;
-import com.microsoft.java.bs.gradle.model.LanguageExtension;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleRunTask;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
-import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
-import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
-import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 
 /**
  * The model builder for Gradle source sets.

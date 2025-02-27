@@ -3,10 +3,9 @@
 
 package com.microsoft.java.bs.gradle.model.impl;
 
-import java.util.Objects;
-
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
+import java.util.Objects;
 
 /**
  * Default implementation of {@link BuildTargetDependency}.

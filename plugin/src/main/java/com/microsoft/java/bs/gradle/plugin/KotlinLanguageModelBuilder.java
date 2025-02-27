@@ -3,26 +3,23 @@
 
 package com.microsoft.java.bs.gradle.plugin;
 
+import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
+import com.microsoft.java.bs.gradle.model.KotlinExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguage;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinExtension;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
-import com.microsoft.java.bs.gradle.model.KotlinExtension;
-import com.microsoft.java.bs.gradle.model.SupportedLanguage;
-import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinExtension;
-import com.microsoft.java.bs.gradle.plugin.utils.Utils;
-
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.util.GradleVersion;
-
-import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 
 /**
  * The language model builder for Kotlin language.

@@ -12,14 +12,6 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinExtension;
 import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.SourceSetsModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.file.FileSystemLocation;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.compile.JavaCompile;
-
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -28,12 +20,19 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.gradle.api.Project;
+import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.file.FileSystemLocation;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.compile.JavaCompile;
 
 /**
  * Utility class for android related operations.

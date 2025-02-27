@@ -5,7 +5,6 @@ package com.microsoft.java.bs.core.internal.reporter;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import org.gradle.tooling.events.ProgressEvent;
 import org.gradle.tooling.events.ProgressListener;
 import org.gradle.tooling.events.test.JvmTestOperationDescriptor;
