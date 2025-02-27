@@ -226,9 +226,16 @@ public class BloopExporter {
         .map(File::toString)
         .collect(Collectors.toSet());
     BloopScala scala;
+    JavaExtension javaExt = SupportedLanguages.JAVA.getExtension(sourceSet);
     ScalaExtension scalaExt = SupportedLanguages.SCALA.getExtension(sourceSet);
     if (scalaExt != null) {
-      BloopScalaSetup setup = new BloopScalaSetup("mixed", true, false, false, true, true);
+      final String order;
+      if (javaExt != null && !javaExt.getSourceDirs().isEmpty()) {
+        order = "java->scala";
+      } else {
+        order = "mixed";
+      }
+      BloopScalaSetup setup = new BloopScalaSetup(order, true, false, false, true, true);
       List<String> jars = scalaExt.getScalaJars().stream()
           .map(File::toString)
           .collect(Collectors.toList());
@@ -239,7 +246,6 @@ public class BloopExporter {
     }
     BloopJava java;
     BloopPlatform platform;
-    JavaExtension javaExt = SupportedLanguages.JAVA.getExtension(sourceSet);
     if (javaExt != null) {
       java = new BloopJava(javaExt.getCompilerArgs());
       BloopPlatformConfig config = new BloopPlatformConfig(toString(javaExt.getJavaHome()),
