@@ -4,7 +4,7 @@ plugins {
   id("java-gradle-plugin")
   id("java")
   // publishing to Central Portal
-  id("com.vanniktech.maven.publish") version ("0.30.0")
+  alias (libs.plugins.vanniktechPublish)
 }
 
 /*
@@ -26,6 +26,12 @@ gradlePlugin {
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(8)
+  }
+}
+
+tasks.withType<Checkstyle>().configureEach {
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(17)
   }
 }
 
@@ -100,7 +106,6 @@ dependencies {
   // Java toolchain must be switched to JDK 17 for this to compile
   // compileOnly("com.android.application:com.android.application.gradle.plugin:8.5.1")
   // compileOnly("com.android.library:com.android.library.gradle.plugin:8.5.1")
-  testImplementation(platform("org.junit:junit-bom:5.12.0"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  testImplementation(libs.junit)
+  testRuntimeOnly(libs.junitLauncher)
 }

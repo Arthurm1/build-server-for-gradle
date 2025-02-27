@@ -1,0 +1,33 @@
+[versions]
+dependencyUpdates = "0.52.0"
+vanniktechPublish = "0.30.0"
+buildConfig = "5.5.1"
+commonsLang = "3.17.0"
+gradleTooling = "8.13"
+bsp = "2.2.0-M2"
+# tied to the bsp gson version
+gson = "2.10.1"
+junit = "5.12.0"
+mokito = "5.15.2"
+
+[libraries]
+bsp = { module = "ch.epfl.scala:bsp4j", version.ref = "bsp" }
+commonsLang = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang" }
+gradleTooling = { module = "org.gradle:gradle-tooling-api", version.ref = "gradleTooling" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+mokitoCore = { module = "org.mockito:mockito-core", version.ref = "mokito" }
+mokitoJunit = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mokito" }
+
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junitLauncher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[bundles]
+mokito = ["mokitoCore", "mokitoJunit"]
+
+[plugins]
+# check for library updates
+dependencyUpdates = { id = "com.github.ben-manes.versions", version.ref = "dependencyUpdates" }
+# publish to Maven
+vanniktechPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }
+# build config source generation
+buildConfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildConfig" }

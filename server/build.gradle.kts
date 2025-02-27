@@ -3,16 +3,16 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 plugins {
   id("application")
   // source generation - to put build info in the app
-  id("com.github.gmazzo.buildconfig") version "5.5.1"
+  alias (libs.plugins.buildConfig)
   // publishing to Central Portal
-  id("com.vanniktech.maven.publish") version ("0.30.0")
+  alias (libs.plugins.vanniktechPublish)
 }
 
 buildConfig {
   packageName("com.microsoft.java.bs.core")
   className("BuildInfo")
   useJavaOutput()
-  buildConfigField("bspVersion", project.findProperty("bspVersion") as String)
+  buildConfigField("bspVersion", libs.versions.bsp)
   buildConfigField("serverName", "gradle-build-server")
   buildConfigField("groupId", project.findProperty("GROUP") as String)
   buildConfigField("pluginArtifactId", "plugin")
@@ -47,21 +47,19 @@ tasks.named<Test>("test") {
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(17)
   }
+  // server tests use the plugin in Maven Local so plugin and model must be published first
   dependsOn(":model:publishToMavenLocal")
   dependsOn(":plugin:publishToMavenLocal")
-  dependsOn("publishToMavenLocal")
 }
 
 dependencies {
   implementation(project(":model"))
-  implementation("ch.epfl.scala:bsp4j:${project.findProperty("bspVersion") as String}")
-  implementation("org.apache.commons:commons-lang3:3.17.0")
-  implementation("org.gradle:gradle-tooling-api:8.13")
-  implementation("com.google.code.gson:gson:2.10.1")
+  implementation(libs.bsp)
+  implementation(libs.commonsLang)
+  implementation(libs.gradleTooling)
+  implementation(libs.gson)
 
-  testImplementation(platform("org.junit:junit-bom:5.12.0"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testImplementation("org.mockito:mockito-core:5.15.2")
-  testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  testImplementation(libs.bundles.mokito)
+  testImplementation(libs.junit)
+  testRuntimeOnly(libs.junitLauncher)
 }

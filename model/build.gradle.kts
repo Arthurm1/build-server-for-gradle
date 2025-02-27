@@ -1,7 +1,7 @@
 plugins {
   id("java-library")
   // publishing to Central Portal
-  id("com.vanniktech.maven.publish") version ("0.30.0")
+  alias (libs.plugins.vanniktechPublish)
 }
 
 java {
@@ -10,10 +10,16 @@ java {
   }
 }
 
+tasks.withType<Checkstyle>().configureEach {
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+
 tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs.add("-Xlint:all")
 }
 
 dependencies {
-  implementation("org.gradle:gradle-tooling-api:8.13")
+  implementation(libs.gradleTooling)
 }
