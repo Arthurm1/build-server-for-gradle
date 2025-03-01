@@ -343,4 +343,21 @@ public class Preferences {
   public void setSemanticdbVersion(String semanticdbVersion) {
     this.semanticdbVersion = semanticdbVersion;
   }
+
+  @Override
+  public String toString() {
+    return "Preferences: gradleJavaHome:" + gradleJavaHome
+        + "isWrapperEnabled: " + isWrapperEnabled
+        + "gradleVersion: " + gradleVersion
+        + "gradleHome: " + gradleHome
+        + "gradleUserHome: " + gradleUserHome
+        + "gradleArguments: " + gradleArguments
+        + "gradleJvmArguments: " + gradleJvmArguments
+        + "useQualifiedOutputPaths: " + useQualifiedOutputPaths
+        + "includeTargetBaseDirectory: " + includeTargetBaseDirectory
+        + "displayNaming: " + displayNaming
+        + "jdks: " + jdks
+        + "javaSemanticdbVersion: " + javaSemanticdbVersion
+        + "semanticdbVersion: " + semanticdbVersion;
+  }
 }

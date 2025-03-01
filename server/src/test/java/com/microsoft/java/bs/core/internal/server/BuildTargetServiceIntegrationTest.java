@@ -3,6 +3,7 @@ package com.microsoft.java.bs.core.internal.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.epfl.scala.bsp4j.BuildTarget;
@@ -66,6 +67,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
+/**
+ * BSP Server integrations tests.
+ * For tests to run, the project must be first published locally using `gradlew publishToMavenLocal`
+ */
 class BuildTargetServiceIntegrationTest extends IntegrationTest {
 
   private CompileReport findCompileReport(TestClient client, BuildTargetIdentifier btId) {
@@ -415,6 +420,70 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
     });
 
     assertFalse(testItem.getClasspath().isEmpty());
+  }
+
+  @Test
+  void testFailingCompilation() {
+    withNewTestServer("fail-compilation", (gradleBuildServer, client) -> {
+      // get targets
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+          .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+          .map(BuildTarget::getId)
+          .collect(Collectors.toList());
+      assertEquals(2, btIds.size());
+      client.waitOnStartReports(1);
+      client.waitOnFinishReports(1);
+      client.waitOnCompileTasks(0);
+      client.waitOnCompileReports(0);
+      client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      client.clearMessages();
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      CleanCacheResult cleanResult = gradleBuildServer
+          .buildTargetCleanCache(cleanCacheParams).join();
+      assertTrue(cleanResult.getCleaned());
+      client.waitOnStartReports(1);
+      client.waitOnFinishReports(1);
+      client.waitOnCompileTasks(0);
+      client.waitOnCompileReports(0);
+      client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      client.clearMessages();
+
+      // compile targets
+      CompileParams compileParams = new CompileParams(btIds);
+      compileParams.setOriginId("originId");
+      CompileResult compileResult = gradleBuildServer.buildTargetCompile(compileParams).join();
+      assertEquals(StatusCode.ERROR, compileResult.getStatusCode());
+      client.waitOnStartReports(2);
+      client.waitOnFinishReports(2);
+      client.waitOnCompileTasks(2);
+      client.waitOnCompileReports(2);
+      client.waitOnLogMessages(1);
+      client.waitOnDiagnostics(0);
+      assertEquals(1, client.finishReportErrorCount());
+      for (BuildTargetIdentifier btId : btIds) {
+        CompileReport compileReport = findCompileReport(client, btId);
+        assertEquals("originId", compileReport.getOriginId());
+        // TODO compile results are not yet implemented so always zero for now.
+        assertEquals(0, compileReport.getWarnings());
+        assertEquals(0, compileReport.getErrors());
+      }
+      for (LogMessageParams message : client.logMessages) {
+        assertEquals("originId", message.getOriginId());
+        assertEquals(MessageType.ERROR, message.getType());
+      }
+      client.clearMessages();
+    });
   }
 
   @Test
@@ -1336,70 +1405,6 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       assertEquals(StatusCode.OK, runResult.getStatusCode(),
           () -> client.finishReports.stream().map(TaskFinishParams::getMessage)
                     .collect(Collectors.joining("\n")));
-      client.clearMessages();
-    });
-  }
-
-  @Test
-  void testFailingCompilation() {
-    withNewTestServer("fail-compilation", (gradleBuildServer, client) -> {
-      // get targets
-      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
-          .join();
-      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
-          .map(BuildTarget::getId)
-          .collect(Collectors.toList());
-      assertEquals(2, btIds.size());
-      client.waitOnStartReports(1);
-      client.waitOnFinishReports(1);
-      client.waitOnCompileTasks(0);
-      client.waitOnCompileReports(0);
-      client.waitOnLogMessages(0);
-      client.waitOnDiagnostics(0);
-      for (TaskFinishParams message : client.finishReports) {
-        assertEquals(StatusCode.OK, message.getStatus());
-      }
-      client.clearMessages();
-
-      // clean targets
-      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
-      CleanCacheResult cleanResult = gradleBuildServer
-          .buildTargetCleanCache(cleanCacheParams).join();
-      assertTrue(cleanResult.getCleaned());
-      client.waitOnStartReports(1);
-      client.waitOnFinishReports(1);
-      client.waitOnCompileTasks(0);
-      client.waitOnCompileReports(0);
-      client.waitOnLogMessages(0);
-      client.waitOnDiagnostics(0);
-      for (TaskFinishParams message : client.finishReports) {
-        assertEquals(StatusCode.OK, message.getStatus());
-      }
-      client.clearMessages();
-
-      // compile targets
-      CompileParams compileParams = new CompileParams(btIds);
-      compileParams.setOriginId("originId");
-      CompileResult compileResult = gradleBuildServer.buildTargetCompile(compileParams).join();
-      assertEquals(StatusCode.ERROR, compileResult.getStatusCode());
-      client.waitOnStartReports(2);
-      client.waitOnFinishReports(2);
-      client.waitOnCompileTasks(2);
-      client.waitOnCompileReports(2);
-      client.waitOnLogMessages(1);
-      client.waitOnDiagnostics(0);
-      assertEquals(1, client.finishReportErrorCount());
-      for (BuildTargetIdentifier btId : btIds) {
-        CompileReport compileReport = findCompileReport(client, btId);
-        assertEquals("originId", compileReport.getOriginId());
-        // TODO compile results are not yet implemented so always zero for now.
-        assertEquals(0, compileReport.getWarnings());
-        assertEquals(0, compileReport.getErrors());
-      }
-      for (LogMessageParams message : client.logMessages) {
-        assertEquals("originId", message.getOriginId());
-        assertEquals(MessageType.ERROR, message.getType());
-      }
       client.clearMessages();
     });
   }

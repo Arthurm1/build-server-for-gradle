@@ -159,6 +159,7 @@ class BuildTargetManagerTest {
     sourceSet.setResourceDirs(Collections.emptySet());
     sourceSet.setModuleDependencies(Collections.emptySet());
     sourceSet.setBuildTargetDependencies(Collections.emptySet());
+    sourceSet.setTaskNames(Collections.emptySet());
     DefaultJavaExtension javaExtension = getTestJavaExtension();
     Map<String, LanguageExtension> extensions = new HashMap<>();
     extensions.put(SupportedLanguages.JAVA.getBspName(), javaExtension);

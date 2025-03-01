@@ -31,6 +31,7 @@ import ch.epfl.scala.bsp4j.TestReport;
 import ch.epfl.scala.bsp4j.extended.TestFinishEx;
 import ch.epfl.scala.bsp4j.extended.TestStartEx;
 import com.microsoft.java.bs.core.Launcher;
+import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import java.io.IOException;
@@ -257,12 +258,14 @@ abstract class IntegrationTest {
 
   @BeforeAll
   static void beforeClass() {
-    System.setProperty("bsp.plugin.reloadworkspace.disabled", "true");
+    // uncomment this to debug the server using attach to remote
+    // see GradleAPIConnector#getGradleSourceSets for usage.
+    // System.setProperty("bsp.plugin.debug.enabled", "true");
   }
 
   @AfterAll
   static void afterClass() {
-    System.clearProperty("bsp.plugin.reloadworkspace.disabled");
+    System.clearProperty("bsp.plugin.debug.enabled");
   }
 
   protected static Path getTestPath(String projectDir) {
@@ -274,14 +277,24 @@ abstract class IntegrationTest {
   }
 
   protected static InitializeBuildParams getInitializeBuildParams(String projectDir) {
+    return getInitializeBuildParams(projectDir, null);
+  }
+
+  protected static InitializeBuildParams getInitializeBuildParams(String projectDir,
+      Preferences preferences) {
     BuildClientCapabilities capabilities =
         new BuildClientCapabilities(SupportedLanguages.allBspNames);
-    return new InitializeBuildParams(
+    InitializeBuildParams params = new InitializeBuildParams(
         "test-client",
         "0.1.0",
         "0.1.0",
         getTestPath(projectDir).toUri().toString(),
         capabilities);
+    if (preferences != null) {
+      params.setDataKind("IntegTestPreferences");
+      params.setData(preferences);
+    }
+    return params;
   }
 
   protected static Pair<TestClient, TestServer> setupClientServer(
@@ -318,6 +331,14 @@ abstract class IntegrationTest {
       String project,
       BiConsumer<TestServer, TestClient> consumer
   ) {
+    withNewTestServer(project, null, consumer);
+  }
+
+  protected static void withNewTestServer(
+      String project,
+      String version,
+      BiConsumer<TestServer, TestClient> consumer
+  ) {
     ExecutorService threadPool = Executors.newCachedThreadPool();
     try (PipedInputStream clientIn = new PipedInputStream();
          PipedOutputStream clientOut = new PipedOutputStream();
@@ -333,7 +354,14 @@ abstract class IntegrationTest {
       TestClient client = pair.getLeft();
       TestServer testServer = pair.getRight();
       try {
-        InitializeBuildParams params = getInitializeBuildParams(project);
+        Preferences preferences;
+        if (version != null) {
+          preferences = new Preferences();
+          preferences.setGradleVersion(version);
+        } else {
+          preferences = null;
+        }
+        InitializeBuildParams params = getInitializeBuildParams(project, preferences);
         InitializeBuildResult result = testServer.buildInitialize(params).join();
         BuildServerCapabilities capabilities = result.getCapabilities();
         assertFalse(capabilities.getCompileProvider().getLanguageIds().isEmpty());

@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.gradle.tooling.model.build.BuildEnvironment;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -58,6 +59,16 @@ class GradleApiConnectorTest {
         "..",
         "testProjects"
     ).normalize();
+    // uncomment this to debug the server using attach to remote
+    // see GradleAPIConnector#getGradleSourceSets for usage.
+    // System.setProperty("bsp.plugin.debug.enabled", "true");
+    System.setProperty("bsp.plugin.reloadworkspace.disabled", "true");
+  }
+
+  @AfterAll
+  static void afterClass() {
+    System.clearProperty("bsp.plugin.debug.enabled");
+    System.clearProperty("bsp.plugin.reloadworkspace.disabled");
   }
 
   private <A> A withConnector(Function<GradleApiConnector, A> function) {
@@ -81,8 +92,12 @@ class GradleApiConnectorTest {
   }
   
   private GradleSourceSets getGradleSourceSets(Path projectDir) {
-    return withConnector(connector -> connector.getGradleSourceSets(projectDir.toUri(),
-        null, null));
+    return withConnector(connector -> getGradleSourceSets(connector, projectDir));
+  }
+
+  private GradleSourceSets getGradleSourceSets(GradleApiConnector connector,
+      Path projectDir) {
+    return connector.getGradleSourceSets(projectDir.toUri(), null, null);
   }
 
   private static class ConsoleBuildClient implements BuildClient {
@@ -449,8 +464,7 @@ class GradleApiConnectorTest {
   void testBuildTargetTest() {
     Path projectDir = projectPath.resolve("java-tests");
     withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toUri(),
-          null, null);
+      GradleSourceSets gradleSourceSets = getGradleSourceSets(connector, projectDir);
       GradleSourceSet sourceSet = gradleSourceSets.getGradleSourceSets().get(0);
       String gradleVersion = sourceSet.getGradleVersion();
 
@@ -537,8 +551,7 @@ class GradleApiConnectorTest {
   void testGetJvmTestEnvironment() {
     Path projectDir = projectPath.resolve("junit5-jupiter-starter-gradle");
     withConnector(connector -> {
-      GradleSourceSets gradleSourceSets = connector.getGradleSourceSets(projectDir.toUri(),
-          getConsoleClient(), null);
+      GradleSourceSets gradleSourceSets = getGradleSourceSets(connector, projectDir);
 
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
       String gradleVersion = null;
@@ -549,8 +562,7 @@ class GradleApiConnectorTest {
       }
       Map<BuildTargetIdentifier, List<GradleTestEntity>> tests = connector.getTestClasses(
           projectDir.toUri(), testTaskMap, getConsoleClient(), null, null, gradleVersion);
-      assertHasTestClass(tests, "Fake",
-          "com.example.project.CalculatorTests");
+      assertHasTestClass(tests, "Fake", "com.example.project.CalculatorTests");
       return null;
     });
   }
