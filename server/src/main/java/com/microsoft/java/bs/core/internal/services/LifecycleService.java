@@ -113,7 +113,8 @@ public class LifecycleService {
     // setup defaults if the BSP client hasn't specified these values
     // use wrapper as default unless client has specified otherwise
     if (preferences.isWrapperEnabled() == null) {
-      preferences.setWrapperEnabled(true);
+      preferences.setWrapperEnabled(preferences.getGradleHome() == null
+          && preferences.getGradleVersion() == null);
     }
     if (params.getDisplayName().equals("IntelliJ-BSP")) {
       // turn off qualified output paths.  Intellij can't handle Uri with query section
