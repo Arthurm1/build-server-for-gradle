@@ -4,6 +4,7 @@ vanniktechPublish = "0.30.0"
 buildConfig = "5.5.1"
 commonsLang = "3.17.0"
 gradleTooling = "8.13"
+slf4j = "2.0.17"
 bsp = "2.2.0-M2"
 # tied to the bsp gson version
 gson = "2.10.1"
@@ -14,6 +15,7 @@ mokito = "5.15.2"
 bsp = { module = "ch.epfl.scala:bsp4j", version.ref = "bsp" }
 commonsLang = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang" }
 gradleTooling = { module = "org.gradle:gradle-tooling-api", version.ref = "gradleTooling" }
+slf4j = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 mokitoCore = { module = "org.mockito:mockito-core", version.ref = "mokito" }
 mokitoJunit = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mokito" }

@@ -58,6 +58,8 @@ dependencies {
   implementation(libs.commonsLang)
   implementation(libs.gradleTooling)
   implementation(libs.gson)
+  // The tooling API need an SLF4J implementation available at runtime
+  runtimeOnly(libs.slf4j)
 
   testImplementation(libs.bundles.mokito)
   testImplementation(libs.junit)

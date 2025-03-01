@@ -22,4 +22,6 @@ tasks.withType<JavaCompile>().configureEach {
 
 dependencies {
   implementation(libs.gradleTooling)
+  // The tooling API need an SLF4J implementation available at runtime
+  runtimeOnly(libs.slf4j)
 }
