@@ -62,13 +62,11 @@ class GradleApiConnectorTest {
     // uncomment this to debug the server using attach to remote
     // see GradleAPIConnector#getGradleSourceSets for usage.
     // System.setProperty("bsp.plugin.debug.enabled", "true");
-    System.setProperty("bsp.plugin.reloadworkspace.disabled", "true");
   }
 
   @AfterAll
   static void afterClass() {
     System.clearProperty("bsp.plugin.debug.enabled");
-    System.clearProperty("bsp.plugin.reloadworkspace.disabled");
   }
 
   private <A> A withConnector(Function<GradleApiConnector, A> function) {
@@ -82,6 +80,7 @@ class GradleApiConnectorTest {
     preferences.setWrapperEnabled(true);
     preferences.setUseQualifiedOutputPaths(true);
     preferences.setIncludeTargetBaseDirectory(true);
+    preferences.setAutoReloadWorkspace(false);
     preferences.setDisplayNaming(Preferences.BRACKET_DISPLAY_NAMING);
     GradleApiConnector connector = new GradleApiConnector(preferenceManager);
     try {

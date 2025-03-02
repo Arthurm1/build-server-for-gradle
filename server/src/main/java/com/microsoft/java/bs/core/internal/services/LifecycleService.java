@@ -142,6 +142,17 @@ public class LifecycleService {
         preferences.setDisplayNaming(Preferences.BRACKET_DISPLAY_NAMING);
       }
     }
+    if (preferences.getAutoReloadWorkspace() == null) {
+      boolean autoReload;
+      if (System.getProperty("bsp.plugin.reloadworkspace.disabled") != null) {
+        autoReload = !Boolean.getBoolean("bsp.plugin.reloadworkspace.disabled");
+      } else if (params.getDisplayName().equals("jdtls")) {
+        autoReload = true;
+      } else {
+        autoReload = false;
+      }
+      preferences.setAutoReloadWorkspace(autoReload);
+    }
 
     preferenceManager.setPreferences(preferences);
 

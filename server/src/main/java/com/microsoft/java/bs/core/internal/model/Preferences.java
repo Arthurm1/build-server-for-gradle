@@ -96,6 +96,12 @@ public class Preferences {
   private String semanticdbVersion;
 
   /**
+   * periodically reload the cached sourcesets.
+   */
+  // TODO deprecate auto reload
+  private Boolean autoReloadWorkspace;
+
+  /**
    * Initialize the preferences.
    */
   public Preferences() {
@@ -344,20 +350,39 @@ public class Preferences {
     this.semanticdbVersion = semanticdbVersion;
   }
 
+  /**
+   * get whether the cached sourcesets are periodically reloaded.
+   *
+   * @return flag indicating whether to periodically reload
+   */
+  public Boolean getAutoReloadWorkspace() {
+    return autoReloadWorkspace;
+  }
+
+  /**
+   * set whether the cached sourcesets are periodically reloaded.
+   *
+   * @param autoReloadWorkspace flag indicating whether to periodically reload
+   */
+  public void setAutoReloadWorkspace(Boolean autoReloadWorkspace) {
+    this.autoReloadWorkspace = autoReloadWorkspace;
+  }
+
   @Override
   public String toString() {
     return "Preferences: gradleJavaHome:" + gradleJavaHome
-        + "isWrapperEnabled: " + isWrapperEnabled
-        + "gradleVersion: " + gradleVersion
-        + "gradleHome: " + gradleHome
-        + "gradleUserHome: " + gradleUserHome
-        + "gradleArguments: " + gradleArguments
-        + "gradleJvmArguments: " + gradleJvmArguments
-        + "useQualifiedOutputPaths: " + useQualifiedOutputPaths
-        + "includeTargetBaseDirectory: " + includeTargetBaseDirectory
-        + "displayNaming: " + displayNaming
-        + "jdks: " + jdks
-        + "javaSemanticdbVersion: " + javaSemanticdbVersion
-        + "semanticdbVersion: " + semanticdbVersion;
+        + " isWrapperEnabled: " + isWrapperEnabled
+        + " gradleVersion: " + gradleVersion
+        + " gradleHome: " + gradleHome
+        + " gradleUserHome: " + gradleUserHome
+        + " gradleArguments: " + gradleArguments
+        + " gradleJvmArguments: " + gradleJvmArguments
+        + " useQualifiedOutputPaths: " + useQualifiedOutputPaths
+        + " includeTargetBaseDirectory: " + includeTargetBaseDirectory
+        + " displayNaming: " + displayNaming
+        + " jdks: " + jdks
+        + " javaSemanticdbVersion: " + javaSemanticdbVersion
+        + " semanticdbVersion: " + semanticdbVersion
+        + " autoReloadWorkspace: " + autoReloadWorkspace;
   }
 }

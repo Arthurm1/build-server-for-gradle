@@ -358,6 +358,7 @@ abstract class IntegrationTest {
         if (version != null) {
           preferences = new Preferences();
           preferences.setGradleVersion(version);
+          preferences.setAutoReloadWorkspace(false);
         } else {
           preferences = null;
         }

@@ -494,7 +494,7 @@ public class BuildTargetService {
       // is left in the ether.
       // It could be shifted into the `GradleBuildServer#buildTargetCompile` and chained onto that
       // result but that would delay the CompileResult
-      if (!Boolean.getBoolean("bsp.plugin.reloadworkspace.disabled")) {
+      if (preferenceManager.getPreferences().getAutoReloadWorkspace()) {
         CompletableFuture.runAsync(() -> reloadWorkspace(null));
       }
       return result;
