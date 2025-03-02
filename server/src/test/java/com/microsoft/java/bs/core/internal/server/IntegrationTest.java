@@ -282,8 +282,8 @@ abstract class IntegrationTest {
 
   protected static InitializeBuildParams getInitializeBuildParams(String projectDir,
       Preferences preferences) {
-    BuildClientCapabilities capabilities =
-        new BuildClientCapabilities(SupportedLanguages.allBspNames);
+    List<String> languages = new ArrayList<>(SupportedLanguages.allBspNames);
+    BuildClientCapabilities capabilities = new BuildClientCapabilities(languages);
     InitializeBuildParams params = new InitializeBuildParams(
         "test-client",
         "0.1.0",

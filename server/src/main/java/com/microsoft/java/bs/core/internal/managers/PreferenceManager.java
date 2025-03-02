@@ -5,8 +5,8 @@ package com.microsoft.java.bs.core.internal.managers;
 
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import java.net.URI;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Manage the preferences of the build server.
@@ -19,13 +19,13 @@ public class PreferenceManager {
   */
   private URI rootUri;
 
-  private List<String> clientSupportedLanguages;
+  private Set<String> clientSupportedLanguages;
 
   /**
    * constructor.
    */
   public PreferenceManager() {
-    this.clientSupportedLanguages = new LinkedList<>();
+    this.clientSupportedLanguages = new HashSet<>();
   }
 
   /**
@@ -69,7 +69,7 @@ public class PreferenceManager {
    *
    * @return supported languages
    */
-  public List<String> getClientSupportedLanguages() {
+  public Set<String> getClientSupportedLanguages() {
     return clientSupportedLanguages;
   }
 
@@ -78,7 +78,7 @@ public class PreferenceManager {
    *
    * @param clientSupportedLanguages supported languages
    */
-  public void setClientSupportedLanguages(List<String> clientSupportedLanguages) {
+  public void setClientSupportedLanguages(Set<String> clientSupportedLanguages) {
     this.clientSupportedLanguages = clientSupportedLanguages;
   }
 }

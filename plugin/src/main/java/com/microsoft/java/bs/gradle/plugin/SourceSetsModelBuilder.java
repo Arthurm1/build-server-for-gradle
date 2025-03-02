@@ -9,19 +9,20 @@ import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
 import com.microsoft.java.bs.gradle.model.GradleTestTask;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleRunTask;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import com.microsoft.java.bs.gradle.plugin.utils.AndroidUtils;
-import com.microsoft.java.bs.gradle.plugin.utils.SourceSetUtils;
 import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -58,13 +59,16 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   @SuppressWarnings("NullableProblems")
   @Override
   public Object buildAll(String modelName, Project project) {
+
+    Set<String> supportedLanguages = getSupportedLanguages(project);
     // mapping Gradle source set to our customized model.
     List<GradleSourceSet> sourceSets = new ArrayList<>();
 
     // Fetch source sets depending on the project type
-    sourceSets.addAll(AndroidUtils.getBuildVariantsAsGradleSourceSets(project));
+    sourceSets.addAll(AndroidUtils.getBuildVariantsAsGradleSourceSets(project,
+        supportedLanguages));
     sourceSets.addAll(getSourceSetContainer(project).stream()
-        .map(ss -> getSourceSet(project, ss))
+        .map(ss -> getSourceSet(project, ss, supportedLanguages))
         .collect(Collectors.toList()));
 
     excludeSourceDirsFromModules(sourceSets);
@@ -72,7 +76,20 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     return new DefaultGradleSourceSets(sourceSets);
   }
 
-  private DefaultGradleSourceSet getSourceSet(Project project, SourceSet sourceSet) {
+  private Set<String> getSupportedLanguages(Project project) {
+    GradleBuildServerPluginExtension extension = project.getExtensions()
+        .findByType(GradleBuildServerPluginExtension.class);
+
+    if (extension == null || extension.getLanguages() == null) {
+      return SupportedLanguages.allBspNames;
+    }
+
+    String[] arr = extension.getLanguages().split(",");
+    return Arrays.stream(arr).collect(Collectors.toSet());
+  }
+
+  private DefaultGradleSourceSet getSourceSet(Project project, SourceSet sourceSet,
+      Set<String> supportedLanguages) {
     DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
     // dependencies are populated by the GradleSourceSetsAction.  Make sure not null.
     gradleSourceSet.setBuildTargetDependencies(new HashSet<>());
@@ -83,10 +100,9 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     gradleSourceSet.setProjectDir(project.getProjectDir());
     gradleSourceSet.setRootDir(project.getRootDir());
     gradleSourceSet.setSourceSetName(sourceSet.getName());
-    String classesTaskName =
-        SourceSetUtils.getFullTaskName(projectPath, sourceSet.getClassesTaskName());
+    String classesTaskName = Utils.getFullTaskName(projectPath, sourceSet.getClassesTaskName());
     gradleSourceSet.setClassesTaskName(classesTaskName);
-    String cleanTaskName = SourceSetUtils.getFullTaskName(projectPath, "clean");
+    String cleanTaskName = Utils.getFullTaskName(projectPath, "clean");
     gradleSourceSet.setCleanTaskName(cleanTaskName);
     Set<String> taskNames = new HashSet<>();
     gradleSourceSet.setTaskNames(taskNames);
@@ -100,12 +116,12 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
     Set<File> generatedSrcDirs = new HashSet<>();
     Set<File> sourceOutputDirs = new HashSet<>();
     for (LanguageModelBuilder languageModelBuilder
-        : SourceSetUtils.getSupportedLanguageModelBuilders()) {
+        : LanguageModelBuilder.getSupportedLanguageModelBuilders(supportedLanguages)) {
       LanguageExtension extension = languageModelBuilder.getExtensionFor(project, sourceSet,
           gradleSourceSet.getModuleDependencies());
       if (extension != null) {
-        String compileTaskName =
-            SourceSetUtils.getFullTaskName(projectPath, extension.getCompileTaskName());
+        String compileTaskName = Utils.getFullTaskName(projectPath,
+            extension.getCompileTaskName());
         taskNames.add(compileTaskName);
 
         srcDirs.addAll(extension.getSourceDirs());

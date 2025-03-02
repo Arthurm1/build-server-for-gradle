@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.gradle.plugin;
 
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,6 +41,7 @@ public class PluginHelper {
 
     String pluginPath = pluginClassesPath.toString().replace("\\", "/");
     String modelPath = modelClassesPath.toString().replace("\\", "/");
+    String languages = String.join(",", SupportedLanguages.allBspNames);
 
     String initScript = "initscript {\n"
         + "  dependencies {\n"
@@ -48,10 +50,14 @@ public class PluginHelper {
         + "}\n"
         + "allprojects {\n"
         + "  apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin\n"
+        + "  GradleBuildServerPlugin {\n"
+        + "    languages =\"$supportedLanguages\"\n"
+        + "  }\n"
         + "}\n";
     return initScript
         .replace("$pluginPath", pluginPath)
-        .replace("$modelPath", modelPath);
+        .replace("$modelPath", modelPath)
+        .replace("$supportedLanguages", languages);
   }
 
   /**

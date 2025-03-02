@@ -6,7 +6,11 @@ package com.microsoft.java.bs.gradle.plugin;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.LanguageExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguage;
+import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.plugin.utils.Utils;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -34,5 +38,27 @@ public abstract class LanguageModelBuilder {
     } catch (UnknownTaskException e) {
       return null;
     }
+  }
+
+  /**
+   * Returns a list of LanguageModelBuilder for the supported languages.
+   */
+  public static List<LanguageModelBuilder> getSupportedLanguageModelBuilders(
+      Collection<String> languages) {
+    List<LanguageModelBuilder> results = new LinkedList<>();
+    for (String language : languages) {
+      if (language.equalsIgnoreCase(SupportedLanguages.JAVA.getBspName())) {
+        results.add(new JavaLanguageModelBuilder());
+      } else if (language.equalsIgnoreCase(SupportedLanguages.SCALA.getBspName())) {
+        results.add(new ScalaLanguageModelBuilder());
+      } else if (language.equalsIgnoreCase(SupportedLanguages.GROOVY.getBspName())) {
+        results.add(new GroovyLanguageModelBuilder());
+      } else if (language.equalsIgnoreCase(SupportedLanguages.KOTLIN.getBspName())) {
+        results.add(new KotlinLanguageModelBuilder());
+      } else if (language.equalsIgnoreCase(SupportedLanguages.ANTLR.getBspName())) {
+        results.add(new AntlrLanguageModelBuilder());
+      }
+    }
+    return results;
   }
 }

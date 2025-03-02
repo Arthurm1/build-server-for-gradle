@@ -10,6 +10,7 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinLanguage;
 import com.microsoft.java.bs.gradle.model.impl.DefaultScalaLanguage;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -22,7 +23,7 @@ public class SupportedLanguages {
   public static final DefaultGroovyLanguage GROOVY = new DefaultGroovyLanguage();
   public static final DefaultKotlinLanguage KOTLIN = new DefaultKotlinLanguage();
 
-  public static final List<String> allBspNames;
+  public static final Set<String> allBspNames;
 
   static {
     List<SupportedLanguage<? extends LanguageExtension>> all = new LinkedList<>();
@@ -31,6 +32,6 @@ public class SupportedLanguages {
     all.add(SCALA);
     all.add(GROOVY);
     all.add(KOTLIN);
-    allBspNames = all.stream().map(SupportedLanguage::getBspName).collect(Collectors.toList());
+    allBspNames = all.stream().map(SupportedLanguage::getBspName).collect(Collectors.toSet());
   }
 }

@@ -15,7 +15,6 @@ import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,7 +48,8 @@ public class AndroidUtils {
    *
    * @param project Gradle project for extracting the build variants
    */
-  public static List<GradleSourceSet> getBuildVariantsAsGradleSourceSets(Project project) {
+  public static List<GradleSourceSet> getBuildVariantsAsGradleSourceSets(Project project,
+      Set<String> supportedLanguages) {
 
     Object androidExtension = getAndroidExtension(project);
     if (androidExtension == null) {
@@ -62,7 +62,7 @@ public class AndroidUtils {
             "getTestVariants",
             "getUnitTestVariants")
         .flatMap(name -> getVariant(androidExtension, name).stream())
-        .map(variant -> convertVariantToGradleSourceSet(project, variant))
+        .map(variant -> convertVariantToGradleSourceSet(project, variant, supportedLanguages))
         .collect(Collectors.toList());
   }
 
@@ -88,9 +88,7 @@ public class AndroidUtils {
    * @param variant Android Build Variant object to populate GradleSourceSet properties
    */
   private static GradleSourceSet convertVariantToGradleSourceSet(
-      Project project,
-      Object variant
-  ) {
+      Project project, Object variant, Set<String> supportedLanguages) {
 
     DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
     gradleSourceSet.setBuildTargetDependencies(new HashSet<>());
@@ -109,25 +107,25 @@ public class AndroidUtils {
     // classes task equivalent in android (assembleRelease)
     Provider<Task> assembleTask = Utils.invokeMethod(variant, "getAssembleProvider");
     gradleSourceSet.setClassesTaskName(
-        SourceSetUtils.getFullTaskName(projectPath, assembleTask.get().getName())
+        Utils.getFullTaskName(projectPath, assembleTask.get().getName())
     );
 
-    gradleSourceSet.setCleanTaskName(SourceSetUtils.getFullTaskName(projectPath, "clean"));
+    gradleSourceSet.setCleanTaskName(Utils.getFullTaskName(projectPath, "clean"));
 
     // compile task in android (compileReleaseJavaWithJavac)
     HashSet<String> tasks = new HashSet<>();
     Provider<JavaCompile> javaCompileProvider =
         Utils.invokeMethod(variant, "getJavaCompileProvider");
     JavaCompile javaCompile = javaCompileProvider.get();
-    tasks.add(SourceSetUtils.getFullTaskName(projectPath, javaCompile.getName()));
+    tasks.add(Utils.getFullTaskName(projectPath, javaCompile.getName()));
     gradleSourceSet.setTaskNames(tasks);
 
     // extensions
     Map<String, LanguageExtension> extensions = new HashMap<>();
     Set<File> javaSourceDirs = getDirs(variant, "getJavaDirectories");
-    addJavaExtension(extensions, project, javaCompile, javaSourceDirs);
+    addJavaExtension(extensions, project, javaCompile, javaSourceDirs, supportedLanguages);
     Set<File> kotlinSourceDirs = getDirs(variant, "getKotlinDirectories");
-    addKotlinExtension(extensions, kotlinSourceDirs);
+    addKotlinExtension(extensions, kotlinSourceDirs, supportedLanguages);
     gradleSourceSet.setExtensions(extensions);
 
     // compile and runtime configurations
@@ -361,15 +359,11 @@ public class AndroidUtils {
    * @param javaSourceDirs source dirs for java compilation
    */
   private static void addJavaExtension(
-      Map<String, LanguageExtension> extensions,
-      Project project,
-      JavaCompile javaCompile,
-      Set<File> javaSourceDirs
-  ) {
-    Set<String> languages = Arrays.stream(SourceSetUtils.getSupportedLanguages())
-        .collect(Collectors.toSet());
+      Map<String, LanguageExtension> extensions, Project project,
+      JavaCompile javaCompile, Set<File> javaSourceDirs,
+      Set<String> supportedLanguages) {
 
-    if (languages.contains(SupportedLanguages.JAVA.getBspName())) {
+    if (supportedLanguages.contains(SupportedLanguages.JAVA.getBspName())) {
       JavaLanguageModelBuilder builder = new JavaLanguageModelBuilder();
       LanguageExtension extension = builder.getExtension(project, javaCompile, javaSourceDirs);
       extensions.put(SupportedLanguages.JAVA.getBspName(), extension);
@@ -383,13 +377,10 @@ public class AndroidUtils {
    * @param kotlinSourceDirs source dirs for kotlin compilation
    */
   private static void addKotlinExtension(
-      Map<String, LanguageExtension> extensions,
-      Set<File> kotlinSourceDirs
-  ) {
-    Set<String> languages = Arrays.stream(SourceSetUtils.getSupportedLanguages())
-        .collect(Collectors.toSet());
+      Map<String, LanguageExtension> extensions, Set<File> kotlinSourceDirs,
+      Set<String> supportedLanguages) {
 
-    if (languages.contains(SupportedLanguages.KOTLIN.getBspName())) {
+    if (supportedLanguages.contains(SupportedLanguages.KOTLIN.getBspName())) {
       // TODO flesh this out once we know how to extract kotlin setup.
       DefaultKotlinExtension extension = new DefaultKotlinExtension();
       extension.setSourceDirs(kotlinSourceDirs);

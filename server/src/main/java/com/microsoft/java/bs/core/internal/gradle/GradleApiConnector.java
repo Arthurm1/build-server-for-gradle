@@ -152,7 +152,8 @@ public class GradleApiConnector {
       File workspaceDir = new File(projectUri);
       String pluginInitScript = Utils.createPluginScript(workspaceDir,
           preferenceManager.getPreferences().getJavaSemanticdbVersion(),
-          preferenceManager.getPreferences().getScalaSemanticdbVersion());
+          preferenceManager.getPreferences().getScalaSemanticdbVersion(),
+          preferenceManager.getClientSupportedLanguages());
       File initScript = Utils.createInitScriptFile("sourcesets", pluginInitScript);
       try {
         BuildActionExecuter<GradleSourceSets> buildExecutor =
@@ -168,8 +169,6 @@ public class GradleApiConnector {
         if (initScript != null) {
           buildExecutor.addArguments("--init-script", initScript.getAbsolutePath());
         }
-        buildExecutor.addJvmArguments("-Dbsp.gradle.supportedLanguages="
-            + String.join(",", preferenceManager.getClientSupportedLanguages()));
         // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
         // via a copy constructor and return as a POJO.
         return new DefaultGradleSourceSets(buildExecutor.run());

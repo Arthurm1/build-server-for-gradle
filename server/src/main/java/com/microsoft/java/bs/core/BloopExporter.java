@@ -366,14 +366,15 @@ public class BloopExporter {
       GetSourceSetsAction getSourceSetsAction = new GetSourceSetsAction();
       BuildActionExecuter<GradleSourceSets> buildExecutor =
           connection.action(getSourceSetsAction);
-      String initScriptContents = Utils.createPluginScript(null, null, null);
+      Set<String> languages = Set.of(SupportedLanguages.JAVA.getBspName(),
+          SupportedLanguages.SCALA.getBspName());
+      String initScriptContents = Utils.createPluginScript(null, null, null, languages);
       File initScript = Utils.createInitScriptFile("bloopExport", initScriptContents);
       try {
         return buildExecutor
                 .setStandardError(System.err)
                 .setStandardOutput(System.out)
                 .addArguments("--init-script", initScript.getAbsolutePath())
-                .addJvmArguments("-Dbsp.gradle.supportedLanguages=java,scala")
                 .run()
                 .getGradleSourceSets();
       } finally {

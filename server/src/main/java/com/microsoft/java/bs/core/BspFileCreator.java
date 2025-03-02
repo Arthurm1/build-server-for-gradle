@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,7 +41,7 @@ public class BspFileCreator {
     String name = BuildInfo.serverName;
     String version = BuildInfo.version;
     String bspVersion = BuildInfo.bspVersion;
-    List<String> languages = SupportedLanguages.allBspNames;
+    List<String> languages = new ArrayList<>(SupportedLanguages.allBspNames);
     String javaHome = System.getProperty("java.home");
     Path javaExe = Path.of(javaHome, "bin", Utils.getJavaExeName());
     String classpath = System.getProperty("java.class.path");

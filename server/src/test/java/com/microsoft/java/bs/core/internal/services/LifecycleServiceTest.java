@@ -18,15 +18,17 @@ import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class LifecycleServiceTest {
 
   private InitializeBuildParams getBuildParams() {
-    BuildClientCapabilities capabilities =
-            new BuildClientCapabilities(SupportedLanguages.allBspNames);
+    List<String> languages = new ArrayList<>(SupportedLanguages.allBspNames);
+    BuildClientCapabilities capabilities = new BuildClientCapabilities(languages);
     return new InitializeBuildParams(
             "test-client",
             "0.1.0",

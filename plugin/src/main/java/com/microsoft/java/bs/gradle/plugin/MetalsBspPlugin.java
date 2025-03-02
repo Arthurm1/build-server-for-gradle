@@ -23,9 +23,9 @@ public class MetalsBspPlugin implements Plugin<Project> {
 
   private void addDependency(Project project, String configName, String dependency) {
     String suffixConfigName = configName.substring(0, 1).toUpperCase() + configName.substring(1);
-    project.getConfigurations().forEach(config -> {
-      addDependency(configName, suffixConfigName, project.getDependencies(), config, dependency);
-    });
+    project.getConfigurations().forEach(config ->
+        addDependency(configName, suffixConfigName, project.getDependencies(), config, dependency)
+    );
   }
 
   private void addDependency(String configName, String suffixConfigName,
@@ -106,29 +106,29 @@ public class MetalsBspPlugin implements Plugin<Project> {
     project.afterEvaluate(proj -> {
       // Can't use rootProject dir for sourceroot because it will change for included builds
       // so supply it from the extension.
-      String sourceRoot = extension.getSourceRoot().get().toString();
+      String sourceRoot = extension.getSourceRoot().toString();
       String targetRoot = proj.getLayout().getBuildDirectory().get()
           .dir("semanticdb-targetroot").getAsFile().toString();
 
       // setup semanticdb plugin in Java
-      if (extension.getJavaSemanticDbVersion().isPresent()) {
-        applyJavaSemanticDbDependency(proj, extension.getJavaSemanticDbVersion().get());
-        proj.getTasks().withType(JavaCompile.class).configureEach(javaCompile -> {
-          javaCompile.getOptions().getCompilerArgs()
-            .add("-Xplugin:semanticdb -sourceroot:" + sourceRoot + " -targetroot:" + targetRoot);
-        });
+      if (extension.getJavaSemanticDbVersion() != null) {
+        applyJavaSemanticDbDependency(proj, extension.getJavaSemanticDbVersion());
+        proj.getTasks().withType(JavaCompile.class).configureEach(javaCompile ->
+            javaCompile.getOptions().getCompilerArgs()
+              .add("-Xplugin:semanticdb -sourceroot:" + sourceRoot + " -targetroot:" + targetRoot)
+        );
       }
 
       // setup semanticdb plugin in Scala
       String[] scalaVersion = new String[1];
       scalaVersion[0] = "";
-      if (extension.getScalaSemanticDbVersion().isPresent()) {
+      if (extension.getScalaSemanticDbVersion() != null) {
         proj.getTasks().withType(ScalaCompile.class).configureEach(scalaCompile -> {
 
           scalaVersion[0] = extractScalaVersion(scalaCompile.getClasspath());
 
           applyScalaSemanticDbDependency(proj, scalaVersion[0],
-                  extension.getScalaSemanticDbVersion().get());
+                  extension.getScalaSemanticDbVersion());
 
           List<String> params = scalaCompile.getScalaCompileOptions().getAdditionalParameters();
           if (scalaVersion[0].startsWith("3")) {
@@ -139,7 +139,7 @@ public class MetalsBspPlugin implements Plugin<Project> {
             params.add(targetRoot);
           } else {
             File pluginPath = extractSemanticDbJar(proj, scalaVersion[0],
-                    extension.getScalaSemanticDbVersion().get());
+                    extension.getScalaSemanticDbVersion());
             scalaCompile.getScalaCompileOptions().getAdditionalParameters()
                     .add("-Xplugin:" + pluginPath.toString().replace("\\", "\\\\"));
             params.add("-P:semanticdb:sourceroot:" + sourceRoot);

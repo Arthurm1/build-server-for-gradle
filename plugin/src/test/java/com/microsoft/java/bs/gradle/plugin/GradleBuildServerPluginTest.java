@@ -38,6 +38,7 @@ import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.util.GradleVersion;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
@@ -59,6 +60,14 @@ class GradleBuildServerPluginTest {
         "..",
         "testProjects"
     ).normalize();
+    // uncomment this to debug the server using attach to remote
+    // see GradleAPIConnector#getGradleSourceSets for usage.
+    //System.setProperty("bsp.plugin.debug.enabled", "true");
+  }
+
+  @AfterAll
+  static void afterClass() {
+    System.clearProperty("bsp.plugin.debug.enabled");
   }
 
   private GradleSourceSets getGradleSourceSets(ProjectConnection connect) throws IOException {
@@ -71,12 +80,13 @@ class GradleBuildServerPluginTest {
           .addArguments("-Dorg.gradle.daemon.idletimeout=10")
           .addArguments("-Dorg.gradle.vfs.watch=false")
           .addArguments("-Dorg.gradle.logging.level=quiet")
-          .addJvmArguments("-Dbsp.gradle.supportedLanguages="
-            + String.join(",", SupportedLanguages.allBspNames))
           // Add back in to remote debug
-          //.addJvmArguments("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
           .setStandardOutput(System.out)
           .setStandardError(System.err);
+      if (Boolean.getBoolean("bsp.plugin.debug.enabled")) {
+        action.addJvmArguments(
+            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
+      }
 
       return new DefaultGradleSourceSets(action.run());
     } catch (Exception e) {

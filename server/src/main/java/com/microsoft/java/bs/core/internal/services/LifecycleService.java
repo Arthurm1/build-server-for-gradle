@@ -31,8 +31,12 @@ import java.io.IOException;
 import java.lang.Runtime.Version;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Level;
 import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.model.build.BuildEnvironment;
@@ -96,7 +100,8 @@ public class LifecycleService {
   void initializePreferenceManager(InitializeBuildParams params, CancellationToken cancelToken) {
     URI rootUri = UriUtils.getUriFromString(params.getRootUri());
     preferenceManager.setRootUri(rootUri);
-    preferenceManager.setClientSupportedLanguages(params.getCapabilities().getLanguageIds());
+    Set<String> languages = new HashSet<>(params.getCapabilities().getLanguageIds());
+    preferenceManager.setClientSupportedLanguages(languages);
 
     Preferences preferences;
     if (params.getData() != null) {
@@ -169,9 +174,10 @@ public class LifecycleService {
     capabilities.setCanReload(true);
     capabilities.setBuildTargetChangedProvider(true);
     capabilities.setDebugProvider(null);
-    capabilities.setCompileProvider(new CompileProvider(SupportedLanguages.allBspNames));
-    capabilities.setTestProvider(new TestProvider(SupportedLanguages.allBspNames));
-    capabilities.setRunProvider(new RunProvider(SupportedLanguages.allBspNames));
+    List<String> languages = new ArrayList<>(SupportedLanguages.allBspNames);
+    capabilities.setCompileProvider(new CompileProvider(languages));
+    capabilities.setTestProvider(new TestProvider(languages));
+    capabilities.setRunProvider(new RunProvider(languages));
     capabilities.setJvmRunEnvironmentProvider(true);
     capabilities.setJvmTestEnvironmentProvider(true);
     capabilities.setJvmCompileClasspathProvider(true);

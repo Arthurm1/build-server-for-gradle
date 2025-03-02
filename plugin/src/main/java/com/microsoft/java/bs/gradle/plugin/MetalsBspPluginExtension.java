@@ -5,7 +5,6 @@ package com.microsoft.java.bs.gradle.plugin;
 
 import java.io.File;
 import org.gradle.api.Project;
-import org.gradle.api.provider.Property;
 
 /**
  * settings for the MetalsBspPlugin.
@@ -16,13 +15,35 @@ import org.gradle.api.provider.Property;
  *   sourceRoot = File('/myRepos/myProject')
  * }
  */
-public interface MetalsBspPluginExtension {
+public class MetalsBspPluginExtension {
 
-  Property<File> getSourceRoot();
+  private File sourceRoot;
+  private String javaSemanticDbVersion;
+  private String scalaSemanticDbVersion;
 
-  Property<String> getJavaSemanticDbVersion();
+  public File getSourceRoot() {
+    return sourceRoot;
+  }
 
-  Property<String> getScalaSemanticDbVersion();
+  public void setSourceRoot(File sourceRoot) {
+    this.sourceRoot = sourceRoot;
+  }
+
+  public String getJavaSemanticDbVersion() {
+    return javaSemanticDbVersion;
+  }
+
+  public void setJavaSemanticDbVersion(String javaSemanticDbVersion) {
+    this.javaSemanticDbVersion = javaSemanticDbVersion;
+  }
+
+  public String getScalaSemanticDbVersion() {
+    return scalaSemanticDbVersion;
+  }
+
+  public void setScalaSemanticDbVersion(String scalaSemanticDbVersion) {
+    this.scalaSemanticDbVersion = scalaSemanticDbVersion;
+  }
 
   /**
    * create the extension with defaults.
@@ -36,11 +57,6 @@ public interface MetalsBspPluginExtension {
     if (extension == null) {
       extension = project.getExtensions()
         .create("MetalsBspPlugin", MetalsBspPluginExtension.class);
-
-      // default is no semantic db settings
-      extension.getJavaSemanticDbVersion().unsetConvention();
-      extension.getScalaSemanticDbVersion().unsetConvention();
-      extension.getSourceRoot().unsetConvention();
     }
     return extension;
   }

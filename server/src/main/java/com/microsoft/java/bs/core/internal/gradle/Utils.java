@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -529,11 +530,13 @@ public class Utils {
    * @param workspaceDir the root dir of all the projects
    * @param javaSemanticDbVersion version of the java semanticdb jar
    * @param scalaSemanticDbVersion version of the scala semanticdb jar
+   * @param languages supported languages
    * @return the text for an init script to apply the BSP plugin.
    */
   public static String createPluginScript(File workspaceDir, String javaSemanticDbVersion,
-        String scalaSemanticDbVersion) {
-    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, true);
+      String scalaSemanticDbVersion, Set<String> languages) {
+    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, true,
+        languages);
   }
 
   /**
@@ -546,8 +549,9 @@ public class Utils {
    * @return the text for an init script to alter the compiler options.
    */
   public static String createCompilerOptionsScript(File workspaceDir, String javaSemanticDbVersion,
-        String scalaSemanticDbVersion) {
-    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, false);
+      String scalaSemanticDbVersion) {
+    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, false,
+        null);
   }
 
   /**
@@ -556,22 +560,28 @@ public class Utils {
    * @param workspaceDir the root dir of all the projects
    * @param javaSemanticDbVersion version of the java semanticdb jar
    * @param scalaSemanticDbVersion version of the scala semanticdb jar
-   * @param includeBspPlugin whether or not to apply the BSP plugin
+   * @param includeBspPlugin whether to apply the BSP plugin
+   * @param languages supported languages
    * @return the text for the init script.
    */
   private static String createInitScript(File workspaceDir, String javaSemanticDbVersion,
-        String scalaSemanticDbVersion, boolean includeBspPlugin) {
+        String scalaSemanticDbVersion, boolean includeBspPlugin, Set<String> languages) {
     if (javaSemanticDbVersion == null && scalaSemanticDbVersion == null
         && !includeBspPlugin) {
       return null;
     }
     String bspPluginSetup;
     if (includeBspPlugin) {
+
+      String supportedLanguages = String.join(",", languages);
       bspPluginSetup = """
           // apply plugin so config can be extracted
           apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
           
-          """;
+          GradleBuildServerPlugin {
+            languages = "$supportedLanguages"
+          }
+          """.replace("$supportedLanguages", supportedLanguages);
     } else {
       bspPluginSetup = "";
     }

@@ -25,6 +25,10 @@ public class GradleBuildServerPlugin implements Plugin<Project> {
 
   @Override
   public void apply(Project project) {
+
+    // create extension to hold user defined settings
+    GradleBuildServerPluginExtension.createExtension(project);
+
     registry.register(new SourceSetsModelBuilder());
   }
 }
