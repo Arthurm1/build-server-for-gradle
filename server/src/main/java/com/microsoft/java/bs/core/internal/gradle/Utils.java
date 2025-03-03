@@ -454,7 +454,7 @@ public class Utils {
     return """
         gradle.projectsEvaluated {
           rootProject {
-            tasks.getByPath('$taskPath')?.setDryRun(true)
+            tasks.findByPath('$taskPath')?.setDryRun(true)
           }
         }"""
         .replace("$taskPath", taskPath);
