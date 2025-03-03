@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.gradle.tooling.BuildActionExecuter;
+import org.gradle.tooling.BuildCancelledException;
 import org.gradle.tooling.BuildException;
 import org.gradle.tooling.BuildLauncher;
 import org.gradle.tooling.CancellationToken;
@@ -177,6 +178,9 @@ public class GradleApiConnector {
           initScript.delete();
         }
       }
+    } catch (BuildCancelledException ce) {
+      reporter.sendError("Sourceset retrieval cancelled");
+      throw new IllegalStateException(ce);
     } catch (GradleConnectionException | IllegalStateException | IOException e) {
       String summary = e.getMessage();
       if (errorOut.size() > 0) {
@@ -329,6 +333,9 @@ public class GradleApiConnector {
           } catch (IOException e) {
             // caused by close the output stream, just simply log the error.
             LOGGER.severe(e.getMessage());
+          } catch (BuildCancelledException ce) {
+            reporter.sendError("Test run cancelled");
+            statusCode = StatusCode.CANCELLED;
           } catch (GradleConnectionException | IllegalStateException e) {
             String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
             if (errorOut.size() > 0) {
@@ -401,6 +408,8 @@ public class GradleApiConnector {
                   launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
                 }
                 launcher.run();
+              } catch (BuildCancelledException ce) {
+                reporter.sendError("Test search cancelled for " + gradleTestTask.getTaskPath());
               } catch (GradleConnectionException | IllegalStateException e) {
                 String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
                 reporter.sendError("Error searching for test classes in " 
@@ -487,6 +496,9 @@ public class GradleApiConnector {
             initScript.delete();
           }
         }
+      } catch (BuildCancelledException ce) {
+        reporter.sendError("Running main class cancelled");
+        statusCode = StatusCode.CANCELLED;
       } catch (GradleConnectionException | IllegalStateException e) {
         String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
         reporter.sendError("Error running main class: " + message);
