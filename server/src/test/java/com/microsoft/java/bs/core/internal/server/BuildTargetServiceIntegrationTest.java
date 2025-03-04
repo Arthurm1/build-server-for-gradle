@@ -3,7 +3,7 @@ package com.microsoft.java.bs.core.internal.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.epfl.scala.bsp4j.BuildTarget;
@@ -64,6 +64,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -231,6 +232,14 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
         .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
                 MavenDependencyModule.class))
         .toList();
+  }
+
+  @Test
+  void testInvalidBuild() {
+    withNewTestServer("invalid-build", (gradleBuildServer, client) -> {
+      assertThrows(CompletionException.class,
+          () -> gradleBuildServer.workspaceBuildTargets().join());
+    });
   }
 
   @Test
