@@ -52,7 +52,7 @@ public class CompileProgressReporter extends ProgressReporter {
   @Override
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
-      String taskPath = getTaskPath(event.getDescriptor());
+      String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
       TaskId taskId = getTaskId(taskPath);
       Set<BuildTargetIdentifier> targets = taskPathMap.get(taskPath);
       if (targets != null) {

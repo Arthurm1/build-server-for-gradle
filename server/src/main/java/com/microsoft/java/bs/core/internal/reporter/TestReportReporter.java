@@ -107,7 +107,7 @@ public class TestReportReporter extends ProgressReporter {
         TestName testName = getTestName(descriptor);
         // do not send reports on Gradle internal test tasks
         if (testName != null) {
-          String taskPath = getTaskPath(event.getDescriptor());
+          String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
           TaskId taskId = getTaskId(taskPath);
           if (event instanceof StartEvent) {
             TaskStartParams startParam = new TaskStartParams(taskId);

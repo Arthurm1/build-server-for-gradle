@@ -62,7 +62,7 @@ public class AppRunReporter extends ProgressReporter implements Closeable {
   @Override
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
-      String taskPath = getTaskPath(event.getDescriptor());
+      String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
       if (taskPath != null && taskPath.contains(taskName)) {
         TaskId taskId = getTaskId(taskPath);
         if (event instanceof StartEvent) {

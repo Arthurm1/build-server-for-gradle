@@ -10,9 +10,7 @@ import ch.epfl.scala.bsp4j.TaskId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import org.gradle.tooling.events.OperationDescriptor;
 import org.gradle.tooling.events.ProgressListener;
-import org.gradle.tooling.events.task.TaskOperationDescriptor;
 
 /**
  * An extension of {@link ProgressListener} that allows sending errors.
@@ -56,20 +54,5 @@ public abstract class ProgressReporter implements ProgressListener {
     TaskId taskId = new TaskId(taskPath == null ? "null" : taskPath);
     taskId.setParents(taskIds);
     return taskId;
-  }
-
-  protected String getTaskPath(OperationDescriptor operationDescriptor) {
-    if (operationDescriptor == null) {
-      return null;
-    } else if (operationDescriptor instanceof TaskOperationDescriptor) {
-      return ((TaskOperationDescriptor) operationDescriptor).getTaskPath();
-    } else {
-      OperationDescriptor parent = operationDescriptor.getParent();
-      if (parent != operationDescriptor) {
-        return getTaskPath(operationDescriptor.getParent());
-      } else {
-        return null;
-      }
-    }
   }
 }

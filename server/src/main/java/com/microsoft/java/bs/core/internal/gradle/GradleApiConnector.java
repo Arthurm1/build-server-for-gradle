@@ -24,6 +24,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -31,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.gradle.tooling.BuildActionExecuter;
 import org.gradle.tooling.BuildCancelledException;
@@ -371,68 +376,79 @@ public class GradleApiConnector {
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap, BuildClient client,
       CompileProgressReporter compileProgressReporter, CancellationToken cancellationToken,
       String gradleVersion) {
- 
-    Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
+
     DefaultProgressReporter reporter = new DefaultProgressReporter(client);
-
-    try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-      // use --test-dry-run to discover tests.  Gradle version must be 8.3 or higher.
-      if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("8.3")) < 0) {
-        reporter.sendError("Error searching for test classes: Gradle version "
-            + gradleVersion + " must be >= 8.3");
-      } else {
-        for (Map.Entry<BuildTargetIdentifier, Set<GradleTestTask>> entry :
-            testTaskMap.entrySet()) {
-          List<GradleTestEntity> gradleTestEntities = new LinkedList<>();
-          for (GradleTestTask gradleTestTask : entry.getValue()) {
-            // task can trigger compilation so add compiler options as well as
-            // script to alter test task to execute dry-run
-            String testScript = Utils.createTestTaskScript(gradleTestTask.getTaskPath());
-            File workspaceDir = new File(projectUri);
-            String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
-                preferenceManager.getPreferences().getJavaSemanticdbVersion(),
-                preferenceManager.getPreferences().getScalaSemanticdbVersion());
-            String script = testScript + '\n' + compilerOptionsScript;
-            File initScript = Utils.createInitScriptFile("testTask", script);
-            try {
-              TestNameRecorder testNameRecorder = new TestNameRecorder();
-              try {
-                TestLauncher launcher = Utils
-                    .getTestLauncher(connection,
-                        preferenceManager.getPreferences(), cancellationToken)
-                    .forTasks(gradleTestTask.getTaskPath())
-                    .addArguments("--init-script", initScript.getAbsolutePath())
-                    .addProgressListener(testNameRecorder, OperationType.TEST)
-                    .addProgressListener(reporter, OperationType.TASK);
-                if (compileProgressReporter != null) {
-                  launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
-                }
-                launcher.run();
-              } catch (BuildCancelledException ce) {
-                reporter.sendError("Test search cancelled for " + gradleTestTask.getTaskPath());
-              } catch (GradleConnectionException | IllegalStateException e) {
-                String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
-                reporter.sendError("Error searching for test classes in " 
-                    + gradleTestTask.getTaskPath() + " " + message);
-              }
-              Set<String> mainClasses = testNameRecorder.getMainClasses();
-              GradleTestEntity gradleTestEntity = new GradleTestEntity(gradleTestTask, mainClasses);
-              gradleTestEntities.add(gradleTestEntity);
-            } finally {
-              if (initScript != null) {
-                initScript.delete();
-              }
-            }
-          }
-
-          results.put(entry.getKey(), gradleTestEntities);
+    // use --test-dry-run to discover tests.  Gradle version must be 8.3 or higher.
+    if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("8.3")) < 0) {
+      reporter.sendError("Error searching for test classes: Gradle version "
+          + gradleVersion + " must be >= 8.3");
+    } else {
+      Map<String, BuildTargetIdentifier> taskPathToTarget = new HashMap<>();
+      Map<String, GradleTestTask> taskPathToTask = new HashMap<>();
+      for (Map.Entry<BuildTargetIdentifier, Set<GradleTestTask>> entry :
+          testTaskMap.entrySet()) {
+        for (GradleTestTask testTask : entry.getValue()) {
+          taskPathToTarget.put(testTask.getTaskPath(), entry.getKey());
+          taskPathToTask.put(testTask.getTaskPath(), testTask);
         }
       }
-    } catch (GradleConnectionException | IllegalStateException e) {
-      reporter.sendError("Error searching for test classes: " + e.getMessage());
+      if (!taskPathToTarget.isEmpty()) {
+        try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
+          TestNameRecorder testNameRecorder = new TestNameRecorder();
+          String[] taskPaths = taskPathToTarget.keySet().toArray(String[]::new);
+          // task can trigger compilation so add compiler options as well as
+          // script to alter test task to execute dry-run
+          String testScript = Utils.createTestTaskScript(taskPaths);
+          File workspaceDir = new File(projectUri);
+          String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
+              preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+              preferenceManager.getPreferences().getScalaSemanticdbVersion());
+          String script = testScript + '\n' + compilerOptionsScript;
+          File initScript = Utils.createInitScriptFile("testTask", script);
+          try {
+            try {
+              TestLauncher launcher = Utils
+                  .getTestLauncher(connection,
+                      preferenceManager.getPreferences(), cancellationToken)
+                  .forTasks(taskPaths)
+                  .addArguments("--init-script", initScript.getAbsolutePath())
+                  .addProgressListener(testNameRecorder, OperationType.TEST)
+                  .addProgressListener(reporter, OperationType.TASK);
+              if (compileProgressReporter != null) {
+                launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
+              }
+              launcher.run();
+            } catch (BuildCancelledException ce) {
+              reporter.sendError("Test search cancelled for " + Arrays.toString(taskPaths));
+            } catch (GradleConnectionException | IllegalStateException e) {
+              String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
+              reporter.sendError("Error searching for test classes in "
+                  + Arrays.toString(taskPaths) + " " + message);
+            }
+
+            Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
+            for (Map.Entry<String, List<String>> testPathToClasses : testNameRecorder
+                .getTestClasses().entrySet()) {
+              String taskPath = testPathToClasses.getKey();
+              Set<String> classes = new HashSet<>(testPathToClasses.getValue());
+              GradleTestTask testTask = taskPathToTask.get(taskPath);
+              GradleTestEntity gradleTestEntity = new GradleTestEntity(testTask, classes);
+              BuildTargetIdentifier btId = taskPathToTarget.get(taskPath);
+              results.computeIfAbsent(btId, k -> new ArrayList<>()).add(gradleTestEntity);
+            }
+            return results;
+          } finally {
+            if (initScript != null) {
+              initScript.delete();
+            }
+          }
+        } catch (GradleConnectionException | IllegalStateException e) {
+          reporter.sendError("Error searching for test classes: " + e.getMessage());
+        }
+      }
     }
 
-    return results;
+    return Collections.emptyMap();
   }
 
   /**

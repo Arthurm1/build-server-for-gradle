@@ -32,7 +32,7 @@ public class DefaultProgressReporter extends ProgressReporter {
   @Override
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
-      String taskPath = getTaskPath(event.getDescriptor());
+      String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
       TaskId taskId = getTaskId(taskPath);
       if (event instanceof StartEvent) {
         taskStarted(taskId, event.getDisplayName());
