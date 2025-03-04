@@ -99,6 +99,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -543,11 +544,15 @@ public class BuildTargetService {
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
       if (!isCancelled(cancelToken)) {
         // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
-        String[] tasks = entry.getValue().stream().map(taskNameCreator).distinct()
+        String[] tasks = entry.getValue().stream().map(taskNameCreator)
+            .distinct()
+            .filter(Objects::nonNull)
             .toArray(String[]::new);
-        code = connector.runTasks(entry.getKey(), reporter, tasks, cancelToken);
-        if (code == StatusCode.ERROR) {
-          break;
+        if (tasks.length > 0) {
+          code = connector.runTasks(entry.getKey(), reporter, tasks, cancelToken);
+          if (code == StatusCode.ERROR) {
+            break;
+          }
         }
       }
     }
@@ -1032,12 +1037,7 @@ public class BuildTargetService {
       // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
       throw new IllegalArgumentException("The build target does not exist: " + btId.getUri());
     }
-    String taskName = creator.apply(gradleBuildTarget.getSourceSet());
-    if (StringUtils.isBlank(taskName)) {
-      throw new IllegalArgumentException("The build target does not have a " + title + " task: "
-          + btId.getUri());
-    }
-    return taskName;
+    return creator.apply(gradleBuildTarget.getSourceSet());
   }
 
   /**
