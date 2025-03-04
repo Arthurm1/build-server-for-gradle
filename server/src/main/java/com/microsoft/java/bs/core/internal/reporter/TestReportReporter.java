@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.StatusCode;
 import ch.epfl.scala.bsp4j.TaskFinishParams;
+import ch.epfl.scala.bsp4j.TaskFinishDataKind;
 import ch.epfl.scala.bsp4j.TaskId;
 import ch.epfl.scala.bsp4j.TaskStartParams;
 import ch.epfl.scala.bsp4j.TestReport;
@@ -147,7 +148,7 @@ public class TestReportReporter extends ProgressReporter {
             }
             TaskFinishParams finishParam = new TaskFinishParams(taskId, statusCode);
             finishParam.setMessage("Finish test");
-            finishParam.setDataKind("test-finish");
+            finishParam.setDataKind(TaskFinishDataKind.TEST_FINISH);
             finishParam.setEventTime(event.getEventTime());
             TestFinishEx testFinish = new TestFinishEx(event.getDisplayName(), testStatus,
                 testName);
@@ -191,7 +192,7 @@ public class TestReportReporter extends ProgressReporter {
         finishParam.setMessage("Finish test");
       }
       finishParam.setEventTime(System.currentTimeMillis());
-      finishParam.setDataKind("test-report");
+      finishParam.setDataKind(TaskFinishDataKind.TEST_REPORT);
       finishParam.setData(testReport);
       client.onBuildTaskFinish(finishParam);
     }

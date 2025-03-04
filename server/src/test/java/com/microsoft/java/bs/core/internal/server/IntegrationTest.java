@@ -25,6 +25,7 @@ import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import ch.epfl.scala.bsp4j.StatusCode;
 import ch.epfl.scala.bsp4j.TaskFinishParams;
+import ch.epfl.scala.bsp4j.TaskFinishDataKind;
 import ch.epfl.scala.bsp4j.TaskProgressParams;
 import ch.epfl.scala.bsp4j.TaskStartParams;
 import ch.epfl.scala.bsp4j.TestReport;
@@ -208,11 +209,11 @@ abstract class IntegrationTest {
     @Override
     public void onBuildTaskFinish(TaskFinishParams params) {
       if (params.getDataKind() != null) {
-        if (params.getDataKind().equals("compile-report")) {
+        if (params.getDataKind().equals(TaskFinishDataKind.COMPILE_REPORT)) {
           compileReports.add(JsonUtils.toModel(params.getData(), CompileReport.class));
-        } else if (params.getDataKind().equals("test-report")) {
+        } else if (params.getDataKind().equals(TaskFinishDataKind.TEST_REPORT)) {
           testReports.add(JsonUtils.toModel(params.getData(), TestReport.class));
-        } else if (params.getDataKind().equals("test-finish")) {
+        } else if (params.getDataKind().equals(TaskFinishDataKind.TEST_FINISH)) {
           testFinishes.add(JsonUtils.toModel(params.getData(), TestFinishEx.class));
         } else {
           fail("Task Finish kind not handled " + params.getDataKind());
