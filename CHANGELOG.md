@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.12.0
+## What's Changed
+* enhancement - support buildTarget/scalaTestClasses by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/0ffa0f01c7897687bd9bdf9d23103a64a47b886d
+* fix - export correct compile order to Bloop by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/cb776640a2013106ffdf474aaeef7bc4abc1cc9e
+* fix - add missing jvm args to main classes by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/d39eedfe8eb78d6f0e46464f0a6e1abfa0cd9f4b
+* fix - don't always return ANTLR extension by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/2cfb34fc96d71ec921bddff1a7d70d4f6bd3caf5
+* fix - populate annotation processor path by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/49dfccd178af07b46f138ad720cbbae9581c5815
+
 ## 0.11.0
 ## What's Changed
 * enhancement - download sources for built-in Gradle jars by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/d0976cc84624287b6c26d3581adaf55e08d0813c
