@@ -8,6 +8,7 @@ import static com.microsoft.java.bs.core.Launcher.LOGGER;
 import ch.epfl.scala.bsp4j.BuildClient;
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.StatusCode;
+import ch.epfl.scala.bsp4j.extended.TestName;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.reporter.AppRunReporter;
@@ -427,10 +428,14 @@ public class GradleApiConnector {
             }
 
             Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
-            for (Map.Entry<String, List<String>> testPathToClasses : testNameRecorder
-                .getTestClasses().entrySet()) {
+            for (Map.Entry<String, List<TestName>> testPathToClasses : testNameRecorder
+                .getTests().entrySet()) {
               String taskPath = testPathToClasses.getKey();
-              Set<String> classes = new HashSet<>(testPathToClasses.getValue());
+              Set<String> classes = testPathToClasses.getValue().stream()
+                  .filter(testName -> testName.getClassName() != null
+                      && testName.getMethodName() == null)
+                  .map(TestName::getClassName)
+                  .collect(Collectors.toSet());
               GradleTestTask testTask = taskPathToTask.get(taskPath);
               GradleTestEntity gradleTestEntity = new GradleTestEntity(testTask, classes);
               BuildTargetIdentifier btId = taskPathToTarget.get(taskPath);

@@ -3,6 +3,7 @@
 
 package com.microsoft.java.bs.core.internal.reporter;
 
+import ch.epfl.scala.bsp4j.extended.TestName;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,35 +20,36 @@ import org.gradle.tooling.events.test.JvmTestOperationDescriptor;
 public class TestNameRecorder implements ProgressListener {
 
   // map of task path to test classes
-  private final Map<String, List<String>> testClasses;
+  private final Map<String, List<TestName>> tests;
 
   /**
    * constructor.
    */
   public TestNameRecorder() {
-    testClasses = new HashMap<>();
+    tests = new HashMap<>();
   }
 
   @Override
   public void statusChanged(ProgressEvent event) {
-    if (event instanceof StartEvent && event.getDescriptor() instanceof JvmTestOperationDescriptor) {
-      JvmTestOperationDescriptor descriptor = (JvmTestOperationDescriptor) event.getDescriptor();
-      if (descriptor.getClassName() != null && descriptor.getMethodName() == null) {
-        String taskPath = ReporterUtils.getTaskPath(descriptor);
-        if (taskPath != null) {
-          testClasses.computeIfAbsent(taskPath, k -> new ArrayList<>())
-              .add(descriptor.getClassName());
+    if (event instanceof StartEvent
+        && event.getDescriptor() instanceof JvmTestOperationDescriptor descriptor) {
+      String taskPath = ReporterUtils.getTaskPath(descriptor);
+      if (taskPath != null) {
+        TestName testName = ReporterUtils.getTestName(descriptor);
+        // do not send reports on Gradle internal test tasks
+        if (testName != null) {
+          tests.computeIfAbsent(taskPath, k -> new ArrayList<>()).add(testName);
         }
       }
     }
   }
 
   /**
-   * get the set of test classes retrieved by the test dry-run.
+   * get the set of tests retrieved by the test dry-run.
    *
-   * @return map of task path to test classes
+   * @return map of task path to tests
    */
-  public Map<String, List<String>> getTestClasses() {
-    return testClasses;
+  public Map<String, List<TestName>> getTests() {
+    return tests;
   }
 }

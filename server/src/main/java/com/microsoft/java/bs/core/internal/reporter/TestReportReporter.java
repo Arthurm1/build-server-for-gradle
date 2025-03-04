@@ -59,52 +59,11 @@ public class TestReportReporter extends ProgressReporter {
     testDuration = 0;
   }
 
-  private TestName getTestName(JvmTestOperationDescriptor eventDescriptor) {
-    List<JvmTestOperationDescriptor> fullStack = new ArrayList<>();
-    fullStack.add(eventDescriptor);
-    OperationDescriptor descriptor = eventDescriptor.getParent();
-    while (descriptor != null) {
-      if (descriptor instanceof JvmTestOperationDescriptor jvmTestOperationDescriptor) {
-        fullStack.add(jvmTestOperationDescriptor);
-      }
-      descriptor = descriptor.getParent();
-    }
-    // Gradle can have blank classnames on dynamic tests even though the test is still
-    // within the class, so search until classname disappears completely.
-    int i = fullStack.size() - 1;
-    boolean classNameFound = false;
-    while (i >= 0 && !classNameFound) {
-      if (fullStack.get(i).getClassName() != null) {
-        classNameFound = true;
-      } else {
-        i--;
-      }
-    }
-    // earlier check means that classname will always be found so can't have i < 0
-    // reverse list order
-    TestName testName = null;
-    while (i >= 0) {
-      JvmTestOperationDescriptor desc = fullStack.get(i);
-      String displayName;
-      try {
-        displayName = desc.getTestDisplayName();
-      } catch (NoSuchMethodError | AbstractMethodError e) {
-        displayName = desc.getDisplayName();
-      }
-      TestName currentTestName = new TestName(displayName, desc.getSuiteName(),
-          desc.getClassName(), desc.getMethodName());
-      currentTestName.setParent(testName);
-      testName = currentTestName;
-      i--;
-    }
-    return testName;
-  }
-
   @Override
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
       if (event.getDescriptor() instanceof JvmTestOperationDescriptor descriptor) {
-        TestName testName = getTestName(descriptor);
+        TestName testName = ReporterUtils.getTestName(descriptor);
         // do not send reports on Gradle internal test tasks
         if (testName != null) {
           String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
