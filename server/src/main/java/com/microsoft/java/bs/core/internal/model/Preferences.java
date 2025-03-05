@@ -11,8 +11,14 @@ import java.util.Map;
  */
 public class Preferences {
 
+  // display name = `projectName-sourcesetName`
+  public static final String DASH_DISPLAY_NAMING = "dash";
+
   // display name = `projectName.sourcesetName`
   public static final String DOT_DISPLAY_NAMING = "dot";
+
+  // display name = `projectName sourcesetName`
+  public static final String SPACE_DISPLAY_NAMING = "space";
 
   // display name = `projectName [sourcesetName]`
   public static final String BRACKET_DISPLAY_NAMING = "bracket";

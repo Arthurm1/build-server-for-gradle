@@ -6,6 +6,7 @@ package com.microsoft.java.bs.core;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.microsoft.java.bs.core.internal.gradle.Utils;
+import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
@@ -26,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.gradle.tooling.BuildActionExecuter;
@@ -336,24 +338,13 @@ public class BloopExporter {
     return newClassesDirMap;
   }
 
-  private String stripPathPrefix(String projectPath) {
-    if (projectPath != null && projectPath.startsWith(":")) {
-      return projectPath.substring(1);
-    }
-    return projectPath;
-  }
-
   // display name is used as the filename so make sure they're valid filenames
-  private Map<BuildTargetDependency, String> getDisplayNames(List<GradleSourceSet> sourceSets) {
+  Map<BuildTargetDependency, String> getDisplayNames(List<GradleSourceSet> sourceSets) {
+    Function<GradleSourceSet, String> displayNameMaker =
+        Utils.getDisplayNameMaker(Preferences.DASH_DISPLAY_NAMING);
     Map<BuildTargetDependency, String> displayNames = new HashMap<>();
     for (GradleSourceSet sourceSet : sourceSets) {
-      String projectName = stripPathPrefix(sourceSet.getProjectPath());
-      if (projectName == null || projectName.isEmpty()) {
-        projectName = sourceSet.getProjectName();
-      }
-      String sourceSetName = sourceSet.getSourceSetName();
-      String displayName = projectName + "-" + sourceSetName;
-      displayName = displayName.replace(":", " ");
+      String displayName = displayNameMaker.apply(sourceSet);
       displayNames.put(new DefaultBuildTargetDependency(sourceSet), displayName);
     }
     return displayNames;

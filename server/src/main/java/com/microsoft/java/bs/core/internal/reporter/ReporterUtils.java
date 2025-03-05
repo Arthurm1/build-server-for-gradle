@@ -7,8 +7,18 @@ import org.gradle.tooling.events.OperationDescriptor;
 import org.gradle.tooling.events.task.TaskOperationDescriptor;
 import org.gradle.tooling.events.test.JvmTestOperationDescriptor;
 
+/**
+ * Methods to help with event listeners.
+ */
 public class ReporterUtils {
 
+  /**
+   * get the gradle task path from the operation descriptor.
+   * Recurses through parents to find a non-null task path.
+   *
+   * @param operationDescriptor descriptor
+   * @return task path
+   */
   public static String getTaskPath(OperationDescriptor operationDescriptor) {
     if (operationDescriptor == null) {
       return null;
@@ -24,6 +34,13 @@ public class ReporterUtils {
     }
   }
 
+  /**
+   * get the test name from the event descriptor.
+   * Recurses through parents to fully describe the test name.
+   *
+   * @param eventDescriptor descriptor
+   * @return the test name
+   */
   public static TestName getTestName(JvmTestOperationDescriptor eventDescriptor) {
     List<JvmTestOperationDescriptor> fullStack = new ArrayList<>();
     fullStack.add(eventDescriptor);

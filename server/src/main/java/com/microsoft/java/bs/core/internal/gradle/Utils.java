@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -79,13 +80,20 @@ public class Utils {
    * @return display name for build target
    */
   private static String bracketDisplayNaming(GradleSourceSet sourceSet) {
-    String projectName = stripPathPrefix(sourceSet.getProjectPath());
-    if (projectName == null || projectName.isEmpty()) {
-      projectName = sourceSet.getProjectName();
-    }
-    String sourceSetName = sourceSet.getSourceSetName();
-    String displayName = projectName + " [" + sourceSetName + ']';
-    return displayName.replace(":", " ");
+    return displayNaming(sourceSet,
+        (projectName, sourceSetName) -> projectName + " [" + sourceSetName + ']');
+  }
+
+  /**
+   * Create a Build target display name of the format `projectName` + delimiter + `sourceSetName`.
+   *
+   * @param sourceSet Gradle source set
+   * @param delimiter delimiter
+   * @return display name for build target
+   */
+  private static String delimiterDisplayNaming(GradleSourceSet sourceSet, char delimiter) {
+    return displayNaming(sourceSet,
+        (projectName, sourceSetName) -> projectName + delimiter + sourceSetName);
   }
 
   /**
@@ -95,12 +103,43 @@ public class Utils {
    * @return display name for build target
    */
   private static String dotDisplayNaming(GradleSourceSet sourceSet) {
+    return delimiterDisplayNaming(sourceSet, '.');
+  }
+
+  /**
+   * Create a Build target display name of the format `projectName-sourceSetName`.
+   *
+   * @param sourceSet Gradle source set
+   * @return display name for build target
+   */
+  private static String dashDisplayNaming(GradleSourceSet sourceSet) {
+    return delimiterDisplayNaming(sourceSet, '-');
+  }
+
+  /**
+   * Create a Build target display name of the format `projectName sourceSetName`.
+   *
+   * @param sourceSet Gradle source set
+   * @return display name for build target
+   */
+  private static String spaceDisplayNaming(GradleSourceSet sourceSet) {
+    return delimiterDisplayNaming(sourceSet, ' ');
+  }
+
+  /**
+   * Create a Build target display name based on the function passed.
+   *
+   * @param converter function to convert project name + sourceset name to display name
+   * @return display name for build target
+   */
+  private static String displayNaming(GradleSourceSet sourceSet,
+      BiFunction<String, String, String> converter) {
     String projectName = stripPathPrefix(sourceSet.getProjectPath());
     if (projectName == null || projectName.isEmpty()) {
       projectName = sourceSet.getProjectName();
     }
     String sourceSetName = sourceSet.getSourceSetName();
-    String displayName = projectName + '.' + sourceSetName;
+    String displayName = converter.apply(projectName, sourceSetName);
     return displayName.replace(":", " ");
   }
 
@@ -113,6 +152,10 @@ public class Utils {
   public static Function<GradleSourceSet, String> getDisplayNameMaker(String displayNaming) {
     if (Preferences.DOT_DISPLAY_NAMING.equals(displayNaming)) {
       return Utils::dotDisplayNaming;
+    } else if (Preferences.DASH_DISPLAY_NAMING.equals(displayNaming)) {
+      return Utils::dashDisplayNaming;
+    } else if (Preferences.SPACE_DISPLAY_NAMING.equals(displayNaming)) {
+      return Utils::spaceDisplayNaming;
     } else {
       return Utils::bracketDisplayNaming;
     }
