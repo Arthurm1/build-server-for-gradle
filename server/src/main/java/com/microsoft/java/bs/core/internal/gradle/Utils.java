@@ -407,6 +407,41 @@ public class Utils {
   }
 
   /**
+   * return an array as a String, limited to a number of entries.
+   *
+   * @param array array of data
+   * @param maxEntries maximum array items to include in the String
+   * @return String version of array
+   * @param <T> type of array entry
+   */
+  public static <T> String arrayAsStr(T[] array, int maxEntries) {
+    if (array == null) {
+      return "null";
+    }
+
+    int length = Math.min(array.length, maxEntries);
+    if (length == -1) {
+      return "[]";
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    for (int idx = 0; idx < length; idx++) {
+      if (idx > 0) {
+        sb.append(", ");
+      }
+      sb.append(array[idx]);
+    }
+    if (length < array.length) {
+      sb.append ("... and ");
+      sb.append(array.length - length);
+      sb.append (" more");
+    }
+    sb.append(']');
+    return sb.toString();
+  }
+
+  /**
    * Get the path specified by the key from environment variables or system properties.
    * If the path is not empty, an <code>File</code> instance will be returned.
    * Otherwise, <code>null</code> will be returned.

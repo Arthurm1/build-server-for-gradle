@@ -26,11 +26,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -187,12 +185,22 @@ public class GradleApiConnector {
       reporter.sendError("Sourceset retrieval cancelled");
       throw new IllegalStateException(ce);
     } catch (GradleConnectionException | IllegalStateException | IOException e) {
-      String summary = e.getMessage();
-      if (errorOut.size() > 0) {
-        summary += "\n" + errorOut;
-      }
-      reporter.sendError(summary);
+      sendError(getErrorMessage(e, errorOut), reporter);
       throw new IllegalStateException(e);
+    }
+  }
+
+  private String getErrorMessage(Exception exception, ByteArrayOutputStream errorOut) {
+    String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(exception));
+    if (errorOut != null && errorOut.size() > 0) {
+      message = message + '\n' + errorOut;
+    }
+    return message;
+  }
+
+  private void sendError(String message, ProgressReporter reporter) {
+    if (reporter != null) {
+      reporter.sendError(message);
     }
   }
 
@@ -238,11 +246,7 @@ public class GradleApiConnector {
       // caused by close the output stream, just simply log the error.
       LOGGER.severe(e.getMessage());
     } catch (BuildException e) {
-      String summary = e.getMessage();
-      if (errorOut.size() > 0) {
-        summary += "\n" + errorOut;
-      }
-      reporter.sendError(summary);
+      sendError(getErrorMessage(e, errorOut), reporter);
       statusCode = StatusCode.ERROR;
     }
 
@@ -342,11 +346,7 @@ public class GradleApiConnector {
             reporter.sendError("Test run cancelled");
             statusCode = StatusCode.CANCELLED;
           } catch (GradleConnectionException | IllegalStateException e) {
-            String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
-            if (errorOut.size() > 0) {
-              message = message + '\n' + errorOut;
-            }
-            testReportReporter.addException(message);
+            testReportReporter.addException(getErrorMessage(e, errorOut));
             statusCode = StatusCode.ERROR;
           } finally {
             testReportReporter.sendResult();
@@ -419,11 +419,11 @@ public class GradleApiConnector {
               }
               launcher.run();
             } catch (BuildCancelledException ce) {
-              reporter.sendError("Test search cancelled for " + Arrays.toString(taskPaths));
+              reporter.sendError("Test search cancelled for " + Utils.arrayAsStr(taskPaths, 3));
             } catch (GradleConnectionException | IllegalStateException e) {
               String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
               reporter.sendError("Error searching for test classes in "
-                  + Arrays.toString(taskPaths) + " " + message);
+                  + Utils.arrayAsStr(taskPaths, 3) + " " + message);
             }
 
             Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
