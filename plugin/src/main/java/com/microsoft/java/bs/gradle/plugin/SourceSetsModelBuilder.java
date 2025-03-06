@@ -219,7 +219,12 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           } catch (GradleException e) {
             // ignore
           }
-          List<String> jvmOptions = task.getAllJvmArgs();
+          List<String> jvmOptions = new ArrayList<>();
+          try {
+            jvmOptions = new ArrayList<>(task.getAllJvmArgs());
+          } catch (Exception e) {
+
+          }
           File workingDirectory = task.getWorkingDir();
           Map<String, String> environmentVariables = task.getEnvironment().entrySet()
               .stream()
@@ -254,7 +259,12 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
         boolean isForThisSourceSet = classpath.equals(runtimeClasspath);
         if (isForThisSourceSet) {
           String taskPath = task.getPath();
-          List<String> jvmOptions = new ArrayList<>(task.getAllJvmArgs());
+          List<String> jvmOptions;
+          try {
+            jvmOptions = new ArrayList<>(task.getAllJvmArgs());
+          } catch (Exception e) {
+            jvmOptions = new ArrayList<>();
+          }
           if (GradleVersion.current().compareTo(GradleVersion.version("8.1")) >= 0) {
             ListProperty<String> additionalJvmArgs = task.getJvmArguments();
             if (additionalJvmArgs.isPresent()) {
