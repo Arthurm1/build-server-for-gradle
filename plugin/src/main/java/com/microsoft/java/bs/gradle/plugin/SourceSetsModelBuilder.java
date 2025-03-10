@@ -381,7 +381,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       if (sourceSetContainer != null) {
         return sourceSetContainer;
       }
-    }
+    } else {
       try {
         // query the java plugin.  This limits support to Java only if other
         // languages add their own sourcesets
@@ -396,6 +396,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                | IllegalArgumentException | InvocationTargetException e) {
         throw new IllegalStateException("Error getting source sets", e);
+      }
     }
     return new LinkedList<>();
   }
