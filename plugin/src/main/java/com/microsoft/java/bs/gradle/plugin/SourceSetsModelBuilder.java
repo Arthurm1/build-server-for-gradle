@@ -36,7 +36,6 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.CopySpec;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.copy.DefaultCopySpec;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.tasks.JavaExec;
@@ -200,9 +199,9 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       for (Test task : tasks) {
         boolean isForThisSourceSet = false;
         if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) >= 0) {
-          FileCollection files = task.getTestClassesDirs();
-          for (File sourceOutputDir : sourceOutputDirs) {
-            if (files.contains(sourceOutputDir)) {
+          Iterable<File> files = task.getTestClassesDirs();
+          for (File file : files) {
+            if (sourceOutputDirs.contains(file)) {
               isForThisSourceSet = true;
               break;
             }
