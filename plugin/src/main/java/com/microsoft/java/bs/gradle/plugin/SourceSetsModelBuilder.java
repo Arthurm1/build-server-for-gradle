@@ -73,6 +73,13 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
 
     excludeSourceDirsFromModules(sourceSets);
 
+    File buildFile = project.getBuildFile();
+    for (GradleSourceSet sourceSet : sourceSets) {
+      if (sourceSet instanceof DefaultGradleSourceSet) {
+        ((DefaultGradleSourceSet) sourceSet).setBuildFile(buildFile);
+      }
+    }
+
     return new DefaultGradleSourceSets(sourceSets);
   }
 
@@ -376,20 +383,20 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
         return sourceSetContainer;
       }
     }
-    try {
-      // query the java plugin.  This limits support to Java only if other
-      // languages add their own sourcesets
-      // use reflection because `getConvention` will be removed in Gradle 9.0
-      Object convention = Utils.invokeMethod(project, "getConvention");
-      Object plugins = Utils.invokeMethod(convention, "getPlugins");
-      Method getGet = plugins.getClass().getMethod("get", Object.class);
-      Object pluginConvention = getGet.invoke(plugins, "java");
-      if (pluginConvention != null) {
-        return Utils.invokeMethod(pluginConvention, "getSourceSets");
-      }
-    } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-             | IllegalArgumentException | InvocationTargetException e) {
-      throw new IllegalStateException("Error getting source sets", e);
+      try {
+        // query the java plugin.  This limits support to Java only if other
+        // languages add their own sourcesets
+        // use reflection because `getConvention` will be removed in Gradle 9.0
+        Object convention = Utils.invokeMethod(project, "getConvention");
+        Object plugins = Utils.invokeMethod(convention, "getPlugins");
+        Method getGet = plugins.getClass().getMethod("get", Object.class);
+        Object pluginConvention = getGet.invoke(plugins, "java");
+        if (pluginConvention != null) {
+          return Utils.invokeMethod(pluginConvention, "getSourceSets");
+        }
+      } catch (NoSuchMethodException | SecurityException | IllegalAccessException
+               | IllegalArgumentException | InvocationTargetException e) {
+        throw new IllegalStateException("Error getting source sets", e);
     }
     return new LinkedList<>();
   }

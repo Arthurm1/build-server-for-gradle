@@ -32,6 +32,8 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   private File rootDir;
 
+  private File buildFile;
+
   private String sourceSetName;
 
   private String classesTaskName;
@@ -79,6 +81,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
     this.projectPath = gradleSourceSet.getProjectPath();
     this.projectDir = gradleSourceSet.getProjectDir();
     this.rootDir = gradleSourceSet.getRootDir();
+    this.buildFile = gradleSourceSet.getBuildFile();
     this.sourceSetName = gradleSourceSet.getSourceSetName();
     this.classesTaskName = gradleSourceSet.getClassesTaskName();
     this.cleanTaskName = gradleSourceSet.getCleanTaskName();
@@ -171,6 +174,15 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
 
   public void setRootDir(File rootDir) {
     this.rootDir = rootDir;
+  }
+
+  @Override
+  public File getBuildFile() {
+    return buildFile;
+  }
+
+  public void setBuildFile(File buildFile) {
+    this.buildFile = buildFile;
   }
 
   @Override
@@ -331,10 +343,10 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
   @Override
   public int hashCode() {
     return Objects.hash(gradleVersion, projectName, projectPath,
-        projectDir, rootDir, sourceSetName, classesTaskName, cleanTaskName, taskNames, sourceDirs,
-        generatedSourceDirs, sourceOutputDirs, resourceDirs, resourceOutputDirs, archiveOutputFiles,
-        compileClasspath, runtimeClasspath, moduleDependencies, buildTargetDependencies,
-        testTasks, runTasks, extensions);
+        projectDir, rootDir, buildFile, sourceSetName, classesTaskName, cleanTaskName, taskNames,
+        sourceDirs, generatedSourceDirs, sourceOutputDirs, resourceDirs, resourceOutputDirs,
+        archiveOutputFiles, compileClasspath, runtimeClasspath, moduleDependencies,
+        buildTargetDependencies, testTasks, runTasks, extensions);
   }
 
   @Override
@@ -354,6 +366,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
             && Objects.equals(projectPath, other.projectPath)
             && Objects.equals(projectDir, other.projectDir)
             && Objects.equals(rootDir, other.rootDir)
+            && Objects.equals(buildFile, other.buildFile)
             && Objects.equals(sourceSetName, other.sourceSetName)
             && Objects.equals(classesTaskName, other.classesTaskName)
             && Objects.equals(cleanTaskName, other.cleanTaskName)
@@ -381,6 +394,7 @@ public class DefaultGradleSourceSet implements GradleSourceSet {
         + " sourceSetName:" + sourceSetName
         + " projectDir:" + projectDir
         + " rootDir:" + rootDir
+        + " buildFile:" + buildFile
         + " classesTaskName:" + classesTaskName
         + " cleanTaskName:" + cleanTaskName
         + " taskNames:" + taskNames

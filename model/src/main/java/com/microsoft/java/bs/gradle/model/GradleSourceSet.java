@@ -40,6 +40,11 @@ public interface GradleSourceSet extends Serializable {
   File getRootDir();
 
   /**
+   * Equivalent to {@code org.gradle.api.Project.getBuildFile()}.
+   */
+  File getBuildFile();
+
+  /**
    * Equivalent to {@code org.gradle.api.tasks.SourceSet.getName()}.
    */
   String getSourceSetName();
