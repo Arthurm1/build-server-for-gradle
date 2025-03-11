@@ -10,12 +10,16 @@ import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import com.microsoft.java.bs.gradle.model.impl.DefaultKotlinExtension;
 import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
@@ -27,10 +31,82 @@ import org.gradle.util.GradleVersion;
  */
 public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
 
+  // Configuration used to retrieve the semantic db libraries
+  private static final String kotlinConfigName = "KotlinBspPlugin";
+
   @Override
   public SupportedLanguage<KotlinExtension> getLanguage() {
     return SupportedLanguages.KOTLIN;
   }
+
+  /**
+   * apply the semantic db plugin.
+   *
+   * @param project Gradle project
+   * @param sourceRoot root of all source files
+   * @param semanticDbVersion semantic db library version
+   */
+  @SuppressWarnings("unchecked")
+  public static void configureSemanticDb(Project project, String sourceRoot,
+      String semanticDbVersion) {
+    // https://github.com/sourcegraph/scip-kotlin
+    // TODO get this in a better way than findByPath as it only returns the main compile
+    // TODO there are 2 different versions, 1.8 and 1.9.  How to support these?
+    Task kotlinCompile = project.getTasks().findByPath(":compileKotlin");
+    if (kotlinCompile != null) {
+      applySemanticDbDependency(project, semanticDbVersion);
+      File classesDir = getClassesDir(kotlinCompile);
+
+      File pluginPath = extractSemanticDbJar(project, semanticDbVersion);
+      List<String> params = new ArrayList<>();
+      params.add("-Xplugin=" + pluginPath.toString().replace("\\", "\\\\"));
+      params.add("-P plugin:semanticdb-kotlinc:sourceroot=" + sourceRoot);
+      params.add("-P plugin:semanticdb-kotlinc:targetroot=" + classesDir);
+      Object compilerOptions = Utils.invokeMethod(kotlinCompile, "getCompilerOptions");
+      Provider<List<?>> freeCompilerArgsProvider =
+          Utils.invokeMethod(compilerOptions, "getFreeCompilerArgs");
+      try {
+        Method addAll = freeCompilerArgsProvider.getClass().getMethod("addAll", Iterable.class);
+        addAll.invoke(freeCompilerArgsProvider, params);
+      } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+        // do nothing
+      }
+    }
+  }
+
+  // semanticdb plugin isn't needed on the classpath, but the location is needed and the jar must
+  // exist so add it as a dependency to a new configuration and Gradle will download it.
+  // There are no transitive dependencies.
+  private static void applySemanticDbDependency(Project project, String version) {
+    if (project.getPlugins().hasPlugin("kotlin")) {
+      // config only needs to be added for the first source set for the project
+      if (project.getConfigurations().findByName(kotlinConfigName) == null) {
+        project.getConfigurations().create(kotlinConfigName, config -> {
+          config.setVisible(false);
+          config.setCanBeConsumed(false);
+          config.setCanBeDeclared(true);
+          config.setCanBeResolved(true);
+          config.setDescription("Semanticdb Kotlin dependencies.");
+          config.defaultDependencies(dependencies -> {
+            String dependency = "com.sourcegraph:semanticdb-kotlinc:" + version;
+            dependencies.add(project.getDependencies().create(dependency));
+          });
+        });
+      }
+    }
+  }
+
+  private static File extractSemanticDbJar(Project project, String version) {
+    Configuration config = project.getConfigurations().getByName(kotlinConfigName);
+    String jarName = "semanticdb-kotlinc-" + version + ".jar";
+    for (File file : config.getFiles()) {
+      if (file.getName().equals(jarName)) {
+        return file;
+      }
+    }
+    throw new IllegalStateException("Cannot find " + jarName + " in " + config.getFiles());
+  }
+
 
   private Set<File> getSourceFolders(SourceSet sourceSet) {
     if (GradleVersion.current().compareTo(GradleVersion.version("7.1")) >= 0) {
@@ -55,7 +131,7 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
 
   @Override
   public DefaultKotlinExtension getExtensionFor(Project project, SourceSet sourceSet,
-                                 Set<GradleModuleDependency> moduleDependencies) {
+      Set<GradleModuleDependency> moduleDependencies) {
     Task kotlinCompile = getKotlinCompileTask(project, sourceSet);
     if (kotlinCompile != null) {
       DefaultKotlinExtension extension = new DefaultKotlinExtension();
@@ -64,7 +140,7 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
 
       extension.setSourceDirs(getSourceFolders(sourceSet));
       extension.setGeneratedSourceDirs(Collections.emptySet());
-      extension.setClassesDir(getClassesDir(kotlinCompile, sourceSet));
+      extension.setClassesDir(getClassesDir(kotlinCompile));
 
       extension.setKotlinApiVersion(getKotlinApiVersion(kotlinCompile));
       extension.setKotlinLanguageVersion(getKotlinLanguageVersion(kotlinCompile));
@@ -125,7 +201,7 @@ public class KotlinLanguageModelBuilder extends LanguageModelBuilder {
     return null;
   }
 
-  private File getClassesDir(Task kotlinCompile, SourceSet sourceSet) {
+  private static File getClassesDir(Task kotlinCompile) {
     if (GradleVersion.current().compareTo(GradleVersion.version("4.2")) >= 0) {
       // https://github.com/JetBrains/kotlin/blob/master/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/tasks/KotlinCompile.kt
       Object destinationDirectory = Utils.invokeMethod(kotlinCompile, "getDestinationDirectory");

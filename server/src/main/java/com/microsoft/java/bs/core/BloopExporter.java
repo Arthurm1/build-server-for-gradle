@@ -359,7 +359,7 @@ public class BloopExporter {
           connection.action(getSourceSetsAction);
       Set<String> languages = Set.of(SupportedLanguages.JAVA.getBspName(),
           SupportedLanguages.SCALA.getBspName());
-      String initScriptContents = Utils.createPluginScript(null, null, null, languages);
+      String initScriptContents = Utils.createPluginScript(null, null, null, null, languages);
       File initScript = Utils.createInitScriptFile("bloopExport", initScriptContents);
       try {
         return buildExecutor

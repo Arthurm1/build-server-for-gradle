@@ -11,9 +11,11 @@ import ch.epfl.scala.bsp4j.MessageType;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
+import java.io.File;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,11 +28,16 @@ import org.junit.jupiter.api.Test;
 class LifecycleServiceIntegrationTest extends IntegrationTest {
 
   private static InitializeBuildParams getInitializedBuildParamsWithJdk(
-      String projectDir,
+      String projectDir, String jdkVersion, String gradleJavaVersionPath) {
+    return getInitializedBuildParamsWithJdk(Path.of(projectDir), jdkVersion,
+        gradleJavaVersionPath);
+  }
+
+  private static InitializeBuildParams getInitializedBuildParamsWithJdk(
+      Path projectDir,
       String jdkVersion,
       String gradleJavaVersionPath
   ) {
-
     Preferences preferences = new Preferences();
     var jdks = new HashMap<String, String>();
     jdks.put(jdkVersion, "file:///tmp/nonexistent_file.txt");
@@ -72,10 +79,11 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
   void testCompatibleDefaultJavaHomeProjectServer() {
     withConnection((client, server) -> {
       try {
-        InitializeBuildParams initParams = getInitializeBuildParams("legacy-gradle");
         Preferences preferences = new Preferences();
         preferences.setSemanticdbVersion("1.0");
         preferences.setJavaSemanticdbVersion("2.0");
+        preferences.setKotlinSemanticdbVersion("3.0");
+        InitializeBuildParams initParams = getInitializeBuildParams("legacy-gradle");
         initParams.setData(preferences);
         InitializeBuildResult initResult = server.buildInitialize(initParams).join();
         assertEquals("BSP-Preferences", initResult.getDataKind());
@@ -83,7 +91,9 @@ class LifecycleServiceIntegrationTest extends IntegrationTest {
         Preferences resultPrefs = JsonUtils.toModel(initResult.getData(), Preferences.class);
         assertNotNull(resultPrefs);
         assertEquals("1.0", resultPrefs.getSemanticdbVersion());
+        assertEquals("1.0", resultPrefs.getScalaSemanticdbVersion());
         assertEquals("2.0", resultPrefs.getJavaSemanticdbVersion());
+        assertEquals("3.0", resultPrefs.getKotlinSemanticdbVersion());
 
         // Wait for the configuration logics to complete
         synchronized (this) {

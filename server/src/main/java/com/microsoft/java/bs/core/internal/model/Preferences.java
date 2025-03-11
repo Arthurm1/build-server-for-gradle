@@ -102,6 +102,11 @@ public class Preferences {
   private String semanticdbVersion;
 
   /**
+   * Kotlin semanticdb plugin version to use.
+   */
+  private String kotlinSemanticdbVersion;
+
+  /**
    * periodically reload the cached sourcesets.
    */
   // TODO deprecate auto reload
@@ -357,6 +362,24 @@ public class Preferences {
   }
 
   /**
+   * get the version of the Kotlin Semantic DB library to use - if at all.
+   *
+   * @return kotlin semantic db library version or null
+   */
+  public String getKotlinSemanticdbVersion() {
+    return kotlinSemanticdbVersion;
+  }
+
+  /**
+   * set the version of the Kotlin Semantic DB library to use - if at all.
+   *
+   * @param kotlinSemanticdbVersion kotlin semantic db library version or null
+   */
+  public void setKotlinSemanticdbVersion(String kotlinSemanticdbVersion) {
+    this.kotlinSemanticdbVersion = kotlinSemanticdbVersion;
+  }
+
+  /**
    * get whether the cached sourcesets are periodically reloaded.
    *
    * @return flag indicating whether to periodically reload
@@ -388,7 +411,8 @@ public class Preferences {
         + " displayNaming: " + displayNaming
         + " jdks: " + jdks
         + " javaSemanticdbVersion: " + javaSemanticdbVersion
-        + " semanticdbVersion: " + semanticdbVersion
+        + " scalaSemanticdbVersion: " + semanticdbVersion
+        + " kotlinSemanticdbVersion: " + kotlinSemanticdbVersion
         + " autoReloadWorkspace: " + autoReloadWorkspace;
   }
 }

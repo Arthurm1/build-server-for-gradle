@@ -229,7 +229,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           try {
             jvmOptions = new ArrayList<>(task.getAllJvmArgs());
           } catch (Exception e) {
-
+            // ignore options failure
           }
           File workingDirectory = task.getWorkingDir();
           Map<String, String> environmentVariables = task.getEnvironment().entrySet()

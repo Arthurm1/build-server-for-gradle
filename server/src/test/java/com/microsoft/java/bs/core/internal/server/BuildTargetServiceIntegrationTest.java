@@ -399,10 +399,10 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       assertTrue(extraTestItem.getJvmOptions().contains("-Xmx2g"));
       assertTrue(extraTestItem.getJvmOptions().contains("-Dproperty=value"));
 
-      client.waitOnStartReports(18);
-      client.waitOnFinishReports(18);
-      client.waitOnCompileTasks(4);
-      client.waitOnCompileReports(4);
+      client.waitOnStartReports(14);
+      client.waitOnFinishReports(14);
+      client.waitOnCompileTasks(3);
+      client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
       client.waitOnTestStarts(0);
       client.waitOnTestFinishes(0);

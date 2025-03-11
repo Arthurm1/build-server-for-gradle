@@ -157,6 +157,7 @@ public class GradleApiConnector {
       String pluginInitScript = Utils.createPluginScript(workspaceDir,
           preferenceManager.getPreferences().getJavaSemanticdbVersion(),
           preferenceManager.getPreferences().getScalaSemanticdbVersion(),
+          preferenceManager.getPreferences().getKotlinSemanticdbVersion(),
           preferenceManager.getClientSupportedLanguages());
       File initScript = Utils.createInitScriptFile("sourcesets", pluginInitScript);
       try {
@@ -222,9 +223,8 @@ public class GradleApiConnector {
          errorOut
     ) {
       File workspaceDir = new File(projectUri);
-      String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
-              preferenceManager.getPreferences().getJavaSemanticdbVersion(),
-              preferenceManager.getPreferences().getScalaSemanticdbVersion());
+      String compilerOptionsScript = Utils.createCompilerOptionsScript(
+          workspaceDir, preferenceManager);
       File initScript = Utils.createInitScriptFile("runTask", compilerOptionsScript);
       try {
         BuildLauncher launcher = Utils.getBuildLauncher(connection,
@@ -298,9 +298,8 @@ public class GradleApiConnector {
           final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
           try (errorOut) {
             File workspaceDir = new File(projectUri);
-            String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
-                    preferenceManager.getPreferences().getJavaSemanticdbVersion(),
-                    preferenceManager.getPreferences().getScalaSemanticdbVersion());
+            String compilerOptionsScript = Utils.createCompilerOptionsScript(
+                workspaceDir, preferenceManager);
             File initScript = Utils.createInitScriptFile("runTest", compilerOptionsScript);
             try {
               TestLauncher launcher = Utils
@@ -400,9 +399,8 @@ public class GradleApiConnector {
           // script to alter test task to execute dry-run
           String testScript = Utils.createTestTaskScript(taskPaths);
           File workspaceDir = new File(projectUri);
-          String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
-              preferenceManager.getPreferences().getJavaSemanticdbVersion(),
-              preferenceManager.getPreferences().getScalaSemanticdbVersion());
+          String compilerOptionsScript = Utils.createCompilerOptionsScript(
+              workspaceDir, preferenceManager);
           String script = testScript + '\n' + compilerOptionsScript;
           File initScript = Utils.createInitScriptFile("testTask", script);
           try {
@@ -485,9 +483,8 @@ public class GradleApiConnector {
         String execScript = Utils.createJavaExecTaskScript(projectPath, sourceSetName, taskName,
             className, arguments, environmentVariables, jvmOptions);
         File workspaceDir = new File(projectUri);
-        String compilerOptionsScript = Utils.createCompilerOptionsScript(workspaceDir,
-            preferenceManager.getPreferences().getJavaSemanticdbVersion(),
-            preferenceManager.getPreferences().getScalaSemanticdbVersion());
+        String compilerOptionsScript = Utils.createCompilerOptionsScript(
+            workspaceDir, preferenceManager);
         String script = execScript + '\n' + compilerOptionsScript;
         File initScript = Utils.createInitScriptFile("runMain", script);
         try {

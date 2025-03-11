@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.tasks.ScalaSourceDirectorySet;
@@ -32,6 +33,9 @@ import org.gradle.util.GradleVersion;
  * The language model builder for Scala language.
  */
 public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
+
+  // Configuration used to retrieve the semantic db libraries
+  private static final String scala2ConfigName = "ScalaBspPlugin";
 
   @Override
   public SupportedLanguage<ScalaExtension> getLanguage() {
@@ -53,6 +57,95 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
       return allSource.stream().filter(dir -> !allResource.contains(dir))
         .collect(Collectors.toSet());
     }
+  }
+
+  private static String extractScalaVersion(FileCollection classpath) {
+    for (File file : classpath.getFiles()) {
+      String filename = file.getName();
+      if (filename.endsWith(".jar")) {
+        if (filename.startsWith("scala3-library_3-") && filename.length() > 21) {
+          // format "scala3-library_3-3.6.3.jar"
+          return filename.substring(17, filename.length() - 4);
+
+        } else if (filename.startsWith("scala-library-") && filename.length() > 18) {
+          // format "scala-library-2.13.16.jar"
+          return filename.substring(14, filename.length() - 4);
+        }
+      }
+    }
+    return "";
+  }
+
+  // semanticdb plugin isn't needed on the classpath, but the location is needed and the jar must
+  // exist so add it as a dependency to a new configuration and Gradle will download it.
+  // There are no transitive dependencies - the plugin only requires the scala library.
+  private static void applyScalaSemanticDbDependency(Project project, String scalaVersion,
+      String version) {
+    if (project.getPlugins().hasPlugin("scala")) {
+      // config only needs to be added for the first source set for the project
+      if (project.getConfigurations().findByName(scala2ConfigName) == null) {
+        project.getConfigurations().create(scala2ConfigName, config -> {
+          config.setVisible(false);
+          config.setCanBeConsumed(false);
+          config.setCanBeDeclared(true);
+          config.setCanBeResolved(true);
+          config.setDescription("Semanticdb dependencies.");
+          config.defaultDependencies(dependencies -> {
+            String dependency = "org.scalameta:semanticdb-scalac_" + scalaVersion + ':' + version;
+            dependencies.add(project.getDependencies().create(dependency));
+          });
+        });
+      }
+    }
+  }
+
+  private static File extractSemanticDbJar(Project project, String scalaVersion, String version) {
+    Configuration config = project.getConfigurations().getByName(scala2ConfigName);
+    String jarName = "semanticdb-scalac_" + scalaVersion + '-' + version + ".jar";
+    for (File file : config.getFiles()) {
+      if (file.getName().equals(jarName)) {
+        return file;
+      }
+    }
+    throw new IllegalStateException("Cannot find " + jarName + " in " + config.getFiles());
+  }
+
+  /**
+   * apply the semantic db plugin.
+   *
+   * @param project Gradle project
+   * @param sourceRoot root of all source files
+   * @param semanticDbVersion semantic db library version
+   */
+  public static void configureSemanticDb(Project project, String sourceRoot,
+      String semanticDbVersion) {
+
+    project.getTasks().withType(ScalaCompile.class).configureEach(scalaCompile -> {
+
+      String scalaVersion = extractScalaVersion(scalaCompile.getClasspath());
+
+      applyScalaSemanticDbDependency(project, scalaVersion, semanticDbVersion);
+
+      File classesDir = getClassesDir(scalaCompile);
+
+      List<String> params = scalaCompile.getScalaCompileOptions().getAdditionalParameters();
+      if (scalaVersion.startsWith("3")) {
+        params.add("-Xsemanticdb");
+        params.add("-sourceroot");
+        params.add(sourceRoot);
+        params.add("-targetroot");
+        params.add(classesDir.toString());
+      } else {
+        File pluginPath = extractSemanticDbJar(project, scalaVersion, semanticDbVersion);
+        params.add("-Xplugin:" + pluginPath.toString().replace("\\", "\\\\"));
+        params.add("-P:semanticdb:sourceroot:" + sourceRoot);
+        params.add("-P:semanticdb:targetroot:" + classesDir);
+        params.add("-P:semanticdb:failures:warning");
+        params.add("-P:semanticdb:synthetics:on");
+        params.add("-Xplugin-require:semanticdb");
+        params.add("-Yrangepos");
+      }
+    });
   }
 
   private ScalaCompile getScalaCompileTask(Project project, SourceSet sourceSet) {
@@ -188,7 +281,7 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
     return args;
   }
 
-  private File getClassesDir(AbstractCompile compile) {
+  private static File getClassesDir(AbstractCompile compile) {
     if (compile != null) {
       if (GradleVersion.current().compareTo(GradleVersion.version("6.1")) >= 0) {
         return compile.getDestinationDirectory().get().getAsFile();

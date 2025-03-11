@@ -4,6 +4,7 @@
 package com.microsoft.java.bs.core.internal.gradle;
 
 import com.microsoft.java.bs.core.BuildInfo;
+import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import java.io.File;
@@ -409,10 +410,10 @@ public class Utils {
   /**
    * return an array as a String, limited to a number of entries.
    *
+   * @param <T> type of array entry
    * @param array array of data
    * @param maxEntries maximum array items to include in the String
    * @return String version of array
-   * @param <T> type of array entry
    */
   public static <T> String arrayAsStr(T[] array, int maxEntries) {
     if (array == null) {
@@ -433,9 +434,9 @@ public class Utils {
       sb.append(array[idx]);
     }
     if (length < array.length) {
-      sb.append ("... and ");
+      sb.append("... and ");
       sb.append(array.length - length);
-      sb.append (" more");
+      sb.append(" more");
     }
     sb.append(']');
     return sb.toString();
@@ -612,28 +613,46 @@ public class Utils {
    * @param workspaceDir the root dir of all the projects
    * @param javaSemanticDbVersion version of the java semanticdb jar
    * @param scalaSemanticDbVersion version of the scala semanticdb jar
+   * @param kotlinSemanticDbVersion version of the kotlin semanticdb jar
    * @param languages supported languages
    * @return the text for an init script to apply the BSP plugin.
    */
   public static String createPluginScript(File workspaceDir, String javaSemanticDbVersion,
-      String scalaSemanticDbVersion, Set<String> languages) {
-    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, true,
-        languages);
+      String scalaSemanticDbVersion, String kotlinSemanticDbVersion, Set<String> languages) {
+    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion,
+        kotlinSemanticDbVersion, true, languages);
   }
 
   /**
-   * Create a Gradle init script to alter the javac and scalac compiler options to
+   * Create a Gradle init script to alter the compiler options to
+   * include the semantic db plugins.
+   *
+   * @param workspaceDir the root dir of all the projects
+   * @param preferenceManager preference manager
+   * @return the text for an init script to alter the compiler options.
+   */
+  public static String createCompilerOptionsScript(File workspaceDir,
+        PreferenceManager preferenceManager) {
+    return createInitScript(workspaceDir,
+        preferenceManager.getPreferences().getJavaSemanticdbVersion(),
+        preferenceManager.getPreferences().getScalaSemanticdbVersion(),
+        preferenceManager.getPreferences().getKotlinSemanticdbVersion(), false, null);
+  }
+
+  /**
+   * Create a Gradle init script to alter thecompiler options to
    * include the semantic db plugins.
    *
    * @param workspaceDir the root dir of all the projects
    * @param javaSemanticDbVersion version of the java semanticdb jar
    * @param scalaSemanticDbVersion version of the scala semanticdb jar
+   * @param kotlinSemanticDbVersion version of the kotlin semanticdb jar
    * @return the text for an init script to alter the compiler options.
    */
   public static String createCompilerOptionsScript(File workspaceDir, String javaSemanticDbVersion,
-      String scalaSemanticDbVersion) {
-    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion, false,
-        null);
+      String scalaSemanticDbVersion, String kotlinSemanticDbVersion) {
+    return createInitScript(workspaceDir, javaSemanticDbVersion, scalaSemanticDbVersion,
+        kotlinSemanticDbVersion, false, null);
   }
 
   /**
@@ -642,57 +661,21 @@ public class Utils {
    * @param workspaceDir the root dir of all the projects
    * @param javaSemanticDbVersion version of the java semanticdb jar
    * @param scalaSemanticDbVersion version of the scala semanticdb jar
+   * @param kotlinSemanticDbVersion version of the kotlin semanticdb jar
    * @param includeBspPlugin whether to apply the BSP plugin
    * @param languages supported languages
    * @return the text for the init script.
    */
   private static String createInitScript(File workspaceDir, String javaSemanticDbVersion,
-        String scalaSemanticDbVersion, boolean includeBspPlugin, Set<String> languages) {
+        String scalaSemanticDbVersion, String kotlinSemanticDbVersion, boolean includeBspPlugin,
+        Set<String> languages) {
     if (javaSemanticDbVersion == null && scalaSemanticDbVersion == null
-        && !includeBspPlugin) {
+        && kotlinSemanticDbVersion == null && !includeBspPlugin) {
       return null;
     }
-    String bspPluginSetup;
-    if (includeBspPlugin) {
-
-      String supportedLanguages = String.join(",", languages);
-      bspPluginSetup = """
-          // apply plugin so config can be extracted
-          apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
-          
-          GradleBuildServerPlugin {
-            languages = "$supportedLanguages"
-          }
-          """.replace("$supportedLanguages", supportedLanguages);
-    } else {
-      bspPluginSetup = "";
-    }
-
-    String javaSemanticDbSetup = javaSemanticDbVersion != null
-        && !javaSemanticDbVersion.isEmpty()
-        ? "    javaSemanticDbVersion = '" + javaSemanticDbVersion + "'\n" : "";
-    String scalaSemanticDbSetup = scalaSemanticDbVersion != null
-        && !scalaSemanticDbVersion.isEmpty()
-        ? "    scalaSemanticDbVersion = '" + scalaSemanticDbVersion + "'\n" : "";
-    String semanticDbPluginSetup;
-    if (!javaSemanticDbSetup.isEmpty() || !scalaSemanticDbSetup.isEmpty()) {
-      String workspace = workspaceDir.toString().replace("\\", "\\\\").replace("'", "\\'");
-      semanticDbPluginSetup = """
-          // apply plugin to setup semanticdb info
-          apply plugin: com.microsoft.java.bs.gradle.plugin.MetalsBspPlugin
-
-          MetalsBspPlugin {
-            sourceRoot = file('$workspace')
-            $javaSemanticDbSetup
-            $scalaSemanticDbSetup
-          }
-        """
-        .replace("$workspace", workspace)
-        .replace("$javaSemanticDbSetup", javaSemanticDbSetup)
-        .replace("$scalaSemanticDbSetup", scalaSemanticDbSetup);
-    } else {
-      semanticDbPluginSetup = "";
-    }
+    String bspPluginSetup = getBspPluginSetup(includeBspPlugin, languages);
+    String semanticDbPluginSetup = getSemanticDbPluginSetup(workspaceDir, javaSemanticDbVersion,
+        scalaSemanticDbVersion, kotlinSemanticDbVersion);
 
     return """
         initscript {
@@ -718,5 +701,55 @@ public class Utils {
         .replace("$version", BuildInfo.version)
         .replace("$bspPluginSetup", bspPluginSetup)
         .replace("$semanticDbPluginSetup", semanticDbPluginSetup);
+  }
+
+  private static String getBspPluginSetup(boolean includeBspPlugin,
+      Set<String> languages) {
+    if (includeBspPlugin) {
+      String supportedLanguages = String.join(",", languages);
+      return """
+          // apply plugin so config can be extracted
+          apply plugin: com.microsoft.java.bs.gradle.plugin.GradleBuildServerPlugin
+          
+          GradleBuildServerPlugin {
+            languages = "$supportedLanguages"
+          }
+          """.replace("$supportedLanguages", supportedLanguages);
+    }
+    return "";
+  }
+
+  private static String getSemanticDbPluginSetup(File workspaceDir,
+      String javaSemanticDbVersion, String scalaSemanticDbVersion,
+      String kotlinSemanticDbVersion) {
+    String javaSemanticDbSetup = javaSemanticDbVersion != null
+        && !javaSemanticDbVersion.isEmpty()
+        ? "    javaSemanticDbVersion = '" + javaSemanticDbVersion + "'\n" : "";
+    String scalaSemanticDbSetup = scalaSemanticDbVersion != null
+        && !scalaSemanticDbVersion.isEmpty()
+        ? "    scalaSemanticDbVersion = '" + scalaSemanticDbVersion + "'\n" : "";
+    String kotlinSemanticDbSetup = kotlinSemanticDbVersion != null
+        && !kotlinSemanticDbVersion.isEmpty()
+        ? "    kotlinSemanticDbVersion = '" + kotlinSemanticDbVersion + "'\n" : "";
+    if (!javaSemanticDbSetup.isEmpty() || !scalaSemanticDbSetup.isEmpty()
+        || !kotlinSemanticDbSetup.isEmpty()) {
+      String workspace = workspaceDir.toString().replace("\\", "\\\\").replace("'", "\\'");
+      return """
+          // apply plugin to setup semanticdb info
+          apply plugin: com.microsoft.java.bs.gradle.plugin.MetalsBspPlugin
+
+          MetalsBspPlugin {
+            sourceRoot = file('$workspace')
+            $javaSemanticDbSetup
+            $scalaSemanticDbSetup
+            $kotlinSemanticDbSetup
+          }
+        """
+        .replace("$workspace", workspace)
+        .replace("$javaSemanticDbSetup", javaSemanticDbSetup)
+        .replace("$scalaSemanticDbSetup", scalaSemanticDbSetup)
+        .replace("$kotlinSemanticDbSetup", kotlinSemanticDbSetup);
+    }
+    return "";
   }
 }

@@ -10,9 +10,10 @@ import org.gradle.api.Project;
  * settings for the MetalsBspPlugin.
  * Use:
  * MetalsBspPlugin {
- *   javaSemanticDbVersion = "2.1"
- *   scalaSemanticDbVersion = "3.1"
  *   sourceRoot = File('/myRepos/myProject')
+ *   javaSemanticDbVersion = "0.10.4"
+ *   scalaSemanticDbVersion = "4.13.2"
+ *   kotlinSemanticDbVersion = "0.3.2"
  * }
  */
 public class MetalsBspPluginExtension {
@@ -20,6 +21,7 @@ public class MetalsBspPluginExtension {
   private File sourceRoot;
   private String javaSemanticDbVersion;
   private String scalaSemanticDbVersion;
+  private String kotlinSemanticDbVersion;
 
   public File getSourceRoot() {
     return sourceRoot;
@@ -43,6 +45,14 @@ public class MetalsBspPluginExtension {
 
   public void setScalaSemanticDbVersion(String scalaSemanticDbVersion) {
     this.scalaSemanticDbVersion = scalaSemanticDbVersion;
+  }
+
+  public String getKotlinSemanticDbVersion() {
+    return kotlinSemanticDbVersion;
+  }
+
+  public void setKotlinSemanticDbVersion(String kotlinSemanticDbVersion) {
+    this.kotlinSemanticDbVersion = kotlinSemanticDbVersion;
   }
 
   /**

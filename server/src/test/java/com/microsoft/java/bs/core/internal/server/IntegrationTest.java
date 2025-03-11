@@ -270,18 +270,26 @@ abstract class IntegrationTest {
   }
 
   protected static Path getTestPath(String projectDir) {
-    return Paths.get(
-        System.getProperty("user.dir"),
-        "..",
-        "testProjects",
-        projectDir);
+    return getTestPath(Path.of(projectDir));
+  }
+
+  protected static Path getTestPath(Path projectDir) {
+    if (projectDir.isAbsolute()) {
+      return projectDir;
+    }
+    return Paths.get(System.getProperty("user.dir")).getParent()
+        .resolve("testProjects").resolve(projectDir);
   }
 
   protected static InitializeBuildParams getInitializeBuildParams(String projectDir) {
+    return getInitializeBuildParams(Path.of(projectDir));
+  }
+
+  protected static InitializeBuildParams getInitializeBuildParams(Path projectDir) {
     return getInitializeBuildParams(projectDir, null);
   }
 
-  protected static InitializeBuildParams getInitializeBuildParams(String projectDir,
+  protected static InitializeBuildParams getInitializeBuildParams(Path projectDir,
       Preferences preferences) {
     List<String> languages = new ArrayList<>(SupportedLanguages.allBspNames);
     BuildClientCapabilities capabilities = new BuildClientCapabilities(languages);
@@ -329,14 +337,29 @@ abstract class IntegrationTest {
   }
 
   protected static void withNewTestServer(
-      String project,
+      String projectDir,
       BiConsumer<TestServer, TestClient> consumer
   ) {
-    withNewTestServer(project, null, consumer);
+    withNewTestServer(projectDir, null, consumer);
   }
 
   protected static void withNewTestServer(
-      String project,
+      String projectDir,
+      String version,
+      BiConsumer<TestServer, TestClient> consumer
+  ) {
+    withNewTestServer(Path.of(projectDir), version, consumer);
+  }
+
+  protected static void withNewTestServer(
+      Path projectDir,
+      BiConsumer<TestServer, TestClient> consumer
+  ) {
+    withNewTestServer(projectDir, null, consumer);
+  }
+
+  protected static void withNewTestServer(
+      Path projectDir,
       String version,
       BiConsumer<TestServer, TestClient> consumer
   ) {
@@ -363,7 +386,7 @@ abstract class IntegrationTest {
         } else {
           preferences = null;
         }
-        InitializeBuildParams params = getInitializeBuildParams(project, preferences);
+        InitializeBuildParams params = getInitializeBuildParams(projectDir, preferences);
         InitializeBuildResult result = testServer.buildInitialize(params).join();
         BuildServerCapabilities capabilities = result.getCapabilities();
         assertFalse(capabilities.getCompileProvider().getLanguageIds().isEmpty());

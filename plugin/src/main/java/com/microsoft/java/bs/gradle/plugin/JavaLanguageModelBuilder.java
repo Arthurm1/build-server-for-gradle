@@ -25,6 +25,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.Directory;
 import org.gradle.api.internal.tasks.compile.DefaultJavaCompileSpec;
 import org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder;
@@ -332,11 +334,57 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
       .findFirst();
   }
 
-  private File getClassesDir(AbstractCompile compile) {
+  private static File getClassesDir(AbstractCompile compile) {
     if (GradleVersion.current().compareTo(GradleVersion.version("6.1")) >= 0) {
       return compile.getDestinationDirectory().get().getAsFile();
     } else {
       return Utils.invokeMethodIgnoreFail(compile, "getDestinationDir");
     }
+  }
+
+  private static void addDependency(Project project, String configName, String dependency) {
+    String suffixConfigName = configName.substring(0, 1).toUpperCase() + configName.substring(1);
+    project.getConfigurations().forEach(config ->
+        addDependency(configName, suffixConfigName, project.getDependencies(), config, dependency)
+    );
+  }
+
+  private static void addDependency(String configName, String suffixConfigName,
+      DependencyHandler dependencies, Configuration config, String dependency) {
+    if (config.getName().equals(configName)
+        || config.getName().endsWith(suffixConfigName)) {
+      dependencies.add(config.getName(), dependency);
+    }
+  }
+
+  private static void applySemanticDbDependency(Project project, String version) {
+    // Unsure how to know if annotation processing is used so add to
+    // both compile and annotation processor configurations
+    if (project.getPlugins().hasPlugin("java")) {
+      String dependency = "com.sourcegraph:semanticdb-javac:" + version;
+      addDependency(project, "compileOnly", dependency);
+      addDependency(project, "annotationProcessor", dependency);
+    }
+  }
+
+  /**
+   * apply the semantic db plugin.
+   *
+   * @param project Gradle project
+   * @param sourceRoot root of all source files
+   * @param semanticDbVersion semantic db library version
+   */
+  public static void configureSemanticDb(Project project, String sourceRoot,
+      String semanticDbVersion) {
+
+
+    applySemanticDbDependency(project, semanticDbVersion);
+
+    project.getTasks().withType(JavaCompile.class).configureEach(javaCompile -> {
+
+      File classesDir = getClassesDir(javaCompile);
+      javaCompile.getOptions().getCompilerArgs()
+          .add("-Xplugin:semanticdb -sourceroot:" + sourceRoot + " -targetroot:" + classesDir);
+    });
   }
 }

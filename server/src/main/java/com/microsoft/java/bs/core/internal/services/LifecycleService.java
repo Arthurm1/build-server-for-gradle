@@ -248,26 +248,19 @@ public class LifecycleService {
 
     if (jdk != null) {
       preferenceManager.getPreferences().setGradleJavaHome(jdk.getAbsolutePath());
-      if (client != null) {
-        ShowMessageParams messageParams = new ShowMessageParams(
-            MessageType.INFO,
-            String.format(
-                "Default JDK wasn't compatible with current gradle version (" + gradleVersion + ")."
-                + "Using \"%s\" instead.", jdk.getAbsolutePath()
-            )
-        );
-        client.onBuildShowMessage(messageParams);
-      }
+      showMessage(MessageType.INFO,
+          "Default JDK wasn't compatible with current gradle version (" + gradleVersion + ")."
+              + "Using \"" + jdk.getAbsolutePath() + "\" instead.");
     } else {
-      if (client != null) {
-        ShowMessageParams messageParams = new ShowMessageParams(
-            MessageType.ERROR,
-            "Failed to find a JDK compatible with current gradle version (" + gradleVersion + ")."
-        );
-        client.onBuildShowMessage(messageParams);
-      }
+      showMessage(MessageType.ERROR,
+          "Failed to find a JDK compatible with current gradle version (" + gradleVersion + ").");
     }
+  }
 
+  private void showMessage(MessageType type, String message) {
+    if (client != null) {
+      client.onBuildShowMessage(new ShowMessageParams(type, message));
+    }
   }
 
   /**
