@@ -1,7 +1,7 @@
 [versions]
 dependencyUpdates = "0.52.0"
-vanniktechPublish = "0.30.0"
-buildConfig = "5.5.1"
+vanniktechPublish = "0.31.0"
+buildConfig = "5.5.2"
 commonsLang = "3.17.0"
 gradleTooling = "8.13"
 slf4j = "2.0.17"
@@ -9,7 +9,7 @@ bsp = "2.2.0-M2"
 # tied to the bsp gson version
 gson = "2.10.1"
 junit = "5.12.0"
-mokito = "5.15.2"
+mokito = "5.16.0"
 
 [libraries]
 bsp = { module = "ch.epfl.scala:bsp4j", version.ref = "bsp" }
