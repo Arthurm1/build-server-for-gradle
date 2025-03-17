@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.microsoft.java.bs.gradle.model.AntlrExtension;
+import com.microsoft.java.bs.gradle.model.Artifact;
 import com.microsoft.java.bs.gradle.model.BuildTargetDependency;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
@@ -31,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -199,6 +201,7 @@ class GradleBuildServerPluginTest {
       // tooling api jar name changed from gradle-tooling-api to gradle-api in 3.0
       new GradleJreVersion("3.0", 8),
       // artifacts view added in 4.0
+      // ArtifactResult#getId added in 4.0
       // CompileOptions#getAnnotationProcessorPath added in 3.4
       // RuntimeClasspathConfigurationName added to sourceset in 3.4
       // Test#getTestClassesDir -> Test#getTestClassesDirs in 4.0
@@ -319,6 +322,34 @@ class GradleBuildServerPluginTest {
           assertTrue(javaExtension.getClassesDir().toPath().endsWith(Paths.get("classes",
               gradleSourceSet.getSourceSetName())));
         }
+      }
+    });
+  }
+
+  static Stream<GradleVersion> versionsFrom4_0() {
+    return versionProvider("4.0", null);
+  }
+
+  @ParameterizedTest(name = "testMultipleSourceJars {0}", allowZeroInvocations = true)
+  @MethodSource("versionsFrom4_0")
+  void testMultipleSourceJars(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("multiple-source-jars", gradleVersion, gradleSourceSets -> {
+      assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
+      for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
+        assertNotNull(gradleSourceSet.getModuleDependencies());
+        assertFalse(gradleSourceSet.getModuleDependencies().isEmpty());
+        gradleSourceSet.getModuleDependencies().forEach(dependency -> {
+          Optional<Artifact> jar = dependency.getArtifacts().stream()
+              .filter(artifact -> artifact.getClassifier() == null).findAny();
+          Optional<Artifact> sourceJar = dependency.getArtifacts().stream()
+              .filter(artifact -> "sources".equals(artifact.getClassifier())).findAny();
+          assertTrue(jar.isPresent());
+          assertTrue(sourceJar.isPresent());
+          String jarUri = Paths.get(jar.get().getUri()).getFileName().toString();
+          String sourceUri = Paths.get(sourceJar.get().getUri()).getFileName().toString();
+          String sourceFromJar = jarUri.substring(0, jarUri.length() - 4) + ".src.jar";
+          assertEquals(sourceUri, sourceFromJar);
+        });
       }
     });
   }

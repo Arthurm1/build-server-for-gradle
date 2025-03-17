@@ -1,0 +1,15 @@
+plugins {
+  id 'java'
+}
+
+repositories {
+  mavenCentral()
+  ivy {
+    url = uri(projectDir.toPath().resolve("ivy"))
+    layout("ivy")
+  }
+}
+
+dependencies {
+  implementation(group: "io.github.arthurm1", name: "multisource", version: "0.12.0")
+}

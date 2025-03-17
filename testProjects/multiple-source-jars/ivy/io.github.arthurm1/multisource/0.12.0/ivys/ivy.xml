@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<ivy-module version="1.0">
+    <info organisation="io.github.arthurm1" module="multisource" revision="0.12.0" status="release">
+    </info>
+    <configurations>
+        <conf name="default"/>
+        <conf name="sources"/>
+    </configurations>
+    <publications>
+        <artifact name="multisource-1" ext="jar" type="jar" conf="default"/>
+        <artifact name="multisource-1" ext="src.jar" type="source" conf="sources"/>
+        <artifact name="multisource-2" ext="jar" type="jar" conf="default"/>
+        <artifact name="multisource-2" ext="src.jar" type="source" conf="sources"/>
+        <artifact name="multisource" ext="jar" type="jar" conf="default"/>
+        <artifact name="multisource" ext="src.jar" type="source" conf="sources"/>
+    </publications>
+</ivy-module>

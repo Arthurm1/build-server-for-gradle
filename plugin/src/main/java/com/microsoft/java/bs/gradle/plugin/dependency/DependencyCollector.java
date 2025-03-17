@@ -7,6 +7,7 @@ import com.microsoft.java.bs.gradle.model.Artifact;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
+import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,14 +65,16 @@ public class DependencyCollector {
    */
   public static Set<GradleModuleDependency> getModuleDependencies(DependencyHandler dependencies,
       Collection<Configuration> configurations) {
-    if (GradleVersion.current().compareTo(GradleVersion.version("4.0")) < 0) {
+    GradleVersion gradleVersion = GradleVersion.current();
+    if (gradleVersion.compareTo(GradleVersion.version("4.0")) < 0) {
       try {
         List<ResolvedConfiguration> configs = configurations.stream()
             .map(Configuration::getResolvedConfiguration)
             .collect(Collectors.toList());
         Stream<DefaultGradleModuleDependency> moduleDependencies = configs.stream()
             .flatMap(config -> config.getResolvedArtifacts().stream())
-            .map(artifact -> getArtifact(dependencies, artifact.getId(), artifact.getFile()));
+            .map(artifact -> getArtifact(dependencies, artifact.getId(), artifact.getFile(),
+                gradleVersion));
 
         // add as individual files for direct dependencies on jars
         Stream<DefaultGradleModuleDependency> directDependencies = configs.stream()
@@ -89,7 +92,7 @@ public class DependencyCollector {
         .filter(Configuration::isCanBeResolved)
         .flatMap(configuration -> getConfigurationArtifacts(configuration).stream())
         .map(artifactResult -> getArtifact(dependencies, artifactResult.getId(),
-            artifactResult.getFile()))
+            artifactResult.getFile(), gradleVersion))
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
     }
@@ -253,7 +256,8 @@ public class DependencyCollector {
   }
 
   private static DefaultGradleModuleDependency getArtifact(DependencyHandler dependencies,
-      ComponentArtifactIdentifier componentArtifactIdentifier, File artifactFile) {
+      ComponentArtifactIdentifier componentArtifactIdentifier, File artifactFile,
+      GradleVersion gradleVersion) {
     if (componentArtifactIdentifier == null) {
       return null;
     }
@@ -262,8 +266,8 @@ public class DependencyCollector {
       return null;
     }
     if (id instanceof ModuleComponentIdentifier) {
-      return getModuleArtifactDependency(dependencies, (ModuleComponentIdentifier) id,
-        artifactFile);
+      return getModuleArtifactDependency(dependencies, componentArtifactIdentifier,
+          (ModuleComponentIdentifier) id, artifactFile, gradleVersion);
     }
     return getFileArtifactDependency(id.getDisplayName(), artifactFile);
   }
@@ -279,14 +283,15 @@ public class DependencyCollector {
   }
 
   private static DefaultGradleModuleDependency getModuleArtifactDependency(
-      DependencyHandler dependencies, ModuleComponentIdentifier componentIdentifier,
-      File resolvedArtifactFile) {
+      DependencyHandler dependencies, ComponentArtifactIdentifier componentArtifactIdentifier,
+      ModuleComponentIdentifier componentIdentifier, File resolvedArtifactFile,
+      GradleVersion gradleVersion) {
 
     ArtifactResolutionQuery query = dependencies
         .createArtifactResolutionQuery()
         .forComponents(componentIdentifier);
 
-    if (GradleVersion.current().compareTo(GradleVersion.version("4.5")) >= 0) {
+    if (gradleVersion.compareTo(GradleVersion.version("4.5")) >= 0) {
       @SuppressWarnings({"UnstableApiUsage"})
       ArtifactResolutionQuery withArtifacts = query.withArtifacts(JvmLibrary.class, artifactTypes);
       query = withArtifacts;
@@ -305,12 +310,14 @@ public class DependencyCollector {
     }
 
     Set<ComponentArtifactsResult> resolvedComponents = resolutionResult.getResolvedComponents();
-    File sourceJar = getNonClassesArtifact(resolvedComponents, SourcesArtifact.class);
+    File sourceJar = getNonClassesArtifact(resolvedComponents, SourcesArtifact.class,
+        componentArtifactIdentifier, gradleVersion);
     if (sourceJar != null) {
       artifacts.add(new DefaultArtifact(sourceJar.toPath().toUri(), "sources"));
     }
 
-    File javaDocJar = getNonClassesArtifact(resolvedComponents, JavadocArtifact.class);
+    File javaDocJar = getNonClassesArtifact(resolvedComponents, JavadocArtifact.class,
+        componentArtifactIdentifier, gradleVersion);
     if (javaDocJar != null) {
       artifacts.add(new DefaultArtifact(javaDocJar.toPath().toUri(), "javadoc"));
     }
@@ -323,14 +330,39 @@ public class DependencyCollector {
     );
   }
 
+  // ivy allows multiple jars (and source jars) per component.
+  // Match them using DefaultIvyArtifactName class which is internal.
+  // If not Ivy then assume they match.
+  private static boolean artifactMatch(ComponentArtifactIdentifier originalIdentifier,
+      ComponentArtifactIdentifier artifactIdentifier) {
+    Object originalIdName = Utils.invokeMethodIgnoreFail(originalIdentifier, "getName");
+    Object artifactIdName = Utils.invokeMethodIgnoreFail(artifactIdentifier, "getName");
+    if (originalIdName != null && artifactIdName != null) {
+      Object originalIdIvyName = Utils.invokeMethodIgnoreFail(originalIdName, "getName");
+      Object artifactIdIvyName = Utils.invokeMethodIgnoreFail(artifactIdName, "getName");
+      if (originalIdIvyName != null && artifactIdIvyName != null) {
+        return Objects.equals(originalIdIvyName, artifactIdIvyName);
+      }
+    }
+    return true;
+  }
+
   private static File getNonClassesArtifact(Set<ComponentArtifactsResult> resolvedComponents,
-      Class<? extends org.gradle.api.component.Artifact> artifactClass) {
+      Class<? extends org.gradle.api.component.Artifact> artifactClass,
+      ComponentArtifactIdentifier originalIdentifier, GradleVersion gradleVersion) {
     for (ComponentArtifactsResult component : resolvedComponents) {
       Set<ArtifactResult> artifacts = component.getArtifacts(artifactClass);
       for (ArtifactResult artifact : artifacts) {
         if (artifact instanceof ResolvedArtifactResult) {
-          // TODO: only return the first found result, might be wrong!
-          return ((ResolvedArtifactResult) artifact).getFile();
+          ResolvedArtifactResult resolvedArtifactResult = (ResolvedArtifactResult) artifact;
+          if (gradleVersion.compareTo(GradleVersion.version("4.0")) >= 0) {
+            if (artifactMatch(originalIdentifier, artifact.getId())) {
+              return resolvedArtifactResult.getFile();
+            }
+          } else {
+            // can't check for Ivy before 4.0 because ArtifactResult#getId doesn't exist
+            return resolvedArtifactResult.getFile();
+          }
         }
       }
     }
