@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.13.0
+## What's Changed
+* enhancement - better error reporting by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/7461a22c730225bf645c758ecd17232dc627e0a1
+* enhancement - handle multiple source jars per module by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/96519f28750d294aa99a6225e58a4455baf7e94a
+* enhancement - remove transitive project dependencies by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/40c4ce676a3913296ef176ea730c8d859f26a5a2
+
 ## 0.12.0
 ## What's Changed
 * enhancement - support buildTarget/scalaTestClasses by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/0ffa0f01c7897687bd9bdf9d23103a64a47b886d
