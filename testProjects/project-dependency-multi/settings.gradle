@@ -1,0 +1,4 @@
+rootProject.name = 'project-dependency-multi'
+include('a')
+include('b')
+include('c')

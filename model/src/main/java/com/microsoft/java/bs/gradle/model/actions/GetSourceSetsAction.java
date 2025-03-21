@@ -113,6 +113,7 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
         .collect(Collectors.toList());
 
     populateInterProjectInfo(sourceSets);
+    reduceInterProjectDependencies(sourceSets);
     removeProjectToProjectArtifacts(sourceSets);
 
     return sourceSets;
@@ -170,6 +171,38 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
         artifacts.removeIf(artifact -> urisToExclude.contains(artifact.getUri().toString()));
       }
       modules.removeIf(module -> module.getArtifacts().isEmpty());
+    }
+  }
+
+  // remove direct dependencies on other projects when they would be included transitively
+  private void reduceInterProjectDependencies(List<GradleSourceSet> sourceSets) {
+    Map<BuildTargetDependency, GradleSourceSet> dependencies = new HashMap<>();
+    for (GradleSourceSet sourceSet : sourceSets) {
+      dependencies.put(new DefaultBuildTargetDependency(sourceSet), sourceSet);
+    }
+    Map<BuildTargetDependency, Set<BuildTargetDependency>> transitiveDependencies =
+        new HashMap<>();
+    // find all transitive dependencies
+    for (BuildTargetDependency dependency : dependencies.keySet()) {
+      GradleSourceSet sourceSet = dependencies.get(dependency);
+      Set<BuildTargetDependency> sourceSetDependencies = new HashSet<>();
+      for (BuildTargetDependency dep : sourceSet.getBuildTargetDependencies()) {
+        GradleSourceSet depSourceSet = dependencies.get(dep);
+        sourceSetDependencies.addAll(depSourceSet.getBuildTargetDependencies());
+      }
+      transitiveDependencies.put(dependency, sourceSetDependencies);
+    }
+    // remove transitive
+    for (BuildTargetDependency dependency : dependencies.keySet()) {
+      GradleSourceSet sourceSet = dependencies.get(dependency);
+      Set<BuildTargetDependency> sourceSetTransitiveDependencies =
+          transitiveDependencies.get(dependency);
+      Set<BuildTargetDependency> newDependencies =
+          new HashSet<>(sourceSet.getBuildTargetDependencies());
+      newDependencies.removeAll(sourceSetTransitiveDependencies);
+      if (sourceSet instanceof DefaultGradleSourceSet) {
+        ((DefaultGradleSourceSet) sourceSet).setBuildTargetDependencies(newDependencies);
+      }
     }
   }
 

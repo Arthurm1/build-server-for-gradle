@@ -264,7 +264,7 @@ class GradleApiConnectorTest {
 
   private void assertHasTaskPath(Set<GradleTestTask> paths, String path) {
     assertTrue(paths.stream().anyMatch(task -> task.getTaskPath().equals(path)), () -> {
-      String pathsAsStr = paths.stream().map(task -> task.getTaskPath())
+      String pathsAsStr = paths.stream().map(GradleTestTask::getTaskPath)
           .collect(Collectors.joining(", "));
       return "Task path not found [" + path + "] in [" + pathsAsStr + ']';
     });
@@ -332,6 +332,21 @@ class GradleApiConnectorTest {
   }
 
   @Test
+  void testGetGradleDependenciesMulti() {
+    Path projectDir = projectPath.resolve("project-dependency-multi");
+    GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
+    assertEquals(6, gradleSourceSets.getGradleSourceSets().size());
+    GradleSourceSet mainA = findSourceSet(gradleSourceSets, "a", "main");
+    assertEquals(0, mainA.getBuildTargetDependencies().size());
+    GradleSourceSet mainB = findSourceSet(gradleSourceSets, "b", "main");
+    assertEquals(1, mainB.getBuildTargetDependencies().size());
+    GradleSourceSet mainC = findSourceSet(gradleSourceSets, "c", "main");
+    assertEquals(1, mainC.getBuildTargetDependencies().size());
+    assertHasBuildTargetDependency(mainB, mainA);
+    assertHasBuildTargetDependency(mainC, mainB);
+  }
+
+  @Test
   void testGetGradleDependenciesWithTestFixtures() {
     Path projectDir = projectPath.resolve("project-dependency-test-fixtures");
     GradleSourceSets gradleSourceSets = getGradleSourceSets(projectDir);
@@ -341,16 +356,14 @@ class GradleApiConnectorTest {
     GradleSourceSet testFixturesA = findSourceSet(gradleSourceSets, "a", "testFixtures");
     assertEquals(1, testFixturesA.getBuildTargetDependencies().size());
     GradleSourceSet testA = findSourceSet(gradleSourceSets, "a", "test");
-    assertEquals(2, testA.getBuildTargetDependencies().size());
+    assertEquals(1, testA.getBuildTargetDependencies().size());
     GradleSourceSet mainB = findSourceSet(gradleSourceSets, "b", "main");
     assertEquals(0, mainB.getBuildTargetDependencies().size());
     GradleSourceSet testB = findSourceSet(gradleSourceSets, "b", "test");
-    assertEquals(3, testB.getBuildTargetDependencies().size());
+    assertEquals(2, testB.getBuildTargetDependencies().size());
     assertHasBuildTargetDependency(testFixturesA, mainA);
-    assertHasBuildTargetDependency(testA, mainA);
     assertHasBuildTargetDependency(testA, testFixturesA);
     assertHasBuildTargetDependency(testB, testFixturesA);
-    assertHasBuildTargetDependency(testB, mainA);
     assertHasBuildTargetDependency(testB, mainB);
   }
 
