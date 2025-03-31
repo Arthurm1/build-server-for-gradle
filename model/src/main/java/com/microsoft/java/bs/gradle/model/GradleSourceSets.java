@@ -7,8 +7,10 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * List of all Gradle source set instances.
+ * List of all Gradle source set instances and exceptions for failed source sets.
  */
 public interface GradleSourceSets extends Serializable {
   List<GradleSourceSet> getGradleSourceSets();
+
+  List<Exception> getExceptions();
 }

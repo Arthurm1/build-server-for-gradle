@@ -239,6 +239,18 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
   }
 
   @Test
+  void testBuildSrc() {
+    withNewTestServer("build-src", (gradleBuildServer, client) -> {
+      WorkspaceBuildTargetsResult buildTargetsResult =
+          gradleBuildServer.workspaceBuildTargets().join();
+      // TODO - the `build-src` project doesn't actually test the need for splitting out buildSrc
+      // source sets retrieval from other source sets retrieval.
+      // That failed in https://github.com/MinecraftForge/MinecraftForge and I'm unable to minimize.
+      assertEquals(4, buildTargetsResult.getTargets().size());
+    });
+  }
+
+  @Test
   void testScalaSemanticDbPlugin() {
     Preferences prefsTooNew = new Preferences();
     prefsTooNew.setSemanticdbVersion("4.10.0");

@@ -176,7 +176,12 @@ public class GradleApiConnector {
         }
         // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
         // via a copy constructor and return as a POJO.
-        return new DefaultGradleSourceSets(buildExecutor.run());
+        GradleSourceSets sourceSets = buildExecutor.run();
+        // report the errors and return only the successful source sets
+        for (Exception exception: sourceSets.getExceptions()) {
+          sendError(getErrorMessage(exception), reporter);
+        }
+        return new DefaultGradleSourceSets(sourceSets.getGradleSourceSets());
       } finally {
         if (initScript != null) {
           initScript.delete();
@@ -197,6 +202,10 @@ public class GradleApiConnector {
       message = message + '\n' + errorOut;
     }
     return message;
+  }
+
+  private String getErrorMessage(Exception exception) {
+    return getErrorMessage(exception, null);
   }
 
   private void sendError(String message, ProgressReporter reporter) {

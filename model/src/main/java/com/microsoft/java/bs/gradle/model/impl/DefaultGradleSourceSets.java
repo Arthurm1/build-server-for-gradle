@@ -5,6 +5,8 @@ package com.microsoft.java.bs.gradle.model.impl;
 
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -15,10 +17,17 @@ import java.util.stream.Collectors;
 public class DefaultGradleSourceSets implements GradleSourceSets {
   private static final long serialVersionUID = 1L;
 
-  private List<GradleSourceSet> gradleSourceSets;
+  private final List<Exception> exceptions;
 
-  public DefaultGradleSourceSets(List<GradleSourceSet> gradleSourceSets) {
+  private final List<GradleSourceSet> gradleSourceSets;
+
+  public DefaultGradleSourceSets(List<GradleSourceSet> gradleSourceSets,
+      List<Exception> exceptions) {
+    this.exceptions = exceptions;
     this.gradleSourceSets = gradleSourceSets;
+  }
+  public DefaultGradleSourceSets(List<GradleSourceSet> gradleSourceSets) {
+    this(gradleSourceSets, new ArrayList<>());
   }
 
   /**
@@ -27,16 +36,18 @@ public class DefaultGradleSourceSets implements GradleSourceSets {
   public DefaultGradleSourceSets(GradleSourceSets sourceSets) {
     this(sourceSets.getGradleSourceSets().stream()
         .map(DefaultGradleSourceSet::new)
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList()),
+        sourceSets.getExceptions());
+  }
+
+  @Override
+  public List<Exception> getExceptions() {
+    return exceptions;
   }
 
   @Override
   public List<GradleSourceSet> getGradleSourceSets() {
     return gradleSourceSets;
-  }
-
-  public void setGradleSourceSets(List<GradleSourceSet> gradleSourceSets) {
-    this.gradleSourceSets = gradleSourceSets;
   }
 
   @Override
@@ -56,6 +67,7 @@ public class DefaultGradleSourceSets implements GradleSourceSets {
       return false;
     }
     DefaultGradleSourceSets other = (DefaultGradleSourceSets) obj;
-    return Objects.equals(gradleSourceSets, other.gradleSourceSets);
+    return Objects.equals(exceptions, other.exceptions)
+      && Objects.equals(gradleSourceSets, other.gradleSourceSets);
   }
 }

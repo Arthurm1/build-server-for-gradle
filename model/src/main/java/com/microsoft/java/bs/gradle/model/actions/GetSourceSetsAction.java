@@ -44,21 +44,20 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
    */
   @Override
   public GradleSourceSets execute(BuildController buildController) {
-    Collection<GradleBuild> builds = fetchIncludedBuilds(buildController);
-    List<GradleSourceSet> sourceSets = fetchModels(buildController, builds);
-    return new DefaultGradleSourceSets(sourceSets);
+    Map<String, GradleBuild> builds = fetchIncludedBuilds(buildController);
+    return fetchModels(buildController, builds);
   }
 
-  private Collection<GradleBuild> fetchIncludedBuilds(BuildController buildController) {
+  private Map<String, GradleBuild> fetchIncludedBuilds(BuildController buildController) {
     Map<String, GradleBuild> builds = new HashMap<>();
     GradleBuild build = buildController.getBuildModel();
     String rootProjectName = build.getRootProject().getName();
     fetchIncludedBuilds(build, builds, rootProjectName);
-    return builds.values();
+    return builds;
   }
 
-  private void fetchIncludedBuilds(GradleBuild build, Map<String,
-      GradleBuild> builds, String rootProjectName) {
+  private void fetchIncludedBuilds(GradleBuild build, Map<String, GradleBuild> builds,
+      String rootProjectName) {
     if (builds.containsKey(rootProjectName)) {
       return;
     }
@@ -93,30 +92,42 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
    * @param buildController The Gradle build controller used to interact with the build.
    * @param builds The Gradle build models representing the build and included builds.
    */
-  private List<GradleSourceSet> fetchModels(BuildController buildController,
-                                            Collection<GradleBuild> builds) {
+  private GradleSourceSets fetchModels(BuildController buildController,
+      Map<String, GradleBuild> builds) {
 
-    // create an action per project
-    Collection<GetSourceSetAction> projectActions = builds
-        .stream()
-        .flatMap(build -> build.getProjects().stream())
-        .map(GetSourceSetAction::new)
-        .collect(Collectors.toList());
+    // retrieve source sets with same root project concurrently
+    // don't retrieve all source sets concurrently as Gradle may fail.
+    List<GradleSourceSets> results = new ArrayList<>();
+    for (Map.Entry<String, GradleBuild> entry: builds.entrySet()) {
 
+      // create an action per project
+      GradleBuild build = entry.getValue();
+      Collection<GetSourceSetAction> projectActions = build.getProjects()
+          .stream()
+          .map(GetSourceSetAction::new)
+          .collect(Collectors.toList());
+
+      List<GradleSourceSets> sourceSets = buildController.run(projectActions);
+      results.addAll(sourceSets);
+    }
     // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
     // via a copy constructor so we can treat as a DefaultGradleSourceSet and
     // populate source set dependencies.
-    List<GradleSourceSet> sourceSets = buildController.run(projectActions)
+    List<GradleSourceSet> sourceSets = results
         .stream()
         .flatMap(ss -> ss.getGradleSourceSets().stream())
         .map(DefaultGradleSourceSet::new)
+        .collect(Collectors.toList());
+    List<Exception> exceptions = results
+        .stream()
+        .flatMap(ss -> ss.getExceptions().stream())
         .collect(Collectors.toList());
 
     populateInterProjectInfo(sourceSets);
     reduceInterProjectDependencies(sourceSets);
     removeProjectToProjectArtifacts(sourceSets);
 
-    return sourceSets;
+    return new DefaultGradleSourceSets(sourceSets, exceptions);
   }
 
   /**
