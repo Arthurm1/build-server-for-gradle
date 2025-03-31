@@ -82,6 +82,7 @@ class GradleApiConnectorTest {
     preferences.setIncludeTargetBaseDirectory(true);
     preferences.setAutoReloadWorkspace(false);
     preferences.setDisplayNaming(Preferences.BRACKET_DISPLAY_NAMING);
+    preferences.setGradleJavaHome(System.getProperty("java.home"));
     GradleApiConnector connector = new GradleApiConnector(preferenceManager);
     try {
       return function.apply(connector);
