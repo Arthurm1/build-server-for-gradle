@@ -38,6 +38,9 @@ import ch.epfl.scala.bsp4j.ScalaTestClassesItem;
 import ch.epfl.scala.bsp4j.ScalaTestParams;
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection;
 import ch.epfl.scala.bsp4j.ScalaTestSuites;
+import ch.epfl.scala.bsp4j.ScalacOptionsItem;
+import ch.epfl.scala.bsp4j.ScalacOptionsParams;
+import ch.epfl.scala.bsp4j.ScalacOptionsResult;
 import ch.epfl.scala.bsp4j.SourceItem;
 import ch.epfl.scala.bsp4j.SourcesItem;
 import ch.epfl.scala.bsp4j.SourcesParams;
@@ -53,6 +56,7 @@ import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult;
 import ch.epfl.scala.bsp4j.extended.TestFinishEx;
 import ch.epfl.scala.bsp4j.extended.TestName;
 import ch.epfl.scala.bsp4j.extended.TestStartEx;
+import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
 import java.net.URI;
@@ -232,6 +236,37 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
         .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
                 MavenDependencyModule.class))
         .toList();
+  }
+
+  @Test
+  void testScalaSemanticDbPlugin() {
+    Preferences prefsTooNew = new Preferences();
+    prefsTooNew.setSemanticdbVersion("4.10.0");
+    withNewTestServer("missing-semanticdb-version", prefsTooNew, (gradleBuildServer, client) -> {
+      WorkspaceBuildTargetsResult buildTargetsResult =
+          gradleBuildServer.workspaceBuildTargets().join();
+      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+          "missing-semanticdb-version [main]");
+      ScalacOptionsParams params = new ScalacOptionsParams(List.of(btId));
+      ScalacOptionsResult scalacOption = gradleBuildServer.buildTargetScalacOptions(params).join();
+      assertFalse(scalacOption.getItems().isEmpty());
+      ScalacOptionsItem scalac = scalacOption.getItems().get(0);
+      assertFalse(scalac.getOptions().stream().anyMatch(f -> f.startsWith("-Xplugin")));
+    });
+    Preferences prefs = new Preferences();
+    prefs.setSemanticdbVersion("4.9.9");
+    withNewTestServer("missing-semanticdb-version", prefs, (gradleBuildServer, client) -> {
+      WorkspaceBuildTargetsResult buildTargetsResult =
+          gradleBuildServer.workspaceBuildTargets().join();
+      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+          "missing-semanticdb-version [main]");
+      ScalacOptionsParams params = new ScalacOptionsParams(List.of(btId));
+      ScalacOptionsResult scalacOption = gradleBuildServer.buildTargetScalacOptions(params).join();
+      assertFalse(scalacOption.getItems().isEmpty());
+      ScalacOptionsItem scalac = scalacOption.getItems().get(0);
+      assertTrue(scalac.getOptions().stream().anyMatch(f ->
+          f.startsWith("-Xplugin") && f.endsWith("semanticdb-scalac_2.12.16-4.9.9.jar")));
+    });
   }
 
   @Test

@@ -22,6 +22,7 @@ import ch.epfl.scala.bsp4j.JvmBuildServer;
 import ch.epfl.scala.bsp4j.LogMessageParams;
 import ch.epfl.scala.bsp4j.PrintParams;
 import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
+import ch.epfl.scala.bsp4j.ScalaBuildServer;
 import ch.epfl.scala.bsp4j.ShowMessageParams;
 import ch.epfl.scala.bsp4j.StatusCode;
 import ch.epfl.scala.bsp4j.TaskFinishDataKind;
@@ -57,7 +58,8 @@ import org.junit.jupiter.api.BeforeAll;
 
 abstract class IntegrationTest {
 
-  protected interface TestServer extends BuildServer, JavaBuildServer, JvmBuildServer {
+  protected interface TestServer extends BuildServer, JavaBuildServer, ScalaBuildServer,
+      JvmBuildServer {
   }
 
   protected static class TestClient implements BuildClient {
@@ -345,24 +347,12 @@ abstract class IntegrationTest {
 
   protected static void withNewTestServer(
       String projectDir,
-      String version,
+      Preferences preferences,
       BiConsumer<TestServer, TestClient> consumer
   ) {
-    withNewTestServer(Path.of(projectDir), version, consumer);
-  }
-
-  protected static void withNewTestServer(
-      Path projectDir,
-      BiConsumer<TestServer, TestClient> consumer
-  ) {
-    withNewTestServer(projectDir, null, consumer);
-  }
-
-  protected static void withNewTestServer(
-      Path projectDir,
-      String version,
-      BiConsumer<TestServer, TestClient> consumer
-  ) {
+    if (preferences != null) {
+      preferences.setAutoReloadWorkspace(false);
+    }
     ExecutorService threadPool = Executors.newCachedThreadPool();
     try (PipedInputStream clientIn = new PipedInputStream();
          PipedOutputStream clientOut = new PipedOutputStream();
@@ -378,15 +368,7 @@ abstract class IntegrationTest {
       TestClient client = pair.getLeft();
       TestServer testServer = pair.getRight();
       try {
-        Preferences preferences;
-        if (version != null) {
-          preferences = new Preferences();
-          preferences.setGradleVersion(version);
-          preferences.setAutoReloadWorkspace(false);
-        } else {
-          preferences = null;
-        }
-        InitializeBuildParams params = getInitializeBuildParams(projectDir, preferences);
+        InitializeBuildParams params = getInitializeBuildParams(Path.of(projectDir), preferences);
         InitializeBuildResult result = testServer.buildInitialize(params).join();
         BuildServerCapabilities capabilities = result.getCapabilities();
         assertFalse(capabilities.getCompileProvider().getLanguageIds().isEmpty());

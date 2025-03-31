@@ -102,10 +102,15 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
   private static File extractSemanticDbJar(Project project, String scalaVersion, String version) {
     Configuration config = project.getConfigurations().getByName(scala2ConfigName);
     String jarName = "semanticdb-scalac_" + scalaVersion + '-' + version + ".jar";
-    for (File file : config.getFiles()) {
-      if (file.getName().equals(jarName)) {
-        return file;
+    try {
+      for (File file : config.getFiles()) {
+        if (file.getName().equals(jarName)) {
+          return file;
+        }
       }
+    } catch (Exception e) {
+      // probably old version of scala and isn't publishjed with this version of semanticdb
+      return null;
     }
     throw new IllegalStateException("Cannot find " + jarName + " in " + config.getFiles());
   }
@@ -137,13 +142,15 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
         params.add(classesDir.toString());
       } else {
         File pluginPath = extractSemanticDbJar(project, scalaVersion, semanticDbVersion);
-        params.add("-Xplugin:" + pluginPath.toString().replace("\\", "\\\\"));
-        params.add("-P:semanticdb:sourceroot:" + sourceRoot);
-        params.add("-P:semanticdb:targetroot:" + classesDir);
-        params.add("-P:semanticdb:failures:warning");
-        params.add("-P:semanticdb:synthetics:on");
-        params.add("-Xplugin-require:semanticdb");
-        params.add("-Yrangepos");
+        if (pluginPath != null) {
+          params.add("-Xplugin:" + pluginPath.toString().replace("\\", "\\\\"));
+          params.add("-P:semanticdb:sourceroot:" + sourceRoot);
+          params.add("-P:semanticdb:targetroot:" + classesDir);
+          params.add("-P:semanticdb:failures:warning");
+          params.add("-P:semanticdb:synthetics:on");
+          params.add("-Xplugin-require:semanticdb");
+          params.add("-Yrangepos");
+        }
       }
     });
   }
