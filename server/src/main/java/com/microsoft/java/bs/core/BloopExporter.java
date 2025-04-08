@@ -231,12 +231,10 @@ public class BloopExporter {
     JavaExtension javaExt = SupportedLanguages.JAVA.getExtension(sourceSet);
     ScalaExtension scalaExt = SupportedLanguages.SCALA.getExtension(sourceSet);
     if (scalaExt != null) {
-      final String order;
-      if (javaExt != null && !javaExt.getSourceDirs().isEmpty()) {
-        order = "java->scala";
-      } else {
-        order = "mixed";
-      }
+      // Gradle appears to not specify order so default is used.
+      // https://github.com/sbt/zinc/blob/07c09c797181e496241e84955859ac524b34eeaf/internal/compiler-interface/src/main/contraband-java/xsbti/compile/CompileOptions.java#L67
+      // https://github.com/gradle/gradle/blob/9fe739b1e0ba376bf725b74cdc198010dbb11ec2/platforms/jvm/scala/src/main/java/org/gradle/api/internal/tasks/scala/ZincScalaCompiler.java#L107
+      final String order = "mixed";
       BloopScalaSetup setup = new BloopScalaSetup(order, true, false, false, true, true);
       List<String> jars = scalaExt.getScalaJars().stream()
           .map(File::toString)
