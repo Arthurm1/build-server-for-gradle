@@ -82,10 +82,10 @@ public class Utils {
   /**
    * Return a project task name - [project path]:[task].
    *
-   * @param modulePath path of project module
+   * @param project Gradle project
    * @param taskName name of gradle task
    */
-  public static String getFullTaskName(String modulePath, String taskName) {
+  public static String getFullTaskName(Project project, String taskName) {
     if (taskName == null) {
       return null;
     }
@@ -93,10 +93,11 @@ public class Utils {
       return taskName;
     }
 
-    if (modulePath == null || modulePath.equals(":")) {
-      // must be prefixed with ":" as taskPaths are reported back like that in progress messages
-      return ":" + taskName;
+    Task task = taskByName(project, taskName);
+    if (task == null) {
+      return null;
     }
-    return modulePath + ":" + taskName;
+
+    return task.getPath();
   }
 }

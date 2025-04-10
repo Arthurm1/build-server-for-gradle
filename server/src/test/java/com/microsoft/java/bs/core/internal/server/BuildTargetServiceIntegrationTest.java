@@ -59,6 +59,7 @@ import ch.epfl.scala.bsp4j.extended.TestStartEx;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -246,7 +247,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       // TODO - the `build-src` project doesn't actually test the need for splitting out buildSrc
       // source sets retrieval from other source sets retrieval.
       // That failed in https://github.com/MinecraftForge/MinecraftForge and I'm unable to minimize.
-      assertEquals(4, buildTargetsResult.getTargets().size());
+      assertEquals(6, buildTargetsResult.getTargets().size());
     });
   }
 
@@ -257,7 +258,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
     withNewTestServer("missing-semanticdb-version", prefsTooNew, (gradleBuildServer, client) -> {
       WorkspaceBuildTargetsResult buildTargetsResult =
           gradleBuildServer.workspaceBuildTargets().join();
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
           "missing-semanticdb-version [main]");
       ScalacOptionsParams params = new ScalacOptionsParams(List.of(btId));
       ScalacOptionsResult scalacOption = gradleBuildServer.buildTargetScalacOptions(params).join();
@@ -270,7 +271,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
     withNewTestServer("missing-semanticdb-version", prefs, (gradleBuildServer, client) -> {
       WorkspaceBuildTargetsResult buildTargetsResult =
           gradleBuildServer.workspaceBuildTargets().join();
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
           "missing-semanticdb-version [main]");
       ScalacOptionsParams params = new ScalacOptionsParams(List.of(btId));
       ScalacOptionsResult scalacOption = gradleBuildServer.buildTargetScalacOptions(params).join();
@@ -524,7 +525,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.waitOnFinishReports(2);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
-      client.waitOnLogMessages(1);
+      client.waitOnLogMessages(2);
       client.waitOnDiagnostics(0);
       assertEquals(1, client.finishReportErrorCount());
       for (BuildTargetIdentifier btId : btIds) {
@@ -562,7 +563,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
 
       // run passing tests
       List<String> passingTestMainClasses = new LinkedList<>();
@@ -729,7 +731,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
 
       // run failing tests
       List<String> failingMainClasses = new LinkedList<>();
@@ -820,7 +823,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
 
       // run stacktrace test
       List<String> stacktraceMainClasses = new LinkedList<>();
@@ -914,7 +918,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
 
       // run single method tests
       List<BuildTargetIdentifier> singleBt = new ArrayList<>();
@@ -1013,7 +1018,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
 
       // run complex tests
       List<String> complexTestMainClasses = new LinkedList<>();
@@ -1208,7 +1214,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
 
       // run nested tests
       List<String> nestedTestMainClasses = new LinkedList<>();
@@ -1377,7 +1384,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       // run tests
       List<String> mainClasses = new LinkedList<>();
       mainClasses.add("com.example.project.PassingTests");
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "java-tests [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "java-tests [test]");
       ScalaTestClassesItem scalaTestClassesItem = new ScalaTestClassesItem(btId, mainClasses);
       List<ScalaTestClassesItem> testClasses = new LinkedList<>();
       testClasses.add(scalaTestClassesItem);
@@ -1426,8 +1434,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
 
       // a request to run mainClass straight after a clean should produce compile results/reports
       // run main
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
-            "junit5-jupiter-starter-gradle [main]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
+          "junit5-jupiter-starter-gradle [main]");
       RunParams runParams = new RunParams(btId);
       HashMap<String, String> envVars = new HashMap<>();
       envVars.put("testEnv", "testing");
@@ -1486,7 +1494,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "testng [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(), "testng [test]");
 
       // run passing tests
       List<String> passingTestMainClasses = new LinkedList<>();
@@ -1634,7 +1642,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "testng [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(), "testng [test]");
 
       // run failing tests
       List<String> failingMainClasses = new LinkedList<>();
@@ -1728,7 +1736,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "testng [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(), "testng [test]");
 
       // run stacktrace test
       List<String> stacktraceMainClasses = new LinkedList<>();
@@ -1838,7 +1846,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "testng [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(), "testng [test]");
 
       // run single method tests
       List<BuildTargetIdentifier> singleBt = new ArrayList<>();
@@ -1939,7 +1947,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       client.clearMessages();
 
       // run tests
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(), "spock [test]");
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(), "spock [test]");
       List<String> passingTestMainClasses = new LinkedList<>();
       passingTestMainClasses.add("com.example.project.SpockTest");
       ScalaTestClassesItem passingTestClassesItem =
@@ -2032,7 +2040,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       gradleBuildServer.buildTargetCompile(compileParams).join();
       client.clearMessages();
 
-      BuildTargetIdentifier btId = findTarget(buildTargetsResult.getTargets(),
+      BuildTargetIdentifier btId = findTargetId(buildTargetsResult.getTargets(),
           "java-tests [extraTest]");
 
       // run single method tests

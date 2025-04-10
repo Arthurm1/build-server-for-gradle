@@ -5,6 +5,7 @@ package com.microsoft.java.bs.gradle.model;
 
 import java.io.File;
 import java.io.Serializable;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +39,16 @@ public interface GradleSourceSet extends Serializable {
    * Equivalent to {@code org.gradle.api.Project.getRootDir()}.
    */
   File getRootDir();
+
+  /**
+   * Equivalent to {@code org.gradle.api.Project.getRootProject().getName()}.
+   */
+  String getRootProjectName();
+
+  /**
+   * Uri used to connect to project via TAPI.
+   */
+  URI getProjectUri();
 
   /**
    * Equivalent to {@code org.gradle.api.Project.getBuildFile()}.

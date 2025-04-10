@@ -5,7 +5,6 @@ package com.microsoft.java.bs.gradle.model.impl;
 
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import com.microsoft.java.bs.gradle.model.GradleSourceSets;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -26,6 +25,7 @@ public class DefaultGradleSourceSets implements GradleSourceSets {
     this.exceptions = exceptions;
     this.gradleSourceSets = gradleSourceSets;
   }
+
   public DefaultGradleSourceSets(List<GradleSourceSet> gradleSourceSets) {
     this(gradleSourceSets, new ArrayList<>());
   }

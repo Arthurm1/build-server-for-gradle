@@ -1019,12 +1019,7 @@ public class BuildTargetService {
       // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
       throw new IllegalArgumentException("The build target does not exist: " + btId.getUri());
     }
-    BuildTarget buildTarget = gradleBuildTarget.getBuildTarget();
-    if (buildTarget.getBaseDirectory() != null) {
-      return UriUtils.getUriFromString(buildTarget.getBaseDirectory());
-    }
-
-    return UriUtils.getUriWithoutQuery(btId.getUri());
+    return gradleBuildTarget.getSourceSet().getProjectUri();
   }
 
   /**

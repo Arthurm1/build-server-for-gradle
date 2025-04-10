@@ -91,14 +91,6 @@ public class AndroidUtils {
       Project project, Object variant, Set<String> supportedLanguages) {
 
     DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
-    gradleSourceSet.setBuildTargetDependencies(new HashSet<>());
-
-    gradleSourceSet.setGradleVersion(project.getGradle().getGradleVersion());
-    gradleSourceSet.setProjectName(project.getName());
-    String projectPath = project.getPath();
-    gradleSourceSet.setProjectPath(projectPath);
-    gradleSourceSet.setProjectDir(project.getProjectDir());
-    gradleSourceSet.setRootDir(project.getRootDir());
 
     // variant class should be com.android.build.gradle.api.BaseVariant or child class
     String variantName = Utils.invokeMethod(variant, "getName");
@@ -107,17 +99,15 @@ public class AndroidUtils {
     // classes task equivalent in android (assembleRelease)
     Provider<Task> assembleTask = Utils.invokeMethod(variant, "getAssembleProvider");
     gradleSourceSet.setClassesTaskName(
-        Utils.getFullTaskName(projectPath, assembleTask.get().getName())
+        Utils.getFullTaskName(project, assembleTask.get().getName())
     );
-
-    gradleSourceSet.setCleanTaskName(Utils.getFullTaskName(projectPath, "clean"));
 
     // compile task in android (compileReleaseJavaWithJavac)
     HashSet<String> tasks = new HashSet<>();
     Provider<JavaCompile> javaCompileProvider =
         Utils.invokeMethod(variant, "getJavaCompileProvider");
     JavaCompile javaCompile = javaCompileProvider.get();
-    tasks.add(Utils.getFullTaskName(projectPath, javaCompile.getName()));
+    tasks.add(Utils.getFullTaskName(project, javaCompile.getName()));
     gradleSourceSet.setTaskNames(tasks);
 
     // extensions

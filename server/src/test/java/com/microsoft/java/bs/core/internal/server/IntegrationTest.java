@@ -340,9 +340,19 @@ abstract class IntegrationTest {
 
   protected static void withNewTestServer(
       String projectDir,
+      String gradleVersion,
       BiConsumer<TestServer, TestClient> consumer
   ) {
-    withNewTestServer(projectDir, null, consumer);
+    Preferences preferences = new Preferences();
+    preferences.setGradleVersion(gradleVersion);
+    withNewTestServer(projectDir, preferences, consumer);
+  }
+
+  protected static void withNewTestServer(
+      String projectDir,
+      BiConsumer<TestServer, TestClient> consumer
+  ) {
+    withNewTestServer(projectDir, (Preferences) null, consumer);
   }
 
   protected static void withNewTestServer(
@@ -401,10 +411,13 @@ abstract class IntegrationTest {
     }
   }
 
-  protected static BuildTargetIdentifier findTarget(
-      List<BuildTarget> targets,
-      String displayName
-  ) {
+  protected static BuildTargetIdentifier findTargetId(List<BuildTarget> targets,
+      String displayName) {
+    return findTarget(targets, displayName).getId();
+  }
+
+  protected static BuildTarget findTarget(List<BuildTarget> targets,
+      String displayName) {
     Optional<BuildTarget> matchingTargets = targets.stream()
         .filter(res -> displayName.equals(res.getDisplayName()))
         .findAny();
@@ -414,6 +427,6 @@ abstract class IntegrationTest {
           .collect(Collectors.toList());
       return "Target " + displayName + " not found in " + targetNames;
     });
-    return matchingTargets.get().getId();
+    return matchingTargets.get();
   }
 }

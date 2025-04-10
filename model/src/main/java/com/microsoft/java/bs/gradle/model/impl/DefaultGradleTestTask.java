@@ -46,6 +46,11 @@ public class DefaultGradleTestTask implements GradleTestTask {
     this.environmentVariables = gradleTestTask.getEnvironmentVariables();
   }
 
+  public DefaultGradleTestTask withPrefix(String prefix) {
+    return new DefaultGradleTestTask(prefix + taskPath, classpath, jvmOptions, workingDirectory,
+        environmentVariables);
+  }
+
   @Override
   public String getTaskPath() {
     return taskPath;

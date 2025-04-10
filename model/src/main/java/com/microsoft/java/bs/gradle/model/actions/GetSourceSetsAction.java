@@ -16,6 +16,7 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSet;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleSourceSets;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleTestTask;
 import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -44,46 +45,48 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
    */
   @Override
   public GradleSourceSets execute(BuildController buildController) {
-    Map<String, GradleBuild> builds = fetchIncludedBuilds(buildController);
-    return fetchModels(buildController, builds);
-  }
-
-  private Map<String, GradleBuild> fetchIncludedBuilds(BuildController buildController) {
-    Map<String, GradleBuild> builds = new HashMap<>();
     GradleBuild build = buildController.getBuildModel();
-    String rootProjectName = build.getRootProject().getName();
-    fetchIncludedBuilds(build, builds, rootProjectName);
-    return builds;
+    File rootProjectDir = build.getRootProject().getProjectDirectory();
+    URI projectUri = rootProjectDir.toPath().toUri();
+    List<GradleBuild> builds = fetchIncludedBuilds(build, rootProjectDir);
+    return fetchModels(buildController, builds, rootProjectDir, projectUri);
   }
 
-  private void fetchIncludedBuilds(GradleBuild build, Map<String, GradleBuild> builds,
-      String rootProjectName) {
-    if (builds.containsKey(rootProjectName)) {
-      return;
-    }
-    builds.put(rootProjectName, build);
-    // Cannot use GradleVersion.current() in BuildAction as that will return the Tooling API version
-    // Cannot use BuildEnvironment to get GradleVersion as that doesn't work pre-3.0 even though
-    // documentation has it added in version 1.
-    // So just handle exceptions
-    Set<? extends GradleBuild> moreBuilds;
-    try {
-      // added in 4.10
-      moreBuilds = build.getEditableBuilds();
-    } catch (Exception e1) {
+  private List<GradleBuild> fetchIncludedBuilds(GradleBuild build, File rootProjectDir) {
+    return fetchIncludedBuilds(build, new HashSet<>(), rootProjectDir);
+  }
+
+  private List<GradleBuild> fetchIncludedBuilds(GradleBuild build, Set<File> retrievedBuilds,
+      File rootProjectDir) {
+    List<GradleBuild> results = new ArrayList<>();
+    if (retrievedBuilds.add(rootProjectDir)) {
+      // NOTE - gradle does not like the build-src projects being retrieved before the main project
+      results.add(build);
+      // Cannot use GradleVersion.current() in BuildAction as that will return the Tooling API
+      // version
+      // Cannot use BuildEnvironment to get GradleVersion as that doesn't work pre-3.0 even though
+      // documentation has it added in version 1.
+      // So just handle exceptions
+      Set<? extends GradleBuild> moreBuilds;
       try {
-        // added in 3.3
-        moreBuilds = build.getIncludedBuilds();
-      } catch (Exception e2) {
-        moreBuilds = null;
+        // added in 4.10
+        moreBuilds = build.getEditableBuilds();
+      } catch (Exception e1) {
+        try {
+          // added in 3.3
+          moreBuilds = build.getIncludedBuilds();
+        } catch (Exception e2) {
+          moreBuilds = null;
+        }
+      }
+      if (moreBuilds != null && !moreBuilds.isEmpty()) {
+        for (GradleBuild includedBuild : moreBuilds) {
+          File includedBuildDir = includedBuild.getRootProject().getProjectDirectory();
+          results.addAll(fetchIncludedBuilds(includedBuild, retrievedBuilds, includedBuildDir));
+        }
       }
     }
-    if (moreBuilds != null) {
-      for (GradleBuild includedBuild : moreBuilds) {
-        String includedBuildName = includedBuild.getRootProject().getName();
-        fetchIncludedBuilds(includedBuild, builds, includedBuildName);
-      }
-    }
+    return results;
   }
 
   /**
@@ -91,24 +94,23 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
    *
    * @param buildController The Gradle build controller used to interact with the build.
    * @param builds The Gradle build models representing the build and included builds.
+   * @param rootProjectDir the dir of the main project
+   * @param projectUri the URI to use for TAPI connections
    */
   private GradleSourceSets fetchModels(BuildController buildController,
-      Map<String, GradleBuild> builds) {
+      Collection<GradleBuild> builds, File rootProjectDir, URI projectUri) {
 
     // retrieve source sets with same root project concurrently
     // don't retrieve all source sets concurrently as Gradle may fail.
     List<GradleSourceSets> results = new ArrayList<>();
-    for (Map.Entry<String, GradleBuild> entry: builds.entrySet()) {
-
+    for (GradleBuild build : builds) {
       // create an action per project
-      GradleBuild build = entry.getValue();
       Collection<GetSourceSetAction> projectActions = build.getProjects()
           .stream()
           .map(GetSourceSetAction::new)
           .collect(Collectors.toList());
 
-      List<GradleSourceSets> sourceSets = buildController.run(projectActions);
-      results.addAll(sourceSets);
+      results.addAll(buildController.run(projectActions));
     }
     // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
     // via a copy constructor so we can treat as a DefaultGradleSourceSet and
@@ -118,14 +120,17 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
         .flatMap(ss -> ss.getGradleSourceSets().stream())
         .map(DefaultGradleSourceSet::new)
         .collect(Collectors.toList());
+
+    populateInterProjectInfo(sourceSets);
+    prependTaskNames(sourceSets, rootProjectDir);
+    populateProjectUri(sourceSets, projectUri);
+    reduceInterProjectDependencies(sourceSets);
+    removeProjectToProjectArtifacts(sourceSets);
+
     List<Exception> exceptions = results
         .stream()
         .flatMap(ss -> ss.getExceptions().stream())
         .collect(Collectors.toList());
-
-    populateInterProjectInfo(sourceSets);
-    reduceInterProjectDependencies(sourceSets);
-    removeProjectToProjectArtifacts(sourceSets);
 
     return new DefaultGradleSourceSets(sourceSets, exceptions);
   }
@@ -146,6 +151,33 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
     @Override
     public GradleSourceSets execute(BuildController controller) {
       return controller.getModel(model, GradleSourceSets.class);
+    }
+  }
+
+  // prepend project name to tasks in included builds
+  private void prependTaskNames(List<GradleSourceSet> sourceSets,
+      File rootProjectDir) {
+    for (GradleSourceSet sourceSet : sourceSets) {
+      if (!sourceSet.getRootDir().equals(rootProjectDir)
+          && sourceSet instanceof DefaultGradleSourceSet) {
+        String prefix = ':' + sourceSet.getRootProjectName();
+        ((DefaultGradleSourceSet) sourceSet)
+            .setTaskNames(sourceSet.getTaskNames().stream()
+            .map(task -> prefix + task)
+            .collect(Collectors.toSet()));
+        ((DefaultGradleSourceSet) sourceSet)
+            .setRunTasks(sourceSet.getRunTasks().stream()
+            .map(task -> ((DefaultGradleRunTask) task).withPrefix(prefix))
+            .collect(Collectors.toSet()));
+        ((DefaultGradleSourceSet) sourceSet)
+            .setTestTasks(sourceSet.getTestTasks().stream()
+            .map(task -> ((DefaultGradleTestTask) task).withPrefix(prefix))
+            .collect(Collectors.toSet()));
+        ((DefaultGradleSourceSet) sourceSet)
+            .setClassesTaskName(prefix + sourceSet.getClassesTaskName());
+        ((DefaultGradleSourceSet) sourceSet)
+            .setCleanTaskName(prefix + sourceSet.getCleanTaskName());
+      }
     }
   }
 
@@ -213,6 +245,15 @@ public class GetSourceSetsAction implements BuildAction<GradleSourceSets> {
       newDependencies.removeAll(sourceSetTransitiveDependencies);
       if (sourceSet instanceof DefaultGradleSourceSet) {
         ((DefaultGradleSourceSet) sourceSet).setBuildTargetDependencies(newDependencies);
+      }
+    }
+  }
+
+  // populate the project uri.  Same uri for all projects including `included` projects.
+  private void populateProjectUri(List<GradleSourceSet> sourceSets, URI projectUri) {
+    for (GradleSourceSet sourceSet : sourceSets) {
+      if (sourceSet instanceof DefaultGradleSourceSet) {
+        ((DefaultGradleSourceSet) sourceSet).setProjectUri(projectUri);
       }
     }
   }

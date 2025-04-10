@@ -72,10 +72,19 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
 
     excludeSourceDirsFromModules(sourceSets);
 
-    File buildFile = project.getBuildFile();
     for (GradleSourceSet sourceSet : sourceSets) {
       if (sourceSet instanceof DefaultGradleSourceSet) {
-        ((DefaultGradleSourceSet) sourceSet).setBuildFile(buildFile);
+        DefaultGradleSourceSet ss = (DefaultGradleSourceSet) sourceSet;
+        ss.setBuildFile(project.getBuildFile());
+        ss.setProjectPath(project.getPath());
+        ss.setProjectDir(project.getProjectDir());
+        ss.setRootDir(project.getRootDir());
+        ss.setRootProjectName(project.getRootProject().getName());
+        ss.setGradleVersion(project.getGradle().getGradleVersion());
+        ss.setProjectName(project.getName());
+        ss.setCleanTaskName(Utils.getFullTaskName(project, "clean"));
+        // dependencies are populated by the GradleSourceSetsAction.  Make sure not null.
+        ss.setBuildTargetDependencies(new HashSet<>());
       }
     }
 
@@ -97,19 +106,9 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
   private DefaultGradleSourceSet getSourceSet(Project project, SourceSet sourceSet,
       Set<String> supportedLanguages) {
     DefaultGradleSourceSet gradleSourceSet = new DefaultGradleSourceSet();
-    // dependencies are populated by the GradleSourceSetsAction.  Make sure not null.
-    gradleSourceSet.setBuildTargetDependencies(new HashSet<>());
-    gradleSourceSet.setGradleVersion(project.getGradle().getGradleVersion());
-    gradleSourceSet.setProjectName(project.getName());
-    String projectPath = project.getPath();
-    gradleSourceSet.setProjectPath(projectPath);
-    gradleSourceSet.setProjectDir(project.getProjectDir());
-    gradleSourceSet.setRootDir(project.getRootDir());
     gradleSourceSet.setSourceSetName(sourceSet.getName());
-    String classesTaskName = Utils.getFullTaskName(projectPath, sourceSet.getClassesTaskName());
+    String classesTaskName = Utils.getFullTaskName(project, sourceSet.getClassesTaskName());
     gradleSourceSet.setClassesTaskName(classesTaskName);
-    String cleanTaskName = Utils.getFullTaskName(projectPath, "clean");
-    gradleSourceSet.setCleanTaskName(cleanTaskName);
     Set<String> taskNames = new HashSet<>();
     gradleSourceSet.setTaskNames(taskNames);
 
@@ -126,7 +125,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
       LanguageExtension extension = languageModelBuilder.getExtensionFor(project, sourceSet,
           gradleSourceSet.getModuleDependencies());
       if (extension != null) {
-        String compileTaskName = Utils.getFullTaskName(projectPath,
+        String compileTaskName = Utils.getFullTaskName(project,
             extension.getCompileTaskName());
         taskNames.add(compileTaskName);
 

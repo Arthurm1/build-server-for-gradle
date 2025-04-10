@@ -524,23 +524,19 @@ public class Utils {
   /**
    * create a script for changing Gradle test tasks to execute a dry run.
    *
-   * @param taskPaths paths of tesk tasks.
    * @return init script contents to setup dry run
    */
-  public static String createTestTaskScript(String[] taskPaths) {
+  public static String createTestTaskScript() {
     // can't pass arguments to tasks e.g. "--test-dry-run"
     // so manipulate test tasks using init script.
-    String taskConvert = Arrays.stream(taskPaths)
-        .map(taskPath -> "tasks.findByPath('$taskPath')?.setDryRun(true)"
-            .replace("$taskPath", taskPath))
-        .collect(Collectors.joining("\n    "));
+    // dryRun supported >= 8.3
+    // don't specify by task name here as number of tasks can get huge and the script won't compile
     return """
-        gradle.projectsEvaluated {
-          rootProject {
-            $taskConvert
+        gradle.afterProject { p ->
+          p.tasks.withType(Test.class).configureEach {
+            dryRun = true
           }
-        }"""
-        .replace("$taskConvert", taskConvert);
+        }""";
   }
 
   /**

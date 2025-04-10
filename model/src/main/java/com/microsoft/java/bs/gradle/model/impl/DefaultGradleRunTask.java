@@ -52,6 +52,11 @@ public class DefaultGradleRunTask implements GradleRunTask {
     this.arguments = gradleRunTask.getArguments();
   }
 
+  public DefaultGradleRunTask withPrefix(String prefix) {
+    return new DefaultGradleRunTask(prefix + taskPath, classpath, jvmOptions, workingDirectory,
+        environmentVariables, mainClass, arguments);
+  }
+
   @Override
   public String getTaskPath() {
     return taskPath;

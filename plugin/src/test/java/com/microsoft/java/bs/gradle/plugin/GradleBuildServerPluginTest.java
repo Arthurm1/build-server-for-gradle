@@ -35,8 +35,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.gradle.tooling.BuildActionExecuter;
+import org.gradle.tooling.BuildLauncher;
+import org.gradle.tooling.ConfigurableLauncher;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.util.GradleVersion;
@@ -72,6 +75,19 @@ class GradleBuildServerPluginTest {
     System.clearProperty("bsp.plugin.debug.enabled");
   }
 
+  private void setupLauncher(ConfigurableLauncher<?> launcher) {
+    String javaHome = System.getProperty("java.home");
+    if (javaHome != null) {
+      if (javaHome.endsWith("jre")) {
+        // only needed for Gradle 2.12.  Otherwise fails with a mismatch on daemon java_home
+        javaHome = javaHome.substring(0, javaHome.length() - 4);
+      }
+      launcher.setJavaHome(new File(javaHome));
+    }
+    launcher.setStandardOutput(System.out);
+    launcher.setStandardError(System.err);
+  }
+
   private GradleSourceSets getGradleSourceSets(ProjectConnection connect) throws IOException {
     BuildActionExecuter<GradleSourceSets> action = connect.action(new GetSourceSetsAction());
     String initScriptContents = PluginHelper.getInitScriptContents();
@@ -81,14 +97,12 @@ class GradleBuildServerPluginTest {
           .addArguments("--init-script", initScript.getAbsolutePath())
           .addArguments("-Dorg.gradle.daemon.idletimeout=10")
           .addArguments("-Dorg.gradle.vfs.watch=false")
-          .addArguments("-Dorg.gradle.logging.level=quiet")
-          // Add back in to remote debug
-          .setStandardOutput(System.out)
-          .setStandardError(System.err);
+          .addArguments("-Dorg.gradle.logging.level=quiet");
       if (Boolean.getBoolean("bsp.plugin.debug.enabled")) {
         action.addJvmArguments(
             "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
       }
+      setupLauncher(action);
 
       return new DefaultGradleSourceSets(action.run());
     } catch (Exception e) {
@@ -155,7 +169,6 @@ class GradleBuildServerPluginTest {
         if (gradleVersion != null) {
           assertEquals(gradleVersion.getVersion(), gradleSourceSet.getGradleVersion());
         }
-        assertEquals(projectDir, gradleSourceSet.getRootDir());
       }
       consumer.accept(gradleSourceSets);
     });
@@ -263,8 +276,9 @@ class GradleBuildServerPluginTest {
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       for (GradleSourceSet gradleSourceSet : gradleSourceSets.getGradleSourceSets()) {
         assertEquals("junit5-jupiter-starter-gradle", gradleSourceSet.getProjectName());
-        assertEquals(projectPath.resolve("junit5-jupiter-starter-gradle").toFile(),
-            gradleSourceSet.getProjectDir());
+        File projectDir = projectPath.resolve("junit5-jupiter-starter-gradle").toFile();
+        assertEquals(projectDir, gradleSourceSet.getProjectDir());
+        assertEquals(projectDir, gradleSourceSet.getRootDir());
         assertEquals(":", gradleSourceSet.getProjectPath());
         assertTrue(gradleSourceSet.getSourceSetName().equals("main")
             || gradleSourceSet.getSourceSetName().equals("test"));
@@ -323,6 +337,62 @@ class GradleBuildServerPluginTest {
               gradleSourceSet.getSourceSetName())));
         }
       }
+    });
+  }
+
+  // buildSrc included in "GradleBuild#getIncludedBuilds" in 7.2
+  // but init-scripts weren't applied to buildSrc before 8.0
+  static Stream<GradleVersion> versionsFrom8_0() {
+    return versionProvider("8.0", null);
+  }
+
+  @ParameterizedTest(name = "testBuildSrc {0}", allowZeroInvocations = true)
+  @MethodSource("versionsFrom8_0")
+  void testBuildSrc(GradleVersion gradleVersion) throws IOException {
+    withSourceSets("build-src", gradleVersion, gradleSourceSets -> {
+      assertEquals(6, gradleSourceSets.getGradleSourceSets().size());
+      GradleSourceSet main = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "build-src", "main");
+      GradleSourceSet fooMain = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "foo", "main");
+      GradleSourceSet buildSrcMain = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "buildSrc", "main");
+
+      assertEquals(projectPath.resolve("build-src"), main.getRootDir().toPath());
+      assertEquals(projectPath.resolve("build-src"), fooMain.getRootDir().toPath());
+      assertEquals(projectPath.resolve("build-src").resolve("buildSrc"),
+          buildSrcMain.getRootDir().toPath());
+
+      assertEquals(":", main.getProjectPath());
+      assertEquals(":foo", fooMain.getProjectPath());
+      assertEquals(":", buildSrcMain.getProjectPath());
+
+      assertEquals("build-src", main.getRootProjectName());
+      assertEquals("build-src", fooMain.getRootProjectName());
+      assertEquals("buildSrc", buildSrcMain.getRootProjectName());
+
+      assertEquals(":classes", main.getClassesTaskName());
+      assertEquals(":foo:classes", fooMain.getClassesTaskName());
+      assertEquals(":buildSrc:classes", buildSrcMain.getClassesTaskName());
+
+      assertEquals(":clean", main.getCleanTaskName());
+      assertEquals(":foo:clean", fooMain.getCleanTaskName());
+      assertEquals(":buildSrc:clean", buildSrcMain.getCleanTaskName());
+
+      GradleSourceSet mainTest = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "build-src", "test");
+      GradleSourceSet fooTest = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "foo", "test");
+      GradleSourceSet buildSrcTest = findSourceSet(gradleSourceSets.getGradleSourceSets(),
+          "buildSrc", "test");
+
+      assertEquals(1, mainTest.getTestTasks().size());
+      assertEquals(1, fooTest.getTestTasks().size());
+      assertEquals(1, buildSrcTest.getTestTasks().size());
+
+      assertEquals(":test", mainTest.getTestTasks().iterator().next().getTaskPath());
+      assertEquals(":foo:test", fooTest.getTestTasks().iterator().next().getTaskPath());
+      assertEquals(":buildSrc:test", buildSrcTest.getTestTasks().iterator().next().getTaskPath());
     });
   }
 
@@ -394,7 +464,9 @@ class GradleBuildServerPluginTest {
   void testSourceInference(GradleVersion gradleVersion) throws IOException {
     File projectDir = projectPath.resolve("infer-source-roots").toFile();
     withConnection(projectDir, gradleVersion, connect -> {
-      connect.newBuild().forTasks("clean", "compileJava").run();
+      BuildLauncher launcher = connect.newBuild().forTasks("clean", "compileJava");
+      setupLauncher(launcher);
+      launcher.run();
       GradleSourceSets gradleSourceSets = getGradleSourceSets(connect);
       assertEquals(2, gradleSourceSets.getGradleSourceSets().size());
       int generatedSourceDirCount = 0;
@@ -1196,6 +1268,11 @@ class GradleBuildServerPluginTest {
     withSourceSets("include-flat/project", gradleVersion, gradleSourceSets -> {
       GradleSourceSet mainA = findSourceSet(gradleSourceSets.getGradleSourceSets(), "a", "main");
       GradleSourceSet mainB = findSourceSet(gradleSourceSets.getGradleSourceSets(), "b", "main");
+      Path projectDir = projectPath.resolve("include-flat");
+      assertEquals(projectDir.resolve("a").toFile(), mainA.getProjectDir());
+      assertEquals(projectDir.resolve("project").toFile(), mainA.getRootDir());
+      assertEquals(projectDir.resolve("b").toFile(), mainB.getProjectDir());
+      assertEquals(projectDir.resolve("project").toFile(), mainB.getRootDir());
       BuildTargetDependency depA = new DefaultBuildTargetDependency(mainA);
       assertTrue(mainB.getBuildTargetDependencies().contains(depA));
 
@@ -1253,6 +1330,9 @@ class GradleBuildServerPluginTest {
       }
     }
     throw new IllegalStateException("Source Set " + projectName + " " + sourceSetName
-        + " not found in " + sourceSets);
+        + " not found in "
+        + sourceSets.stream()
+               .map(f -> f.getProjectName() + ":" + f.getSourceSetName())
+               .collect(Collectors.joining(", ")));
   }
 }

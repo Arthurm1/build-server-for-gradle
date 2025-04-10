@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -178,7 +179,7 @@ public class GradleApiConnector {
         // via a copy constructor and return as a POJO.
         GradleSourceSets sourceSets = buildExecutor.run();
         // report the errors and return only the successful source sets
-        for (Exception exception: sourceSets.getExceptions()) {
+        for (Exception exception : sourceSets.getExceptions()) {
           sendError(getErrorMessage(exception), reporter);
         }
         return new DefaultGradleSourceSets(sourceSets.getGradleSourceSets());
@@ -196,20 +197,41 @@ public class GradleApiConnector {
     }
   }
 
-  private String getErrorMessage(Exception exception, ByteArrayOutputStream errorOut) {
-    String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(exception));
-    if (errorOut != null && errorOut.size() > 0) {
-      message = message + '\n' + errorOut;
+  private String getException(Exception exception) {
+    // Gradle stack traces can be long - summarize first, then add the full stack
+    Throwable[] throwables = ExceptionUtils.getThrowables(exception);
+    String cutDownMessage = Arrays.stream(throwables).map(Throwable::getMessage)
+        .collect(Collectors.joining("\n"));
+    return cutDownMessage + '\n' + ExceptionUtils.getStackTrace(exception);
+  }
+
+  private String getErrorMessage(Exception exception, String gradleVersion) {
+    return getErrorMessage(exception, null, gradleVersion);
+  }
+
+  private String getErrorMessage(Exception exception, ByteArrayOutputStream errorOut,
+      String gradleVersion) {
+    Throwable rootCause = ExceptionUtils.getRootCause(exception);
+    if (rootCause != null) {
+      return rootCause.getMessage();
     }
-    return message;
+    return getErrorMessage(exception, errorOut);
+  }
+
+  private String getErrorMessage(Exception exception, ByteArrayOutputStream errorOut) {
+    String fullMessage = getException(exception);
+    if (errorOut != null && errorOut.size() > 0) {
+      fullMessage = fullMessage + '\n' + errorOut;
+    }
+    return fullMessage;
   }
 
   private String getErrorMessage(Exception exception) {
-    return getErrorMessage(exception, null);
+    return getErrorMessage(exception, null, null);
   }
 
   private void sendError(String message, ProgressReporter reporter) {
-    if (reporter != null) {
+    if (reporter != null && message != null) {
       reporter.sendError(message);
     }
   }
@@ -255,6 +277,8 @@ public class GradleApiConnector {
       // caused by close the output stream, just simply log the error.
       LOGGER.severe(e.getMessage());
     } catch (BuildException e) {
+      sendError("Tasks error Project:" + projectUri + " tasks: "  + Utils.arrayAsStr(tasks, 3),
+          reporter);
       sendError(getErrorMessage(e, errorOut), reporter);
       statusCode = StatusCode.ERROR;
     }
@@ -401,17 +425,20 @@ public class GradleApiConnector {
         }
       }
       if (!taskPathToTarget.isEmpty()) {
+        TestNameRecorder testNameRecorder = new TestNameRecorder();
+        String[] taskPaths = taskPathToTarget.keySet().toArray(String[]::new);
+        // task can trigger compilation so add compiler options as well as
+        // script to alter test task to execute dry-run
+        String testScript = Utils.createTestTaskScript();
+        File workspaceDir = new File(projectUri);
+        String compilerOptionsScript = Utils.createCompilerOptionsScript(
+            workspaceDir, preferenceManager);
+        String script = testScript;
+        if (compilerOptionsScript != null) {
+          script += '\n' + compilerOptionsScript;
+        }
+        File initScript = Utils.createInitScriptFile("testTask", script);
         try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
-          TestNameRecorder testNameRecorder = new TestNameRecorder();
-          String[] taskPaths = taskPathToTarget.keySet().toArray(String[]::new);
-          // task can trigger compilation so add compiler options as well as
-          // script to alter test task to execute dry-run
-          String testScript = Utils.createTestTaskScript(taskPaths);
-          File workspaceDir = new File(projectUri);
-          String compilerOptionsScript = Utils.createCompilerOptionsScript(
-              workspaceDir, preferenceManager);
-          String script = testScript + '\n' + compilerOptionsScript;
-          File initScript = Utils.createInitScriptFile("testTask", script);
           try {
             try {
               TestLauncher launcher = Utils
@@ -427,10 +454,15 @@ public class GradleApiConnector {
               launcher.run();
             } catch (BuildCancelledException ce) {
               reporter.sendError("Test search cancelled for " + Utils.arrayAsStr(taskPaths, 3));
+            } catch (BuildException e) {
+              sendError("Build exception " + initScript, reporter);
+              sendError(getErrorMessage(e, gradleVersion), reporter);
             } catch (GradleConnectionException | IllegalStateException e) {
-              String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
-              reporter.sendError("Error searching for test classes in "
-                  + Utils.arrayAsStr(taskPaths, 3) + " " + message);
+              String message = "Error searching for test classes in "
+                  + Utils.arrayAsStr(taskPaths, 3) + " "
+                  + getException(e);
+              sendError(message, reporter);
+              throw new IllegalStateException(message, e);
             }
 
             Map<BuildTargetIdentifier, List<GradleTestEntity>> results = new HashMap<>();
@@ -448,13 +480,14 @@ public class GradleApiConnector {
               results.computeIfAbsent(btId, k -> new ArrayList<>()).add(gradleTestEntity);
             }
             return results;
+          } catch (GradleConnectionException e) {
+            String message = getException(e);
+            sendError("Error searching for tests: " + message, reporter);
           } finally {
             if (initScript != null) {
               initScript.delete();
             }
           }
-        } catch (GradleConnectionException | IllegalStateException e) {
-          reporter.sendError("Error searching for test classes: " + e.getMessage());
         }
       }
     }
@@ -494,7 +527,10 @@ public class GradleApiConnector {
         File workspaceDir = new File(projectUri);
         String compilerOptionsScript = Utils.createCompilerOptionsScript(
             workspaceDir, preferenceManager);
-        String script = execScript + '\n' + compilerOptionsScript;
+        String script = execScript;
+        if (compilerOptionsScript != null) {
+          script += '\n' + compilerOptionsScript;
+        }
         File initScript = Utils.createInitScriptFile("runMain", script);
         try {
           BuildLauncher launcher = Utils
@@ -526,7 +562,7 @@ public class GradleApiConnector {
         reporter.sendError("Running main class cancelled");
         statusCode = StatusCode.CANCELLED;
       } catch (GradleConnectionException | IllegalStateException e) {
-        String message = String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
+        String message = getException(e);
         reporter.sendError("Error running main class: " + message);
         statusCode = StatusCode.ERROR;
       }
