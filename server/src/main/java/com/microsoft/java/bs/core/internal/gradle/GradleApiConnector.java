@@ -158,8 +158,7 @@ public class GradleApiConnector {
       String pluginInitScript = Utils.createPluginScript(workspaceDir,
           preferenceManager.getPreferences().getJavaSemanticdbVersion(),
           preferenceManager.getPreferences().getScalaSemanticdbVersion(),
-          preferenceManager.getPreferences().getKotlinSemanticdbVersion(),
-          preferenceManager.getClientSupportedLanguages());
+          preferenceManager.getPreferences().getKotlinSemanticdbVersion());
       File initScript = Utils.createInitScriptFile("sourcesets", pluginInitScript);
       try {
         BuildActionExecuter<GradleSourceSets> buildExecutor =

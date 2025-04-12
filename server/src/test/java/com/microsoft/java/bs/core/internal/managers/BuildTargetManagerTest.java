@@ -42,7 +42,8 @@ class BuildTargetManagerTest {
     DefaultGradleSourceSets gradleSourceSets =
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
+    Set<String> supportedLanguages = Set.of("java");
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null), supportedLanguages);
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTarget = list.get(0).getBuildTarget();
@@ -58,7 +59,8 @@ class BuildTargetManagerTest {
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
+    Set<String> supportedLanguages = Set.of("java");
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null), supportedLanguages);
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTarget = list.get(0).getBuildTarget();
@@ -75,7 +77,8 @@ class BuildTargetManagerTest {
         new DefaultGradleSourceSets(List.of(gradleSourceSet));
     
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
+    Set<String> supportedLanguages = Set.of("java");
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null), supportedLanguages);
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTarget = list.get(0).getBuildTarget();
@@ -109,7 +112,8 @@ class BuildTargetManagerTest {
         List.of(gradleSourceSetFoo, gradleSourceSetBar));
 
     BuildTargetManager manager = new BuildTargetManager();
-    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null));
+    Set<String> supportedLanguages = Set.of("java");
+    manager.store(gradleSourceSets, Utils.getDisplayNameMaker((String) null), supportedLanguages);
 
     List<GradleBuildTarget> list = manager.getAllGradleBuildTargets();
     BuildTarget buildTargetFoo = list.stream()

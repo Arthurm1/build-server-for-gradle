@@ -145,7 +145,8 @@ public class BuildTargetService {
         client, cancelToken);
     Function<GradleSourceSet, String> displayNameMaker = Utils.getDisplayNameMaker(
         preferenceManager.getPreferences());
-    return buildTargetManager.store(sourceSets, displayNameMaker);
+    Set<String> supportedLanguages = preferenceManager.getClientSupportedLanguages();
+    return buildTargetManager.store(sourceSets, displayNameMaker, supportedLanguages);
   }
 
   private BuildTargetManager getBuildTargetManager(CancellationToken cancelToken) {

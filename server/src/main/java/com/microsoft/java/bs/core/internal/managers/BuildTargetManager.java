@@ -61,7 +61,7 @@ public class BuildTargetManager {
    * @return A list containing identifiers of changed build targets.
    */
   public List<BuildTargetChangeInfo> store(GradleSourceSets gradleSourceSets,
-      Function<GradleSourceSet, String> displayNameMaker) {
+      Function<GradleSourceSet, String> displayNameMaker, Set<String> supportedLanguages) {
     Map<BuildTargetIdentifier, GradleBuildTarget> newCache = new HashMap<>();
     Map<BuildTargetDependency, BuildTargetIdentifier> dependencyToBuildTargetId = new HashMap<>();
     for (GradleSourceSet sourceSet : gradleSourceSets.getGradleSourceSets()) {
@@ -83,7 +83,7 @@ public class BuildTargetManager {
       );
       bt.setBaseDirectory(sourceSet.getRootDir().toPath().toUri().toString());
 
-      setBuildTarget(sourceSet, bt);
+      setBuildTarget(sourceSet, bt, supportedLanguages);
 
       GradleBuildTarget buildTarget = new GradleBuildTarget(bt, sourceSet);
       newCache.put(btId, buildTarget);
@@ -196,17 +196,20 @@ public class BuildTargetManager {
     return tags;
   }
 
-  private void setBuildTarget(GradleSourceSet sourceSet, BuildTarget bt) {
+  private void setBuildTarget(GradleSourceSet sourceSet, BuildTarget bt, Set<String> languages) {
     // currently BSP can't support Kotlin + Scala, only Scala + kotlin or Java + Kotlin
     // The next version should output a map of BuildTargets
     KotlinExtension kotlinExtension = SupportedLanguages.KOTLIN.getExtension(sourceSet);
     ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(sourceSet);
     JavaExtension javaExtension = SupportedLanguages.JAVA.getExtension(sourceSet);
-    if (scalaExtension != null) {
+    if (scalaExtension != null
+        && languages.contains(SupportedLanguages.SCALA.getBspName())) {
       setScalaBuildTarget(sourceSet, scalaExtension, javaExtension, bt);
-    } else if (kotlinExtension != null) {
+    } else if (kotlinExtension != null
+        && languages.contains(SupportedLanguages.KOTLIN.getBspName())) {
       setKotlinBuildTarget(sourceSet, kotlinExtension, javaExtension, bt);
-    } else if (javaExtension != null) {
+    } else if (javaExtension != null
+        && languages.contains(SupportedLanguages.JAVA.getBspName())) {
       setJvmBuildTarget(sourceSet, javaExtension, bt);
     }
   }

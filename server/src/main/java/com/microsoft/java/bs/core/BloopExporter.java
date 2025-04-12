@@ -355,9 +355,7 @@ public class BloopExporter {
       GetSourceSetsAction getSourceSetsAction = new GetSourceSetsAction();
       BuildActionExecuter<GradleSourceSets> buildExecutor =
           connection.action(getSourceSetsAction);
-      Set<String> languages = Set.of(SupportedLanguages.JAVA.getBspName(),
-          SupportedLanguages.SCALA.getBspName());
-      String initScriptContents = Utils.createPluginScript(null, null, null, null, languages);
+      String initScriptContents = Utils.createPluginScript(null, null, null, null);
       File initScript = Utils.createInitScriptFile("bloopExport", initScriptContents);
       try {
         return buildExecutor
