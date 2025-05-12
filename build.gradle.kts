@@ -19,7 +19,7 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = "10.21.3"
+    toolVersion = "10.23.1"
     maxWarnings = 0
   }
 }
