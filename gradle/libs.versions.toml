@@ -9,7 +9,7 @@ bsp = "2.2.0-M2"
 # tied to the bsp gson version
 gson = "2.10.1"
 junit = "5.12.2"
-mokito = "5.16.0"
+mokito = "5.17.0"
 
 [libraries]
 bsp = { module = "ch.epfl.scala:bsp4j", version.ref = "bsp" }
