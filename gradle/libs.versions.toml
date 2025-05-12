@@ -1,7 +1,7 @@
 [versions]
 dependencyUpdates = "0.52.0"
 vanniktechPublish = "0.31.0"
-buildConfig = "5.5.2"
+buildConfig = "5.6.5"
 commonsLang = "3.17.0"
 gradleTooling = "8.14"
 slf4j = "2.0.17"
