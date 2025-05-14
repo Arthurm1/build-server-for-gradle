@@ -5,9 +5,10 @@ plugins {
   id("java")
   // publishing to Central Portal
   alias (libs.plugins.vanniktechPublish)
+  // publishing to Gradle plugin portal
+  id("com.gradle.plugin-publish") version "1.2.1"
 }
 
-/*
 gradlePlugin {
   website.set("https://github.com/arthurm1/build-server-for-gradle")
   vcsUrl.set("https://github.com/arthurm1/build-server-for-gradle.git")
@@ -21,7 +22,6 @@ gradlePlugin {
     }
   }
 }
-*/
 
 java {
   toolchain {
