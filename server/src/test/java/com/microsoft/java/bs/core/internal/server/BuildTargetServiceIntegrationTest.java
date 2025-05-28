@@ -59,7 +59,6 @@ import ch.epfl.scala.bsp4j.extended.TestStartEx;
 import com.microsoft.java.bs.core.internal.model.Preferences;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
-import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;

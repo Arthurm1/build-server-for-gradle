@@ -109,7 +109,7 @@ public class ScalaLanguageModelBuilder extends LanguageModelBuilder {
         }
       }
     } catch (Exception e) {
-      // probably old version of scala and isn't publishjed with this version of semanticdb
+      // probably old version of scala and isn't published with this version of semanticdb
       return null;
     }
     throw new IllegalStateException("Cannot find " + jarName + " in " + config.getFiles());

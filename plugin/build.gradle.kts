@@ -45,7 +45,7 @@ tasks.named<Test>("test") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
-  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true")
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(8)
   }
@@ -57,7 +57,7 @@ tasks.register<Test>("test11") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
-  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true")
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(11)
   }
@@ -69,7 +69,7 @@ tasks.register<Test>("test17") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
-  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true")
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(17)
   }
@@ -81,7 +81,7 @@ tasks.register<Test>("test21") {
     events("passed", "skipped", "failed")
     exceptionFormat = TestExceptionFormat.FULL
   }
-  systemProperty("junit.jupiter.execution.parallel.enabled", "true");
+  systemProperty("junit.jupiter.execution.parallel.enabled", "true")
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(21)
   }

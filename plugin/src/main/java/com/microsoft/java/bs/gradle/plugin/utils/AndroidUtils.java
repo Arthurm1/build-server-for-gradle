@@ -205,7 +205,7 @@ public class AndroidUtils {
    * Get specific type of input dirs for the given GradleSourceSet.
    *
    * @param variant Instance of Build Variant
-   * @param methodName name of method to return relevante dirs
+   * @param methodName name of method to return relevant dirs
    */
   private static Set<File> getDirs(
       Object variant,

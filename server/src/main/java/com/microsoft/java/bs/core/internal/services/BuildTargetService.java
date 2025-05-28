@@ -105,7 +105,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 import org.gradle.tooling.CancellationToken;
 
 /**
@@ -866,7 +865,7 @@ public class BuildTargetService {
       }
     }
     // implementing multiple test tasks in Gradle that point to the same source
-    // can cause duplicates (e.g. if the build defined the same set of tests to
+    // can cause duplicates e.g. if the build defined the same set of tests to
     // run under jdk11 for 1 task and jdk17 for another task.  So use a Set instead of List
     Set<JvmEnvironmentItem> items = new HashSet<>();
     for (Map.Entry<BuildTargetIdentifier, List<GradleTestEntity>> entry :

@@ -104,7 +104,7 @@ public class BspTraceEntity {
     }
 
     /**
-     * set the BSP's message request name..
+     * set the BSP's message request name.
      *
      * @param operationName the BSP's message request name.
      * @return the builder
