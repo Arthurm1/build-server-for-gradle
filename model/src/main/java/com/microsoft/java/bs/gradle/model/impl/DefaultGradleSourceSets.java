@@ -68,6 +68,6 @@ public class DefaultGradleSourceSets implements GradleSourceSets {
     }
     DefaultGradleSourceSets other = (DefaultGradleSourceSets) obj;
     return Objects.equals(exceptions, other.exceptions)
-      && Objects.equals(gradleSourceSets, other.gradleSourceSets);
+        && Objects.equals(gradleSourceSets, other.gradleSourceSets);
   }
 }

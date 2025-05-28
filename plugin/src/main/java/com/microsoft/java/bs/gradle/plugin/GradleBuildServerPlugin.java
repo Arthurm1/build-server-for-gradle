@@ -17,6 +17,8 @@ public class GradleBuildServerPlugin implements Plugin<Project> {
 
   /**
    * Constructor for the GradleBuildServerPlugin.
+   *
+   * @param registry the Gradle tooling model builder registry
    */
   @Inject
   public GradleBuildServerPlugin(ToolingModelBuilderRegistry registry) {

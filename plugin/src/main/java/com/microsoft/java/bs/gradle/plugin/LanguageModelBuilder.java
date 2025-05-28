@@ -42,6 +42,9 @@ public abstract class LanguageModelBuilder {
 
   /**
    * Returns a list of LanguageModelBuilder for the supported languages.
+   *
+   * @param languages languages to fetch the model builders for
+   * @return supported model builders
    */
   public static List<LanguageModelBuilder> getSupportedLanguageModelBuilders(
       Collection<String> languages) {

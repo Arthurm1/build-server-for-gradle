@@ -282,8 +282,8 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
         .thenCompose(either -> {
           long elapsedTime = getElapsedTime(startTime);
           return either.isLeft()
-            ? failure(methodName, either.getLeft(), elapsedTime)
-            : success(methodName, either.getRight(), elapsedTime);
+              ? failure(methodName, either.getLeft(), elapsedTime)
+              : success(methodName, either.getRight(), elapsedTime);
         });
     // create a Gradle cancellation token
     CancellationTokenSource cancelTokenSource = GradleConnector.newCancellationTokenSource();

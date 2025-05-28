@@ -65,6 +65,10 @@ public class DependencyCollector {
 
   /**
    * Resolve and collect dependencies from a collection of {@link Configuration}.
+   *
+   * @param dependencies dependency handler for the project
+   * @param configurations configurations to get the dependencies of
+   * @return collection of modules
    */
   public static Set<GradleModuleDependency> getModuleDependencies(DependencyHandler dependencies,
       Collection<Configuration> configurations) {

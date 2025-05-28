@@ -52,6 +52,7 @@ public class Utils {
   /**
    * get a set of tasks by type.
    *
+   * @param <T> type of Task
    * @param project Gradle project
    * @param clazz type of task
    * @return set of tasks of type `T`
@@ -67,7 +68,9 @@ public class Utils {
   /**
    * get a task by name.
    *
+   * @param <T> type of Task
    * @param project Gradle project
+   * @param name name of task
    * @return the task (if it exists) or null if it does not.
    */
   @SuppressWarnings("unchecked")
@@ -84,6 +87,7 @@ public class Utils {
    *
    * @param project Gradle project
    * @param taskName name of gradle task
+   * @return full task name
    */
   public static String getFullTaskName(Project project, String taskName) {
     if (taskName == null) {

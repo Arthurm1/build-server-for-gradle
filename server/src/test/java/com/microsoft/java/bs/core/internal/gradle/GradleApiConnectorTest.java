@@ -328,7 +328,7 @@ class GradleApiConnectorTest {
           .map(ss -> ss.getProjectDir() + ' ' + ss.getSourceSetName())
           .collect(Collectors.joining(", "));
       return "Dependency not found " + dependency.getProjectPath() + ' '
-        + dependency.getSourceSetName() + ". Available: " + availableDependencies;
+          + dependency.getSourceSetName() + ". Available: " + availableDependencies;
     });
   }
 

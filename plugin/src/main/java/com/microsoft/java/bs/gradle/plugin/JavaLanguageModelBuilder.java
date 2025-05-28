@@ -274,6 +274,9 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
 
   /**
    * Get the compilation arguments of the source set.
+   *
+   * @param javaCompile Gradle java compile task
+   * @return list of set java compiler arguments
    */
   public static List<String> getCompilerArgs(JavaCompile javaCompile) {
     try {
@@ -302,6 +305,9 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
 
   /**
    * Get the source compatibility level of the source set.
+   *
+   * @param compilerArgs the java compiler arguments
+   * @return the source compatibility setting or blank if it isn't set
    */
   public static String getSourceCompatibility(List<String> compilerArgs) {
     return findFirstCompilerArgMatch(compilerArgs,
@@ -311,6 +317,9 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
 
   /**
    * Get the target compatibility level of the source set.
+   *
+   * @param compilerArgs the java compiler arguments
+   * @return the target compatibility setting or blank if it isn't set
    */
   public static String getTargetCompatibility(List<String> compilerArgs) {
     return findFirstCompilerArgMatch(compilerArgs,

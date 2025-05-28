@@ -47,6 +47,8 @@ public class AndroidUtils {
    * them into list of GradleSourceSets.
    *
    * @param project Gradle project for extracting the build variants
+   * @param supportedLanguages set of languages to find extensions for
+   * @return list of source sets
    */
   public static List<GradleSourceSet> getBuildVariantsAsGradleSourceSets(Project project,
       Set<String> supportedLanguages) {
