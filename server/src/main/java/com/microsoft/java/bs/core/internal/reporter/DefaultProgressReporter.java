@@ -17,25 +17,18 @@ import ch.epfl.scala.bsp4j.TaskStartDataKind;
 import ch.epfl.scala.bsp4j.TaskStartParams;
 import com.microsoft.java.bs.core.internal.managers.Problem;
 import com.microsoft.java.bs.core.internal.managers.ProblemsManager;
-
 import java.io.File;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import org.gradle.tooling.events.FailureResult;
 import org.gradle.tooling.events.FinishEvent;
 import org.gradle.tooling.events.OperationResult;
 import org.gradle.tooling.events.ProgressEvent;
 import org.gradle.tooling.events.StartEvent;
-import org.gradle.tooling.events.problems.ContextualLabel;
-import org.gradle.tooling.events.problems.SingleProblemEvent;
 import org.gradle.tooling.events.task.TaskSkippedResult;
 import org.gradle.tooling.events.task.TaskSuccessResult;
-import org.gradle.tooling.model.ProjectIdentifier;
 
 /**
  * A default implementation of {@link ProgressReporter}.
@@ -66,9 +59,9 @@ public class DefaultProgressReporter extends ProgressReporter {
       Set<String> compilingTasks, Map<BuildTargetIdentifier, File> buildFileMap,
       ProblemsManager problemsManager) {
     super(client, originId);
-    this.taskPathMap = taskPathMap;
-    this.cleanTasks = cleanTasks;
-    this.compilingTasks = compilingTasks;
+    this.taskPathMap = taskPathMap == null ? Collections.emptyMap() : taskPathMap;
+    this.cleanTasks = cleanTasks == null ? Collections.emptySet() : cleanTasks;
+    this.compilingTasks = compilingTasks == null ? Collections.emptySet() : compilingTasks;
     this.buildFileMap = buildFileMap;
     this.problemsManager = problemsManager;
     startTimes = new HashMap<>();
@@ -82,18 +75,25 @@ public class DefaultProgressReporter extends ProgressReporter {
   @Override
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
+      sendError("Event " + ReporterUtils.toString(event));
       String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
       if (taskPath == null) {
         // events about the build setup don't have a taskPath so create a fake one
         taskPath = ReporterUtils.createFakeTaskPath(event.getDescriptor());
-      } else {
-        taskPath += "\n" + ReporterUtils.createFakeTaskPath(event.getDescriptor());
+        if (taskPath == null) {
+          sendError("Fake task path failed");
+        } else {
+          sendError("Fake task path created [" + taskPath + "]");
+        }
       }
-      boolean isCleaning = cleanTasks != null && cleanTasks.contains(taskPath);
-      boolean isCompiling = compilingTasks != null && compilingTasks.contains(taskPath);
+      boolean isCleaning = cleanTasks.contains(taskPath);
+      boolean isCompiling = compilingTasks.contains(taskPath);
       boolean isCompileTask = isCleaning || isCompiling;
       TaskId taskId = getTaskId(taskPath);
-      Set<BuildTargetIdentifier> targets = taskPathMap != null ? taskPathMap.get(taskPath) : null;
+      Set<BuildTargetIdentifier> targets = taskPathMap.get(taskPath);
+      if (targets == null) {
+        sendError("Task path not found [" + taskPath + "] in " + taskPathMap.keySet());
+      }
       if (event instanceof StartEvent) {
         if (taskPath != null) {
           startTimes.put(taskPath, event.getEventTime());
@@ -134,31 +134,12 @@ public class DefaultProgressReporter extends ProgressReporter {
           if (problem != null) {
             problemsManager.addDiagnostics(problem);
           } else {
-            if (event instanceof SingleProblemEvent spe) {
-              sendError("found unreported problem " + taskPath + '\n' + toString2(spe,
-                  (SingleProblemEvent f) -> f.getProblem(),
-                  (org.gradle.tooling.events.problems.Problem f) -> f.getContextualLabel(),
-                  (ContextualLabel f) -> f.getContextualLabel())  + '\n');
-            }
+            sendError("found unreported problem");
           }
         }
         taskInProgress(taskId, isCompileTask, targets, event.getDisplayName());
       }
     }
-  }
-
-  private String toString2(Object object, Function<?, ?>... convert) {
-    var result = Stream.of(convert)
-        .reduce(object, (a, b) -> {
-          if (a != null) {
-            Object output = ((Function<Object, Object>) b).apply(a);
-            if (output != null) {
-              return output;
-            }
-          }
-          return a;
-        }, (a, b) -> a == null ? b : a);
-    return Objects.toString(result);
   }
 
   private void taskStarted(TaskId taskId, boolean isCompileTask, Set<BuildTargetIdentifier> targets,
