@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -404,6 +405,43 @@ public class Utils {
     }
 
     return null;
+  }
+
+  /**
+   * return a collection as a String, limited to a number of entries.
+   *
+   * @param <T> type of collection entry
+   * @param collection collection
+   * @param maxEntries maximum array items to include in the String
+   * @return String version of array
+   */
+  public static <T> String collectionAsStr(Collection<T> collection, int maxEntries) {
+    if (collection == null) {
+      return "null";
+    }
+
+    if (collection.isEmpty()) {
+      return "[]";
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    int idx = 0;
+    Iterator<T> iter = collection.iterator();
+    while(iter.hasNext() && idx < maxEntries) {
+      if (idx > 0) {
+        sb.append(", ");
+      }
+      sb.append(iter.next());
+      idx++;
+    }
+    if (iter.hasNext()) {
+      sb.append("... and ");
+      sb.append(collection.size() - maxEntries);
+      sb.append(" more");
+    }
+    sb.append(']');
+    return sb.toString();
   }
 
   /**

@@ -15,6 +15,7 @@ import ch.epfl.scala.bsp4j.TaskId;
 import ch.epfl.scala.bsp4j.TaskProgressParams;
 import ch.epfl.scala.bsp4j.TaskStartDataKind;
 import ch.epfl.scala.bsp4j.TaskStartParams;
+import com.microsoft.java.bs.core.internal.gradle.Utils;
 import com.microsoft.java.bs.core.internal.managers.Problem;
 import com.microsoft.java.bs.core.internal.managers.ProblemsManager;
 import java.io.File;
@@ -22,13 +23,18 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.gradle.tooling.events.FailureResult;
 import org.gradle.tooling.events.FinishEvent;
 import org.gradle.tooling.events.OperationResult;
 import org.gradle.tooling.events.ProgressEvent;
 import org.gradle.tooling.events.StartEvent;
+import org.gradle.tooling.events.problems.ProblemEvent;
 import org.gradle.tooling.events.task.TaskSkippedResult;
 import org.gradle.tooling.events.task.TaskSuccessResult;
+import org.gradle.tooling.events.task.internal.DefaultTaskFinishEvent;
+import org.gradle.tooling.events.task.internal.DefaultTaskStartEvent;
 
 /**
  * A default implementation of {@link ProgressReporter}.
@@ -75,7 +81,9 @@ public class DefaultProgressReporter extends ProgressReporter {
   @Override
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
-      sendError("Event " + ReporterUtils.toString(event));
+      if (!(event instanceof DefaultTaskStartEvent) && !(event instanceof DefaultTaskFinishEvent)) {
+        //sendError("Event " + ReporterUtils.toString(event));
+      }
       String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
       if (taskPath == null) {
         // events about the build setup don't have a taskPath so create a fake one
@@ -83,7 +91,7 @@ public class DefaultProgressReporter extends ProgressReporter {
         if (taskPath == null) {
           sendError("Fake task path failed");
         } else {
-          sendError("Fake task path created [" + taskPath + "]");
+          //sendError("Fake task path created [" + taskPath + "]");
         }
       }
       boolean isCleaning = cleanTasks.contains(taskPath);
@@ -91,8 +99,8 @@ public class DefaultProgressReporter extends ProgressReporter {
       boolean isCompileTask = isCleaning || isCompiling;
       TaskId taskId = getTaskId(taskPath);
       Set<BuildTargetIdentifier> targets = taskPathMap.get(taskPath);
-      if (targets == null) {
-        sendError("Task path not found [" + taskPath + "] in " + taskPathMap.keySet());
+      if (targets == null && event instanceof ProblemEvent) {
+        sendError("Task path not found [" + taskPath + "] in " + Utils.collectionAsStr(taskPathMap.keySet(), 3));
       }
       if (event instanceof StartEvent) {
         if (taskPath != null) {
