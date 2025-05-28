@@ -21,8 +21,10 @@ import ch.epfl.scala.bsp4j.TaskFinishParams;
 import ch.epfl.scala.bsp4j.TaskProgressParams;
 import ch.epfl.scala.bsp4j.TaskStartParams;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.managers.ProblemsManager;
 import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.model.Preferences;
+import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
 import com.microsoft.java.bs.gradle.model.GradleModuleDependency;
 import com.microsoft.java.bs.gradle.model.GradleRunTask;
 import com.microsoft.java.bs.gradle.model.GradleSourceSet;
@@ -150,6 +152,11 @@ class GradleApiConnectorTest {
 
   private BuildClient getConsoleClient() {
     return new ConsoleBuildClient();
+  }
+
+  private DefaultProgressReporter getConsoleReporter(BuildClient client) {
+    return new DefaultProgressReporter(client, "Origin",
+        null, null, null, null);
   }
 
   @Test
@@ -573,8 +580,9 @@ class GradleApiConnectorTest {
         testTaskMap.put(fakeBt, gradleSourceSet.getTestTasks());
         gradleVersion = gradleSourceSet.getGradleVersion();
       }
+      BuildClient buildClient = getConsoleClient();
       Map<BuildTargetIdentifier, List<GradleTestEntity>> tests = connector.getTestClasses(
-          projectDir.toUri(), testTaskMap, getConsoleClient(), null, null, gradleVersion);
+          projectDir.toUri(), testTaskMap, getConsoleReporter(buildClient), null, gradleVersion);
       assertHasTestClass(tests, "Fake", "com.example.project.CalculatorTests");
       return null;
     });

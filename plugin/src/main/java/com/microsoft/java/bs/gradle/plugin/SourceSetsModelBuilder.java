@@ -224,11 +224,11 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           } catch (GradleException e) {
             // ignore
           }
-          List<String> jvmOptions = new ArrayList<>();
+          List<String> jvmOptions;
           try {
             jvmOptions = new ArrayList<>(task.getAllJvmArgs());
           } catch (Exception e) {
-            // ignore options failure
+            jvmOptions = new ArrayList<>();
           }
           File workingDirectory = task.getWorkingDir();
           Map<String, String> environmentVariables = task.getEnvironment().entrySet()

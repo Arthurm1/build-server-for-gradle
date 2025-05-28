@@ -74,11 +74,10 @@ import com.microsoft.java.bs.core.internal.gradle.Utils;
 import com.microsoft.java.bs.core.internal.log.BuildTargetChangeInfo;
 import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
+import com.microsoft.java.bs.core.internal.managers.ProblemsManager;
 import com.microsoft.java.bs.core.internal.model.GradleBuildTarget;
 import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
-import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
-import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
 import com.microsoft.java.bs.core.internal.utils.JsonUtils;
 import com.microsoft.java.bs.core.internal.utils.TelemetryUtils;
 import com.microsoft.java.bs.core.internal.utils.UriUtils;
@@ -120,6 +119,8 @@ public class BuildTargetService {
 
   private final PreferenceManager preferenceManager;
 
+  private final ProblemsManager problemsManager;
+
   private BuildClient client;
 
   private boolean firstTime;
@@ -137,15 +138,18 @@ public class BuildTargetService {
     this.connector = connector;
     this.preferenceManager = preferenceManager;
     this.firstTime = true;
+    problemsManager = new ProblemsManager();
   }
 
   private List<BuildTargetChangeInfo> updateBuildTargets(CancellationToken cancelToken) {
+    DefaultProgressReporter reporter = createProgressReporter();
     GradleSourceSets sourceSets = connector.getGradleSourceSets(preferenceManager.getRootUri(),
-        client, cancelToken);
+        reporter, cancelToken);
     Function<GradleSourceSet, String> displayNameMaker = Utils.getDisplayNameMaker(
         preferenceManager.getPreferences());
     Set<String> supportedLanguages = preferenceManager.getClientSupportedLanguages();
     return buildTargetManager.store(sourceSets, displayNameMaker, supportedLanguages);
+    // TODO if there are differences then remove any deleted ones from the diagnostics
   }
 
   private BuildTargetManager getBuildTargetManager(CancellationToken cancelToken) {
@@ -480,8 +484,7 @@ public class BuildTargetService {
     if (params.getTargets().isEmpty()) {
       return new CompileResult(StatusCode.OK);
     } else {
-      ProgressReporter reporter = new CompileProgressReporter(client,
-          params.getOriginId(), getFullTaskPathMap());
+      DefaultProgressReporter reporter = createProgressReporter(params.getOriginId());
       StatusCode code = runTasks(params.getTargets(), btId -> getBuildTaskName(btId, cancelToken),
           reporter, cancelToken);
       CompileResult result = new CompileResult(code);
@@ -510,26 +513,20 @@ public class BuildTargetService {
    * @return the clean result
    */
   public CleanCacheResult cleanCache(CleanCacheParams params, CancellationToken cancelToken) {
-    ProgressReporter reporter = new DefaultProgressReporter(client);
+    DefaultProgressReporter reporter = createProgressReporter(null);
     StatusCode code = runTasks(params.getTargets(), btId -> getCleanTaskName(btId, cancelToken),
         reporter, cancelToken);
     return new CleanCacheResult(code == StatusCode.OK);
   }
 
-  /**
-   * create a map of all known taskpaths to the build targets they affect.
-   * used to associate progress events to the correct target.
-   */
-  private Map<String, Set<BuildTargetIdentifier>> getFullTaskPathMap() {
-    Map<String, Set<BuildTargetIdentifier>> fullTaskPathMap = new HashMap<>();
-    for (GradleBuildTarget buildTarget : buildTargetManager.getAllGradleBuildTargets()) {
-      Set<String> tasks = buildTarget.getSourceSet().getTaskNames();
-      BuildTargetIdentifier btId = buildTarget.getBuildTarget().getId();
-      for (String taskName : tasks) {
-        fullTaskPathMap.computeIfAbsent(taskName, k -> new HashSet<>()).add(btId);
-      }
-    }
-    return fullTaskPathMap;
+  private DefaultProgressReporter createProgressReporter() {
+    return createProgressReporter(null);
+  }
+
+  private DefaultProgressReporter createProgressReporter(String originId) {
+    return new DefaultProgressReporter(client, originId, buildTargetManager.getFullTaskPathMap(),
+        buildTargetManager.getCleanTasks(), buildTargetManager.getCompilingTasks(),
+        problemsManager);
   }
 
   /**
@@ -537,21 +534,26 @@ public class BuildTargetService {
    */
   private StatusCode runTasks(List<BuildTargetIdentifier> targets,
       Function<BuildTargetIdentifier, String> taskNameCreator,
-      ProgressReporter reporter, CancellationToken cancelToken) {
+      DefaultProgressReporter reporter, CancellationToken cancelToken) {
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets =
         groupBuildTargetsByRootDir(targets, cancelToken);
     StatusCode code = StatusCode.OK;
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
       if (!isCancelled(cancelToken)) {
-        // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
-        String[] tasks = entry.getValue().stream().map(taskNameCreator)
-            .distinct()
-            .filter(Objects::nonNull)
-            .toArray(String[]::new);
-        if (tasks.length > 0) {
-          code = connector.runTasks(entry.getKey(), reporter, tasks, cancelToken);
-          if (code == StatusCode.ERROR) {
-            break;
+        if (!entry.getValue().isEmpty()) {
+          GradleBuildTarget target = buildTargetManager.getGradleBuildTarget(
+              entry.getValue().iterator().next());
+          String gradleVersion = target.getSourceSet().getGradleVersion();
+          // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
+          String[] tasks = entry.getValue().stream().map(taskNameCreator)
+              .distinct()
+              .filter(Objects::nonNull)
+              .toArray(String[]::new);
+          if (tasks.length > 0) {
+            code = connector.runTasks(entry.getKey(), reporter, tasks, cancelToken, gradleVersion);
+            if (code == StatusCode.ERROR) {
+              break;
+            }
           }
         }
       }
@@ -692,8 +694,7 @@ public class BuildTargetService {
     TestResult testResult = new TestResult(StatusCode.OK);
     testResult.setOriginId(params.getOriginId());
     // running tests can trigger compilation that must be reported on
-    CompileProgressReporter compileProgressReporter =
-        new CompileProgressReporter(client, params.getOriginId(), getFullTaskPathMap());
+    DefaultProgressReporter reporter = createProgressReporter(params.getOriginId());
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets =
         groupBuildTargetsByRootDir(params.getTargets(), cancelToken);
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
@@ -705,11 +706,11 @@ public class BuildTargetService {
           String gradleVersion = target.getSourceSet().getGradleVersion();
           if (TestParamsDataKind.SCALA_TEST.equals(params.getDataKind())) {
             // existing logic for scala test (class level)
-            statusCode = runScalaTests(entry.getKey(), params, compileProgressReporter,
-                cancelToken, gradleVersion);
+            statusCode = runScalaTests(entry.getKey(), params, reporter, cancelToken,
+                gradleVersion);
           } else if ("scala-test-suites-selection".equals(params.getDataKind())) {
-            statusCode = runScalaTestSuitesSelection(entry.getKey(), params,
-                compileProgressReporter, cancelToken, gradleVersion);
+            statusCode = runScalaTestSuitesSelection(entry.getKey(), params, reporter, cancelToken,
+                gradleVersion);
           } else {
             LOGGER.warning("Test Data Kind " + params.getDataKind() + " not supported");
             statusCode = StatusCode.ERROR;
@@ -733,7 +734,7 @@ public class BuildTargetService {
   private StatusCode runScalaTests(
       URI projectUri,
       TestParams params,
-      CompileProgressReporter compileProgressReporter,
+      DefaultProgressReporter reporter,
       CancellationToken cancelToken,
       String gradleVersion
   ) {
@@ -749,13 +750,13 @@ public class BuildTargetService {
     }
     return connector.runTests(projectUri, testClasses, testParams.getJvmOptions(),
         params.getArguments(), null, client, params.getOriginId(),
-        compileProgressReporter, cancelToken, gradleVersion);
+        reporter, cancelToken, gradleVersion);
   }
 
   private StatusCode runScalaTestSuitesSelection(
       URI projectUri,
       TestParams params,
-      CompileProgressReporter compileProgressReporter,
+      DefaultProgressReporter reporter,
       CancellationToken cancelToken,
       String gradleVersion
   ) {
@@ -796,7 +797,7 @@ public class BuildTargetService {
         testClasses.put(params.getTargets().get(0), classesMethods);
         return connector.runTests(projectUri, testClasses, testSuites.getJvmOptions(),
             params.getArguments(), envVars, client, params.getOriginId(),
-            compileProgressReporter, cancelToken, gradleVersion);
+            reporter, cancelToken, gradleVersion);
       }
     }
   }
@@ -841,8 +842,7 @@ public class BuildTargetService {
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets =
         groupBuildTargetsByRootDir(params.getTargets(), cancelToken);
     // retrieving tests can trigger compilation that must be reported on
-    CompileProgressReporter compileProgressReporter = new CompileProgressReporter(client,
-            params.getOriginId(), getFullTaskPathMap());
+    DefaultProgressReporter reporter = createProgressReporter(params.getOriginId());
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
       Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap = new HashMap<>();
       String gradleVersion = null;
@@ -859,8 +859,8 @@ public class BuildTargetService {
       if (gradleVersion != null) {
         URI projectUri = entry.getKey();
         Map<BuildTargetIdentifier, List<GradleTestEntity>> partialMainClassesMap =
-            connector.getTestClasses(projectUri, testTaskMap, client,
-                compileProgressReporter, cancelToken, gradleVersion);
+            connector.getTestClasses(projectUri, testTaskMap, reporter, cancelToken,
+                gradleVersion);
         mainClassesMap.putAll(partialMainClassesMap);
       }
     }
@@ -907,8 +907,8 @@ public class BuildTargetService {
       runResult.setStatusCode(StatusCode.ERROR);
     } else {
       // running tests can trigger compilation that must be reported on
-      CompileProgressReporter compileProgressReporter = new CompileProgressReporter(client,
-              params.getOriginId(), getFullTaskPathMap());
+      DefaultProgressReporter reporter = createProgressReporter(params.getOriginId());
+
       GradleBuildTarget buildTarget = getGradleBuildTarget(params.getTarget(),
           cancelToken);
       if (buildTarget == null) {
@@ -916,6 +916,7 @@ public class BuildTargetService {
         throw new IllegalArgumentException("The build target does not exist: "
           + params.getTarget().getUri());
       }
+      GradleSourceSet sourceSet = buildTarget.getSourceSet();
       URI projectUri = getRootProjectUri(params.getTarget(), cancelToken);
       // ideally BSP would have a jvmRunEnv style runkind for executing tests, not scala.
       ScalaMainClass mainClass = JsonUtils.toModel(params.getData(), ScalaMainClass.class);
@@ -929,16 +930,17 @@ public class BuildTargetService {
         argumentsToUse = arguments1;
       }
       StatusCode statusCode = connector.runMainClass(projectUri,
-              buildTarget.getSourceSet().getProjectPath(),
-              buildTarget.getSourceSet().getSourceSetName(),
+              sourceSet.getProjectPath(),
+              sourceSet.getSourceSetName(),
               mainClass.getClassName(),
               params.getEnvironmentVariables(),
               mainClass.getJvmOptions(),
               argumentsToUse,
               client,
               params.getOriginId(),
-              compileProgressReporter,
-              cancelToken);
+              reporter,
+              cancelToken,
+              sourceSet.getGradleVersion());
 
       if (statusCode != StatusCode.OK) {
         runResult.setStatusCode(statusCode);

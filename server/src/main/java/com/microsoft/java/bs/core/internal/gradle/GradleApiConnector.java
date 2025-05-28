@@ -12,7 +12,6 @@ import ch.epfl.scala.bsp4j.extended.TestName;
 import com.microsoft.java.bs.core.internal.managers.PreferenceManager;
 import com.microsoft.java.bs.core.internal.model.GradleTestEntity;
 import com.microsoft.java.bs.core.internal.reporter.AppRunReporter;
-import com.microsoft.java.bs.core.internal.reporter.CompileProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.DefaultProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.ProgressReporter;
 import com.microsoft.java.bs.core.internal.reporter.TestNameRecorder;
@@ -41,6 +40,7 @@ import org.gradle.tooling.BuildCancelledException;
 import org.gradle.tooling.BuildException;
 import org.gradle.tooling.BuildLauncher;
 import org.gradle.tooling.CancellationToken;
+import org.gradle.tooling.ConfigurableLauncher;
 import org.gradle.tooling.GradleConnectionException;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ModelBuilder;
@@ -144,16 +144,18 @@ public class GradleApiConnector {
    * Get the source sets of the Gradle project.
    *
    * @param projectUri uri of the project
-   * @param client     connection to BSP client
+   * @param reporter sends back Gradle events to the BSP client
    * @param cancellationToken the Gradle cancellation token.
    * @return an instance of {@link GradleSourceSets}
    */
-  public GradleSourceSets getGradleSourceSets(URI projectUri, BuildClient client,
+  public GradleSourceSets getGradleSourceSets(URI projectUri, DefaultProgressReporter reporter,
       CancellationToken cancellationToken) {
-    ProgressReporter reporter = new DefaultProgressReporter(client);
     ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     try (ProjectConnection connection = getGradleConnector(projectUri).connect();
          errorOut) {
+
+      String gradleVersion = getBuildEnvironment(connection, cancellationToken).getGradle()
+          .getGradleVersion();
       File workspaceDir = new File(projectUri);
       String pluginInitScript = Utils.createPluginScript(workspaceDir,
           preferenceManager.getPreferences().getJavaSemanticdbVersion(),
@@ -164,9 +166,9 @@ public class GradleApiConnector {
         BuildActionExecuter<GradleSourceSets> buildExecutor =
             Utils.getBuildActionExecuter(connection, preferenceManager.getPreferences(),
               new GetSourceSetsAction(), cancellationToken)
-            .addProgressListener(reporter,
-                OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION)
             .setStandardError(errorOut);
+        addProgressListener(buildExecutor, reporter, Set.of(OperationType.TASK,
+            OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION), gradleVersion);
         if (Boolean.getBoolean("bsp.plugin.debug.enabled")) {
           buildExecutor.addJvmArguments(
               "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
@@ -188,7 +190,7 @@ public class GradleApiConnector {
         }
       }
     } catch (BuildCancelledException ce) {
-      reporter.sendError("Sourceset retrieval cancelled");
+      sendError("Sourceset retrieval cancelled", reporter);
       throw new IllegalStateException(ce);
     } catch (GradleConnectionException | IllegalStateException | IOException e) {
       sendError(getErrorMessage(e, errorOut), reporter);
@@ -196,12 +198,26 @@ public class GradleApiConnector {
     }
   }
 
-  private String getException(Exception exception) {
-    // Gradle stack traces can be long - summarize first, then add the full stack
-    Throwable[] throwables = ExceptionUtils.getThrowables(exception);
-    String cutDownMessage = Arrays.stream(throwables).map(Throwable::getMessage)
-        .collect(Collectors.joining("\n"));
-    return cutDownMessage + '\n' + ExceptionUtils.getStackTrace(exception);
+  private boolean supportsProblemsApi(String gradleVersion) {
+    // problems API was added in 8.7 has changed across multiple versions
+    // maybe 8.13 is stable :shrug:
+    return GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("8.13")) >= 0;
+  }
+
+  private void addProgressListener(ConfigurableLauncher<?> launcher,
+      DefaultProgressReporter reporter, Set<OperationType> operationTypes,
+      String gradleVersion) {
+    // Can be null in tests
+    if (reporter != null) {
+      Set<OperationType> eventTypes = new HashSet<>(operationTypes);
+      if (supportsProblemsApi(gradleVersion)) {
+        // the new Problems API is the only way to get reports on compile
+        // errors/warnings without parsing the standard out which is different for each language
+        eventTypes.add(OperationType.PROBLEMS);
+        reporter.useProblemReporter();
+      }
+      launcher.addProgressListener(reporter, eventTypes);
+    }
   }
 
   private String getErrorMessage(Exception exception, String gradleVersion) {
@@ -211,8 +227,15 @@ public class GradleApiConnector {
   private String getErrorMessage(Exception exception, ByteArrayOutputStream errorOut,
       String gradleVersion) {
     Throwable rootCause = ExceptionUtils.getRootCause(exception);
-    if (rootCause != null) {
-      return rootCause.getMessage();
+    if (rootCause != null && rootCause.getClass().getName()
+        .equals("org.gradle.api.internal.tasks.compile.CompilationFailedException")) {
+      // if problems API supported then diagnostics will have been sent back via BSP so
+      // don't send an error message as well
+      if (!supportsProblemsApi(gradleVersion)) {
+        return rootCause.getMessage();
+      } else {
+        return null;
+      }
     }
     return getErrorMessage(exception, errorOut);
   }
@@ -239,13 +262,14 @@ public class GradleApiConnector {
    * Request Gradle daemon to run the tasks.
    *
    * @param projectUri uri of the project
-   * @param reporter   reporter on feedback from Gradle
+   * @param reporter reporter on feedback from Gradle
    * @param cancellationToken the Gradle cancellation token.
-   * @param tasks      tasks to run
+   * @param tasks tasks to run
+   * @param gradleVersion gradle version
    * @return the result of running the tasks
    */
-  public StatusCode runTasks(URI projectUri, ProgressReporter reporter,
-      String[] tasks, CancellationToken cancellationToken) {
+  public StatusCode runTasks(URI projectUri, DefaultProgressReporter reporter,
+      String[] tasks, CancellationToken cancellationToken, String gradleVersion) {
     // Don't issue a start progress update - the listener will pick that up automatically
     final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     StatusCode statusCode = StatusCode.OK;
@@ -262,9 +286,9 @@ public class GradleApiConnector {
         if (initScript != null) {
           launcher.addArguments("--init-script", initScript.getAbsolutePath());
         }
+        addProgressListener(launcher, reporter, Set.of(OperationType.TASK), gradleVersion);
         // TODO: consider to use outputstream to capture the output.
-        launcher.addProgressListener(reporter, OperationType.TASK)
-            .setStandardError(errorOut)
+        launcher.setStandardError(errorOut)
             .forTasks(tasks)
             .run();
       } finally {
@@ -278,7 +302,7 @@ public class GradleApiConnector {
     } catch (BuildException e) {
       sendError("Tasks error Project:" + projectUri + " tasks: "  + Utils.arrayAsStr(tasks, 3),
           reporter);
-      sendError(getErrorMessage(e, errorOut), reporter);
+      sendError(getErrorMessage(e, errorOut, gradleVersion), reporter);
       statusCode = StatusCode.ERROR;
     }
 
@@ -296,7 +320,7 @@ public class GradleApiConnector {
    * @param envVars the tests environment variables
    * @param client the BSP client
    * @param originId client message originId
-   * @param compileProgressReporter listener to pass compile progress back to client.
+   * @param reporter listener to pass compile progress back to client.
    * @param cancellationToken the Gradle cancellation token.
    * @param gradleVersion the Gradle version of this project
    * @return the result of running the tests
@@ -308,20 +332,19 @@ public class GradleApiConnector {
       List<String> args,
       Map<String, String> envVars,
       BuildClient client, String originId,
-      CompileProgressReporter compileProgressReporter,
+      DefaultProgressReporter reporter,
       CancellationToken cancellationToken,
       String gradleVersion) {
 
     StatusCode statusCode = StatusCode.OK;
-    ProgressReporter reporter = new DefaultProgressReporter(client);
     try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
       if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("2.6")) < 0) {
-        reporter.sendError("Error running test classes: Gradle version "
-            + gradleVersion + " must be >= 2.6");
+        sendError("Error running test classes: Gradle version " + gradleVersion
+            + " must be >= 2.6", reporter);
       } else if (envVars != null && !envVars.isEmpty()
           && GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("3.5")) < 0) {
-        reporter.sendError("Error running test classes With Environment Variables: Gradle version "
-            + gradleVersion + " must be >= 3.5");
+        sendError("Error running test classes With Environment Variables: Gradle version "
+            + gradleVersion + " must be >= 3.5", reporter);
       } else {
         for (Map.Entry<BuildTargetIdentifier, Map<String, Set<String>>> entry :
             testClassesMethodsMap.entrySet()) {
@@ -339,11 +362,9 @@ public class GradleApiConnector {
                      preferenceManager.getPreferences(), cancellationToken)
                   .setStandardError(errorOut)
                   .addProgressListener(testReportReporter, OperationType.TEST);
+              addProgressListener(launcher, reporter, Set.of(OperationType.TASK), gradleVersion);
               if (initScript != null) {
                 launcher.addArguments("--init-script", initScript.getAbsolutePath());
-              }
-              if (compileProgressReporter != null) {
-                launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
               }
               for (Map.Entry<String, Set<String>> classesMethods : entry.getValue().entrySet()) {
                 if (classesMethods.getValue() != null && !classesMethods.getValue().isEmpty()) {
@@ -374,10 +395,10 @@ public class GradleApiConnector {
             // caused by close the output stream, just simply log the error.
             LOGGER.severe(e.getMessage());
           } catch (BuildCancelledException ce) {
-            reporter.sendError("Test run cancelled");
+            sendError("Test run cancelled", reporter);
             statusCode = StatusCode.CANCELLED;
           } catch (GradleConnectionException | IllegalStateException e) {
-            testReportReporter.addException(getErrorMessage(e, errorOut));
+            testReportReporter.addException(getErrorMessage(e, errorOut, gradleVersion));
             statusCode = StatusCode.ERROR;
           } finally {
             testReportReporter.sendResult();
@@ -385,7 +406,7 @@ public class GradleApiConnector {
         }
       }
     } catch (GradleConnectionException | IllegalStateException e) {
-      reporter.sendError("Error running test classes: " + e.getMessage());
+      sendError("Error running test classes: " + e.getMessage(), reporter);
       statusCode = StatusCode.ERROR;
     }
 
@@ -397,22 +418,20 @@ public class GradleApiConnector {
    *
    * @param projectUri URI of the project.
    * @param testTaskMap map of build targets to their Gradle test tasks
-   * @param client the BSP client
-   * @param compileProgressReporter listener to pass compile progress back to client.
+   * @param reporter listener to pass compile progress back to client.
    * @param cancellationToken the Gradle cancellation token.
    * @param gradleVersion the Gradle version of the project
    * @return the JVM test classes discovered
    */
   public Map<BuildTargetIdentifier, List<GradleTestEntity>> getTestClasses(URI projectUri,
-      Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap, BuildClient client,
-      CompileProgressReporter compileProgressReporter, CancellationToken cancellationToken,
+      Map<BuildTargetIdentifier, Set<GradleTestTask>> testTaskMap,
+      DefaultProgressReporter reporter, CancellationToken cancellationToken,
       String gradleVersion) {
 
-    DefaultProgressReporter reporter = new DefaultProgressReporter(client);
     // use --test-dry-run to discover tests.  Gradle version must be 8.3 or higher.
     if (GradleVersion.version(gradleVersion).compareTo(GradleVersion.version("8.3")) < 0) {
-      reporter.sendError("Error searching for test classes: Gradle version "
-          + gradleVersion + " must be >= 8.3");
+      sendError("Error searching for test classes: Gradle version " + gradleVersion
+          + " must be >= 8.3", reporter);
     } else {
       Map<String, BuildTargetIdentifier> taskPathToTarget = new HashMap<>();
       Map<String, GradleTestTask> taskPathToTask = new HashMap<>();
@@ -447,19 +466,19 @@ public class GradleApiConnector {
                   .addArguments("--init-script", initScript.getAbsolutePath())
                   .addProgressListener(testNameRecorder, OperationType.TEST)
                   .addProgressListener(reporter, OperationType.TASK);
-              if (compileProgressReporter != null) {
-                launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
-              }
+              addProgressListener(launcher, reporter, Set.of(OperationType.TASK), gradleVersion);
               launcher.run();
             } catch (BuildCancelledException ce) {
-              reporter.sendError("Test search cancelled for " + Utils.arrayAsStr(taskPaths, 3));
+              sendError("Test search cancelled for " + Utils.arrayAsStr(taskPaths, 3), reporter);
+            } catch (BuildException e) {
+              sendError(getErrorMessage(e, gradleVersion), reporter);
             } catch (BuildException e) {
               sendError("Build exception " + initScript, reporter);
               sendError(getErrorMessage(e, gradleVersion), reporter);
             } catch (GradleConnectionException | IllegalStateException e) {
               String message = "Error searching for test classes in "
                   + Utils.arrayAsStr(taskPaths, 3) + " "
-                  + getException(e);
+                  + String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
               sendError(message, reporter);
               throw new IllegalStateException(message, e);
             }
@@ -487,6 +506,8 @@ public class GradleApiConnector {
               initScript.delete();
             }
           }
+        } catch (GradleConnectionException e) {
+          throw new IllegalStateException("Error searching for test classes", e);
         }
       }
     }
@@ -506,18 +527,20 @@ public class GradleApiConnector {
    * @param arguments the main class run arguments
    * @param client the BSP client
    * @param originId client message originId
-   * @param compileProgressReporter listener to pass compile progress back to client.
+   * @param reporter listener to pass compile progress back to client.
    * @param cancellationToken the Gradle cancellation token.
+   * @param gradleVersion gradle version
    * @return result of running main class
    */
   public StatusCode runMainClass(URI projectUri, String projectPath, String sourceSetName,
       String className, Map<String, String> environmentVariables, List<String> jvmOptions,
       List<String> arguments, BuildClient client, String originId,
-      CompileProgressReporter compileProgressReporter, CancellationToken cancellationToken) {
+      DefaultProgressReporter reporter, CancellationToken cancellationToken,
+      String gradleVersion) {
 
     StatusCode statusCode = StatusCode.OK;
     String taskName = "buildServerRunApp";
-    try (AppRunReporter reporter = new AppRunReporter(client, originId, taskName)) {
+    try (AppRunReporter appReporter = new AppRunReporter(client, originId, taskName)) {
       try (ProjectConnection connection = getGradleConnector(projectUri).connect()) {
         // task can trigger compilation so add compiler options as well as
         // script to create a JavaExec task to run the main class
@@ -536,19 +559,17 @@ public class GradleApiConnector {
               .getBuildLauncher(connection,
                   preferenceManager.getPreferences(), cancellationToken)
               .forTasks(taskName)
+              // TODO BSP `run/readStdin` - how to link which running task gets which StdIn data?
+              //    .setStandardInput(reporter.getStdIn())
               // TODO this is needed to feedback the main class stdOut/Err but it will also feedback
               // Gradle stdOut/Err so reporter will report on any compile messages etc.
               // Unsure how to filter those out.
-              .setStandardOutput(reporter.getStdOut())
-              .setStandardError(reporter.getStdErr())
-              // TODO BSP `run/readStdin` - how to link which running task gets which StdIn data?
-              //    .setStandardInput(reporter.getStdIn())
-              .addProgressListener(reporter, OperationType.TASK);
+              .setStandardOutput(appReporter.getStdOut())
+              .setStandardError(appReporter.getStdErr())
+              .addProgressListener(appReporter, OperationType.TASK);
+          addProgressListener(launcher, reporter, Set.of(OperationType.TASK), gradleVersion);
           if (initScript != null) {
             launcher.addArguments("--init-script", initScript.getAbsolutePath());
-          }
-          if (compileProgressReporter != null) {
-            launcher.addProgressListener(compileProgressReporter, OperationType.TASK);
           }
           // run method is blocking
           launcher.run();
@@ -558,11 +579,11 @@ public class GradleApiConnector {
           }
         }
       } catch (BuildCancelledException ce) {
-        reporter.sendError("Running main class cancelled");
+        sendError("Running main class cancelled", reporter);
         statusCode = StatusCode.CANCELLED;
       } catch (GradleConnectionException | IllegalStateException e) {
         String message = getException(e);
-        reporter.sendError("Error running main class: " + message);
+        sendError("Error running main class: " + message, appReporter);
         statusCode = StatusCode.ERROR;
       }
     } catch (IOException e) {

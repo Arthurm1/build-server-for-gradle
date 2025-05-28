@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -46,12 +47,21 @@ public class BuildTargetManager {
 
   private volatile Map<Path, BuildTargetIdentifier> sourceDirsMap;
 
+  private volatile Map<String, Set<BuildTargetIdentifier>> fullTaskPathMap;
+
+  private volatile Set<String> compilingTasks;
+
+  private volatile Set<String> cleanTasks;
+
   /**
    * constructor.
    */
   public BuildTargetManager() {
     this.cache = new HashMap<>();
     this.sourceDirsMap = new HashMap<>();
+    this.fullTaskPathMap = new HashMap<>();
+    this.compilingTasks = new HashSet<>();
+    this.cleanTasks = new HashSet<>();
   }
 
   /**
@@ -95,6 +105,9 @@ public class BuildTargetManager {
     updateBuildTargetDependencies(newCache.values(), dependencyToBuildTargetId);
 
     this.sourceDirsMap = calculateSourceDirsMap(newCache.values());
+    this.fullTaskPathMap = calculateFullTaskPathMap(newCache.values());
+    this.compilingTasks = calculateCompilingTasks(newCache.values());
+    this.cleanTasks = calculateCleanTasks(newCache.values());
 
     Map<BuildTargetIdentifier, GradleBuildTarget> oldCache = cache;
     this.cache = newCache;
@@ -182,6 +195,18 @@ public class BuildTargetManager {
    */
   public Map<Path, BuildTargetIdentifier> getSourceDirsMap() {
     return new HashMap<>(sourceDirsMap);
+  }
+
+  public Map<String, Set<BuildTargetIdentifier>> getFullTaskPathMap() {
+    return new HashMap<>(fullTaskPathMap);
+  }
+
+  public Set<String> getCompilingTasks() {
+    return new HashSet<>(compilingTasks);
+  }
+
+  public Set<String> getCleanTasks() {
+    return new HashSet<>(cleanTasks);
   }
 
   private URI getBuildTargetUri(URI projectUri, String sourceSetName) {
@@ -324,5 +349,36 @@ public class BuildTargetManager {
       }
     }
     return sourceDirsMap;
+  }
+
+  private Map<String, Set<BuildTargetIdentifier>> calculateFullTaskPathMap(
+      Collection<GradleBuildTarget> buildTargets) {
+    Map<String, Set<BuildTargetIdentifier>> fullTaskPathMap = new HashMap<>();
+    for (GradleBuildTarget buildTarget : buildTargets) {
+      Set<String> tasks = new HashSet<>(buildTarget.getSourceSet().getTaskNames());
+      tasks.add(buildTarget.getSourceSet().getCleanTaskName());
+      BuildTargetIdentifier btId = buildTarget.getBuildTarget().getId();
+      for (String taskName : tasks) {
+        fullTaskPathMap.computeIfAbsent(taskName, k -> new HashSet<>()).add(btId);
+      }
+    }
+    return fullTaskPathMap;
+  }
+
+  private Set<String> calculateCleanTasks(Collection<GradleBuildTarget> buildTargets) {
+    Set<String> tasks = new HashSet<>();
+    for (GradleBuildTarget buildTarget : buildTargets) {
+      String cleanTask = buildTarget.getSourceSet().getCleanTaskName();
+      tasks.add(cleanTask);
+    }
+    return tasks;
+  }
+
+  private Set<String> calculateCompilingTasks(Collection<GradleBuildTarget> buildTargets) {
+    Set<String> tasks = new HashSet<>();
+    for (GradleBuildTarget buildTarget : buildTargets) {
+      tasks.addAll(buildTarget.getSourceSet().getTaskNames());
+    }
+    return tasks;
   }
 }

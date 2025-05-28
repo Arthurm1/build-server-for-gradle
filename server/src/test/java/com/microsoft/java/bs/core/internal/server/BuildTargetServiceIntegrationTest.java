@@ -3,6 +3,7 @@ package com.microsoft.java.bs.core.internal.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -107,10 +108,6 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
             .filter(d -> d.getTextDocument().getUri().contains(filename))
             .collect(Collectors.toList());
     assertFalse(fileDiagnostics.isEmpty(), "No diagnostics for " + filename + " in " + bt);
-    // TODO add reset tests back in when gradle problem ordering/collation is understood
-    /*assertTrue(fileDiagnostics.getFirst().getReset(), "First diagnostic should mark as reset");
-    assertTrue(fileDiagnostics.stream().skip(1).filter(PublishDiagnosticsParams::getReset)
-            .findAny().isEmpty(), "All file diagnostics but first should not be marked as reset");*/
     return fileDiagnostics.stream().flatMap(param -> param.getDiagnostics().stream())
         .collect(Collectors.toList());
   }
@@ -359,10 +356,10 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       CleanCacheResult cleanResult = gradleBuildServer
           .buildTargetCleanCache(cleanCacheParams).join();
       assertTrue(cleanResult.getCleaned());
-      client.waitOnStartReports(1);
-      client.waitOnFinishReports(1);
-      client.waitOnCompileTasks(0);
-      client.waitOnCompileReports(0);
+      client.waitOnStartReports(2);
+      client.waitOnFinishReports(2);
+      client.waitOnCompileTasks(2);
+      client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
       client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
@@ -375,8 +372,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       compileParams.setOriginId("originId");
       CompileResult compileResult = gradleBuildServer.buildTargetCompile(compileParams).join();
       assertEquals(StatusCode.OK, compileResult.getStatusCode());
-      client.waitOnStartReports(2);
-      client.waitOnFinishReports(2);
+      client.waitOnStartReports(7);
+      client.waitOnFinishReports(7);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -387,7 +384,6 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       for (BuildTargetIdentifier btId : btIds) {
         CompileReport compileReport = findCompileReport(client, btId);
         assertEquals("originId", compileReport.getOriginId());
-        // TODO compile results are not yet implemented so always zero for now.
         assertEquals(0, compileReport.getWarnings());
         assertEquals(0, compileReport.getErrors());
       }
@@ -446,8 +442,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       assertTrue(extraTestItem.getJvmOptions().contains("-Xmx2g"));
       assertTrue(extraTestItem.getJvmOptions().contains("-Dproperty=value"));
 
-      client.waitOnStartReports(14);
-      client.waitOnFinishReports(14);
+      client.waitOnStartReports(11);
+      client.waitOnFinishReports(11);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
@@ -479,8 +475,79 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void testFailingCompilation() {
-    withNewTestServer("fail-compilation", (gradleBuildServer, client) -> {
+  void testCompilingMultiProjectServer() {
+    withNewTestServer("duplicate-nested-project-names", (gradleBuildServer, client) -> {
+      // get targets
+      WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
+          .join();
+      List<BuildTargetIdentifier> btIds = buildTargetsResult.getTargets().stream()
+          .map(BuildTarget::getId)
+          .collect(Collectors.toList());
+      assertEquals(12, btIds.size());
+      client.waitOnStartReports(11);
+      client.waitOnFinishReports(11);
+      client.waitOnCompileTasks(0);
+      client.waitOnCompileReports(0);
+      client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      client.clearMessages();
+
+      // clean targets
+      CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
+      CleanCacheResult cleanResult =
+          gradleBuildServer.buildTargetCleanCache(cleanCacheParams).join();
+      assertTrue(cleanResult.getCleaned());
+      // 1 per sourceset
+      client.waitOnStartReports(12);
+      client.waitOnFinishReports(12);
+      client.waitOnCompileTasks(12);
+      client.waitOnCompileReports(12);
+      client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      for (BuildTargetIdentifier bt : btIds) {
+        CompileReport compileReport = findCompileReport(client, bt);
+        // clean doesn't have origin id
+        assertNull(compileReport.getOriginId());
+        assertEquals(0, compileReport.getWarnings());
+        assertEquals(0, compileReport.getErrors());
+      }
+      client.clearMessages();
+
+      // compile targets
+      CompileParams compileParams = new CompileParams(btIds);
+      compileParams.setOriginId("originId");
+      CompileResult compileResult = gradleBuildServer.buildTargetCompile(compileParams).join();
+      assertEquals(StatusCode.OK, compileResult.getStatusCode());
+      // compileJava processResources classes.  So 3 tasks per source set.
+      // does it matter that we report on all these Gradle tasks?
+      client.waitOnStartReports(36);
+      client.waitOnFinishReports(36);
+      client.waitOnCompileTasks(12);
+      client.waitOnCompileReports(12);
+      client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(0);
+      for (TaskFinishParams message : client.finishReports) {
+        assertEquals(StatusCode.OK, message.getStatus());
+      }
+      for (BuildTargetIdentifier bt : btIds) {
+        CompileReport compileReport = findCompileReport(client, bt);
+        assertEquals("originId", compileReport.getOriginId());
+        assertEquals(0, compileReport.getWarnings());
+        assertEquals(0, compileReport.getErrors());
+      }
+      client.clearMessages();
+    });
+  }
+
+  @Test
+  void testFailingServer() {
+    withNewTestServer("fail-compilation", "8.13", (gradleBuildServer, client) -> {
       // get targets
       WorkspaceBuildTargetsResult buildTargetsResult = gradleBuildServer.workspaceBuildTargets()
           .join();
@@ -504,10 +571,10 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       CleanCacheResult cleanResult = gradleBuildServer
           .buildTargetCleanCache(cleanCacheParams).join();
       assertTrue(cleanResult.getCleaned());
-      client.waitOnStartReports(1);
-      client.waitOnFinishReports(1);
-      client.waitOnCompileTasks(0);
-      client.waitOnCompileReports(0);
+      client.waitOnStartReports(2);
+      client.waitOnFinishReports(2);
+      client.waitOnCompileTasks(2);
+      client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
       client.waitOnDiagnostics(0);
       for (TaskFinishParams message : client.finishReports) {
@@ -520,24 +587,60 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       compileParams.setOriginId("originId");
       CompileResult compileResult = gradleBuildServer.buildTargetCompile(compileParams).join();
       assertEquals(StatusCode.ERROR, compileResult.getStatusCode());
-      client.waitOnStartReports(2);
-      client.waitOnFinishReports(2);
+      client.waitOnStartReports(4);
+      client.waitOnFinishReports(4);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
-      client.waitOnLogMessages(2);
-      client.waitOnDiagnostics(0);
+      client.waitOnLogMessages(0);
+      client.waitOnDiagnostics(3);
       assertEquals(1, client.finishReportErrorCount());
-      for (BuildTargetIdentifier btId : btIds) {
-        CompileReport compileReport = findCompileReport(client, btId);
-        assertEquals("originId", compileReport.getOriginId());
-        // TODO compile results are not yet implemented so always zero for now.
-        assertEquals(0, compileReport.getWarnings());
-        assertEquals(0, compileReport.getErrors());
-      }
       for (LogMessageParams message : client.logMessages) {
         assertEquals("originId", message.getOriginId());
         assertEquals(MessageType.ERROR, message.getType());
       }
+
+      BuildTargetIdentifier mainBt = findTarget(buildTargetsResult.getTargets(),
+          "fail-compilation [main]");
+      CompileReport compileReportMain = findCompileReport(client, mainBt);
+      assertEquals("originId", compileReportMain.getOriginId());
+      assertEquals(5, compileReportMain.getWarnings());
+      assertEquals(0, compileReportMain.getErrors());
+      List<PublishDiagnosticsParams> compileDiagnosticsMain = findDiagnostics(client, mainBt);
+      List<DiagnosticSeverity> mainSeverities = compileDiagnosticsMain.stream()
+              .flatMap(param -> param.getDiagnostics().stream()
+                      .map(Diagnostic::getSeverity))
+              .collect(Collectors.toList());
+      assertEquals(5, mainSeverities.stream()
+          .filter(diag -> diag.equals(DiagnosticSeverity.WARNING)).count());
+      assertEquals(0, mainSeverities.stream()
+          .filter(diag -> diag.equals(DiagnosticSeverity.ERROR)).count());
+      assertWarning(client, mainBt, "SingleWarningCreator.java", 19, 8, 19, 15, "found raw type");
+      assertWarning(client, mainBt, "WarningsCreator.java", 20, 59, 20, 66, "found raw type");
+      assertWarning(client, mainBt, "WarningsCreator.java", 20, 55, 20, 68, "unchecked cast");
+      assertWarning(client, mainBt, "WarningsCreator.java", 26, 35, 26, 39, "static variable");
+      assertWarning(client, mainBt, "WarningsCreator.java", 30, 18, 30, 35, "deprecatedMethod");
+
+      BuildTargetIdentifier testBt = findTarget(buildTargetsResult.getTargets(),
+          "fail-compilation [test]");
+
+      CompileReport compileReportTest = findCompileReport(client, testBt);
+      assertEquals("originId", compileReportTest.getOriginId());
+      assertEquals(0, compileReportTest.getWarnings());
+      assertEquals(3, compileReportTest.getErrors());
+      List<PublishDiagnosticsParams> compileDiagnosticsTest = findDiagnostics(client, testBt);
+      List<DiagnosticSeverity> testSeverities = compileDiagnosticsTest.stream()
+              .flatMap(param -> param.getDiagnostics().stream()
+                      .map(Diagnostic::getSeverity))
+              .collect(Collectors.toList());
+      assertEquals(0, testSeverities.stream()
+          .filter(diag -> diag.equals(DiagnosticSeverity.WARNING)).count());
+      assertEquals(3, testSeverities.stream()
+          .filter(diag -> diag.equals(DiagnosticSeverity.ERROR)).count());
+      assertError(client, testBt, "ErrorsCreator.java", 19, 33, 19, 33, "';' expected");
+      assertError(client, testBt, "ErrorsCreator.java", 23, 17, 23, 17, "unclosed string literal");
+      // TODO start and end column is reported wrong here because of tabs.
+      // See https://github.com/gradle/gradle/issues/28230
+      assertError(client, testBt, "ErrorsCreator.java", 25, 8, 25, 8, "unclosed string literal");
       client.clearMessages();
     });
   }
@@ -581,8 +684,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult passingTestResult = gradleBuildServer.buildTargetTest(passingTestParams).join();
       assertEquals(StatusCode.OK, passingTestResult.getStatusCode());
       assertEquals("originId", passingTestResult.getOriginId());
-      client.waitOnStartReports(10);
-      client.waitOnFinishReports(11);
+      client.waitOnStartReports(18);
+      client.waitOnFinishReports(19);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
@@ -749,8 +852,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult failingTestResult = gradleBuildServer.buildTargetTest(failingTestParams).join();
       assertEquals(StatusCode.ERROR, failingTestResult.getStatusCode());
       assertEquals("originId", failingTestResult.getOriginId());
-      client.waitOnStartReports(4);
-      client.waitOnFinishReports(5);
+      client.waitOnStartReports(9);
+      client.waitOnFinishReports(10);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -761,7 +864,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       for (CompileReport message : client.compileReports) {
         assertTrue(message.getNoOp());
       }
-      assertEquals(3, client.finishReportErrorCount());
+      assertEquals(4, client.finishReportErrorCount());
       TestReport failingTestsReport = client.testReports.get(0);
       assertEquals(0, failingTestsReport.getPassed());
       assertEquals(0, failingTestsReport.getCancelled());
@@ -842,8 +945,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           .buildTargetTest(stacktraceTestParams).join();
       assertEquals(StatusCode.ERROR, stacktraceTestResult.getStatusCode());
       assertEquals("originId", stacktraceTestResult.getOriginId());
-      client.waitOnStartReports(4);
-      client.waitOnFinishReports(5);
+      client.waitOnStartReports(9);
+      client.waitOnFinishReports(10);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -854,7 +957,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       for (CompileReport message : client.compileReports) {
         assertTrue(message.getNoOp());
       }
-      assertEquals(3, client.finishReportErrorCount());
+      assertEquals(4, client.finishReportErrorCount());
       TestReport stacktraceTestsReport = client.testReports.get(0);
       assertEquals(0, stacktraceTestsReport.getPassed());
       assertEquals(0, stacktraceTestsReport.getCancelled());
@@ -942,8 +1045,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           gradleBuildServer.buildTargetTest(singleMethodTestParams).join();
       assertEquals(StatusCode.OK, singleMethodTestResult.getStatusCode());
       assertEquals("originId", singleMethodTestResult.getOriginId());
-      client.waitOnStartReports(5);
-      client.waitOnFinishReports(6);
+      client.waitOnStartReports(13);
+      client.waitOnFinishReports(14);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
@@ -1036,8 +1139,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult complexTestResult = gradleBuildServer.buildTargetTest(complexTestParams).join();
       assertEquals(StatusCode.OK, complexTestResult.getStatusCode());
       assertEquals("originId", complexTestResult.getOriginId());
-      client.waitOnStartReports(11);
-      client.waitOnFinishReports(12);
+      client.waitOnStartReports(19);
+      client.waitOnFinishReports(20);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
@@ -1232,8 +1335,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult nestedTestResult = gradleBuildServer.buildTargetTest(nestedTestParams).join();
       assertEquals(StatusCode.OK, nestedTestResult.getStatusCode());
       assertEquals("originId", nestedTestResult.getOriginId());
-      client.waitOnStartReports(10);
-      client.waitOnFinishReports(11);
+      client.waitOnStartReports(18);
+      client.waitOnFinishReports(19);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
@@ -1397,8 +1500,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult testResult = gradleBuildServer.buildTargetTest(testParams).join();
       assertEquals(StatusCode.OK, testResult.getStatusCode());
       assertEquals("originId", testResult.getOriginId());
-      client.waitOnStartReports(10);
-      client.waitOnFinishReports(11);
+      client.waitOnStartReports(18);
+      client.waitOnFinishReports(19);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
@@ -1448,8 +1551,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       runParams.setData(mainClass);
       RunResult runResult = gradleBuildServer.buildTargetRun(runParams).join();
       assertEquals("originId", runResult.getOriginId());
-      client.waitOnStartReports(2);
-      client.waitOnFinishReports(2);
+      client.waitOnStartReports(6);
+      client.waitOnFinishReports(6);
       client.waitOnCompileTasks(1);
       client.waitOnCompileReports(1);
       client.waitOnSupplier(() -> client.stdOut.stream().anyMatch(message ->
@@ -1511,8 +1614,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult passingTestResult = gradleBuildServer.buildTargetTest(passingTestParams).join();
       assertEquals(StatusCode.OK, passingTestResult.getStatusCode());
       assertEquals("originId", passingTestResult.getOriginId());
-      client.waitOnStartReports(8);
-      client.waitOnFinishReports(9);
+      client.waitOnStartReports(13);
+      client.waitOnFinishReports(14);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -1659,8 +1762,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult failingTestResult = gradleBuildServer.buildTargetTest(failingTestParams).join();
       assertEquals(StatusCode.ERROR, failingTestResult.getStatusCode());
       assertEquals("originId", failingTestResult.getOriginId());
-      client.waitOnStartReports(4);
-      client.waitOnFinishReports(5);
+      client.waitOnStartReports(9);
+      client.waitOnFinishReports(10);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -1671,7 +1774,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       for (CompileReport message : client.compileReports) {
         assertTrue(message.getNoOp());
       }
-      assertEquals(3, client.finishReportErrorCount());
+      assertEquals(4, client.finishReportErrorCount());
       TestReport failingTestsReport = client.testReports.get(0);
       assertEquals(0, failingTestsReport.getPassed());
       assertEquals(0, failingTestsReport.getCancelled());
@@ -1754,8 +1857,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           .buildTargetTest(stacktraceTestParams).join();
       assertEquals(StatusCode.ERROR, stacktraceTestResult.getStatusCode());
       assertEquals("originId", stacktraceTestResult.getOriginId());
-      client.waitOnStartReports(5);
-      client.waitOnFinishReports(6);
+      client.waitOnStartReports(10);
+      client.waitOnFinishReports(11);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -1766,7 +1869,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       for (CompileReport message : client.compileReports) {
         assertTrue(message.getNoOp());
       }
-      assertEquals(3, client.finishReportErrorCount());
+      assertEquals(4, client.finishReportErrorCount());
       TestReport stacktraceTestsReport = client.testReports.get(0);
       assertEquals(0, stacktraceTestsReport.getPassed());
       assertEquals(0, stacktraceTestsReport.getCancelled());
@@ -1869,8 +1972,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
           gradleBuildServer.buildTargetTest(singleMethodTestParams).join();
       assertEquals(StatusCode.OK, singleMethodTestResult.getStatusCode());
       assertEquals("originId", singleMethodTestResult.getOriginId());
-      client.waitOnStartReports(4);
-      client.waitOnFinishReports(5);
+      client.waitOnStartReports(9);
+      client.waitOnFinishReports(10);
       client.waitOnCompileTasks(2);
       client.waitOnCompileReports(2);
       client.waitOnLogMessages(0);
@@ -1964,8 +2067,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       // Dependency `org.spockframework:spock-core:XXXX` may need upgrading.
       assertEquals(StatusCode.OK, passingTestResult.getStatusCode());
       assertEquals("originId", passingTestResult.getOriginId());
-      client.waitOnStartReports(6);
-      client.waitOnFinishReports(7);
+      client.waitOnStartReports(11);
+      client.waitOnFinishReports(12);
       client.waitOnCompileTasks(4);
       client.waitOnCompileReports(4);
       client.waitOnLogMessages(0);
@@ -2061,8 +2164,8 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       TestResult passingTestResult = gradleBuildServer.buildTargetTest(passingTestParams).join();
       assertEquals(StatusCode.OK, passingTestResult.getStatusCode());
       assertEquals("originId", passingTestResult.getOriginId());
-      client.waitOnStartReports(5);
-      client.waitOnFinishReports(6);
+      client.waitOnStartReports(13);
+      client.waitOnFinishReports(14);
       client.waitOnCompileTasks(3);
       client.waitOnCompileReports(3);
       client.waitOnLogMessages(0);
