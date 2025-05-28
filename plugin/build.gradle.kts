@@ -3,10 +3,18 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 plugins {
   id("java-gradle-plugin")
   id("java")
+  id("com.microsoft.java.bs.checkstyle")
   // publishing to Central Portal
   alias (libs.plugins.vanniktechPublish)
   // publishing to Gradle plugin portal
   alias (libs.plugins.gradlePluginPublish)
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    url = uri("https://repo.gradle.org/gradle/libs-releases")
+  }
 }
 
 gradlePlugin {
@@ -26,12 +34,6 @@ gradlePlugin {
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(8)
-  }
-}
-
-tasks.withType<Checkstyle>().configureEach {
-  javaLauncher = javaToolchains.launcherFor {
-    languageVersion = JavaLanguageVersion.of(17)
   }
 }
 

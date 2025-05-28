@@ -1,18 +1,20 @@
 plugins {
   id("java-library")
+  id("com.microsoft.java.bs.checkstyle")
   // publishing to Central Portal
   alias (libs.plugins.vanniktechPublish)
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    url = uri("https://repo.gradle.org/gradle/libs-releases")
+  }
 }
 
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(8)
-  }
-}
-
-tasks.withType<Checkstyle>().configureEach {
-  javaLauncher = javaToolchains.launcherFor {
-    languageVersion = JavaLanguageVersion.of(17)
   }
 }
 

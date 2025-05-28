@@ -2,10 +2,18 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
   id("application")
+  id("com.microsoft.java.bs.checkstyle")
   // source generation - to put build info in the app
   alias (libs.plugins.buildConfig)
   // publishing to Central Portal
   alias (libs.plugins.vanniktechPublish)
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    url = uri("https://repo.gradle.org/gradle/libs-releases")
+  }
 }
 
 buildConfig {
@@ -17,11 +25,6 @@ buildConfig {
   buildConfigField("groupId", project.findProperty("GROUP") as String)
   buildConfigField("pluginArtifactId", "plugin")
   buildConfigField("version", project.findProperty("VERSION_NAME") as String)
-}
-
-// exclude the generated sources
-tasks.withType<Checkstyle>().configureEach {
-  exclude("**/BuildInfo.java")
 }
 
 java {
