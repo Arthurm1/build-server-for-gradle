@@ -91,7 +91,9 @@ import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -104,6 +106,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.gradle.tooling.CancellationToken;
 
 /**
@@ -119,7 +123,7 @@ public class BuildTargetService {
 
   private final PreferenceManager preferenceManager;
 
-  private final ProblemsManager problemsManager;
+  private volatile ProblemsManager problemsManager;
 
   private BuildClient client;
 
@@ -138,7 +142,20 @@ public class BuildTargetService {
     this.connector = connector;
     this.preferenceManager = preferenceManager;
     this.firstTime = true;
-    problemsManager = new ProblemsManager();
+  }
+
+  private ProblemsManager getProblemsManager() {
+    if (problemsManager == null) {
+      synchronized (this) {
+        if (problemsManager == null) {
+          String uri = preferenceManager.getRootUri()
+              .resolve("GradleBspServer_CatchAllBuildTarget").toString();
+          BuildTargetIdentifier bt = new BuildTargetIdentifier(uri);
+          problemsManager = new ProblemsManager(bt);
+        }
+      }
+    }
+    return problemsManager;
   }
 
   private List<BuildTargetChangeInfo> updateBuildTargets(CancellationToken cancelToken) {
@@ -524,9 +541,24 @@ public class BuildTargetService {
   }
 
   private DefaultProgressReporter createProgressReporter(String originId) {
+    Map<BuildTargetIdentifier, File> buildFileMap = buildTargetManager.getBuildFileMap();
+    ProblemsManager problemsManager = getProblemsManager();/*
+    if (buildFileMap.isEmpty()) {
+      // at this point the source sets haven't been retrieved so nothing about the build is known
+      // except for the root uri.
+      Path dir = Paths.get(preferenceManager.getRootUri());
+      File buildFile = Stream.of("build.gradle",
+              "build.gradle.kts", "settings.gradle", "settings.gradle.kts")
+          .map(dir::resolve)
+          .filter(Files::exists)
+          .findAny()
+          .map(Path::toFile)
+          .orElseGet(() -> dir.resolve("UnknownBuildFile").toFile());
+      buildFileMap = Map.of(problemsManager.getCatchAllBt(), buildFile);
+    }*/
     return new DefaultProgressReporter(client, originId, buildTargetManager.getFullTaskPathMap(),
         buildTargetManager.getCleanTasks(), buildTargetManager.getCompilingTasks(),
-        problemsManager);
+        buildFileMap, problemsManager);
   }
 
   /**

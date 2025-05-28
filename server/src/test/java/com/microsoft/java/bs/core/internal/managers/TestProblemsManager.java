@@ -10,6 +10,7 @@ import ch.epfl.scala.bsp4j.Position;
 import ch.epfl.scala.bsp4j.PublishDiagnosticsParams;
 import ch.epfl.scala.bsp4j.Range;
 import ch.epfl.scala.bsp4j.TextDocumentIdentifier;
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,8 @@ class TestProblemsManager {
 
   @Test
   void testProblemsManager() {
-    ProblemsManager manager = new ProblemsManager();
+    BuildTargetIdentifier fakeId = new BuildTargetIdentifier("fake");
+    ProblemsManager manager = new ProblemsManager(fakeId);
     BuildTargetIdentifier fooId = new BuildTargetIdentifier("foo");
     BuildTargetIdentifier barId = new BuildTargetIdentifier("bar");
     String taskPathFoo = "Task:Foo";
@@ -65,8 +67,8 @@ class TestProblemsManager {
     manager.targetsClean(targets, taskPathMap);
     assertTrue(manager.getOldProblems().isEmpty());
     assertTrue(manager.getCurrentProblems().isEmpty());
-    manager.collateDiagnostics(taskPathFoo, taskPathMap, false);
-    manager.collateDiagnostics(taskPathBar, taskPathMap, false);
+    manager.collateDiagnostics(taskPathFoo, taskPathMap);
+    manager.collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(manager.getOldProblems().isEmpty());
     assertTrue(manager.getCurrentProblems().isEmpty());
 
@@ -75,8 +77,8 @@ class TestProblemsManager {
     manager.targetsCompile(taskPathBar);
     assertTrue(manager.getOldProblems().isEmpty());
     assertTrue(manager.getCurrentProblems().isEmpty());
-    manager.collateDiagnostics(taskPathFoo, taskPathMap, false);
-    manager.collateDiagnostics(taskPathBar, taskPathMap, false);
+    manager.collateDiagnostics(taskPathFoo, taskPathMap);
+    manager.collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(manager.getOldProblems().isEmpty());
     assertTrue(manager.getCurrentProblems().isEmpty());
 
@@ -85,8 +87,8 @@ class TestProblemsManager {
     manager.targetsCompile(taskPathBar);
     assertTrue(manager.getOldProblems().isEmpty());
     assertTrue(manager.getCurrentProblems().isEmpty());
-    manager.collateDiagnostics(taskPathFoo, taskPathMap, true);
-    manager.collateDiagnostics(taskPathBar, taskPathMap, true);
+    manager.collateDiagnostics(taskPathFoo, taskPathMap);
+    manager.collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(manager.getOldProblems().isEmpty());
     assertTrue(manager.getCurrentProblems().isEmpty());
 
@@ -99,14 +101,14 @@ class TestProblemsManager {
     manager.addDiagnostics(fooProblem);
     // collate Foo
     List<PublishDiagnosticsParams> fooParams1 = manager
-        .collateDiagnostics(taskPathFoo, taskPathMap, false);
+        .collateDiagnostics(taskPathFoo, taskPathMap);
     assertEquals(1, fooParams1.size());
     PublishDiagnosticsParams fooParam1 = fooParams1.iterator().next();
     assertTrue(fooParam1.getReset());
     assertEquals(1, fooParam1.getDiagnostics().size());
     // collate Bar
     List<PublishDiagnosticsParams> barParams1 = manager
-        .collateDiagnostics(taskPathBar, taskPathMap, false);
+        .collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(barParams1.isEmpty());
 
     // compile warning noop
@@ -116,14 +118,14 @@ class TestProblemsManager {
     assertTrue(manager.getCurrentProblems().isEmpty());
     // collate Foo
     List<PublishDiagnosticsParams> fooParams2 = manager
-        .collateDiagnostics(taskPathFoo, taskPathMap, true);
+        .collateDiagnostics(taskPathFoo, taskPathMap);
     assertEquals(1, fooParams2.size());
     PublishDiagnosticsParams fooParam2 = fooParams2.iterator().next();
     assertTrue(fooParam2.getReset());
     assertEquals(1, fooParam2.getDiagnostics().size());
     // collate Bar
     List<PublishDiagnosticsParams> barParams2 = manager
-        .collateDiagnostics(taskPathBar, taskPathMap, true);
+        .collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(barParams2.isEmpty());
     // TODO Gradle will eventually replay warnings
     // https://github.com/gradle/gradle/issues/31233
@@ -136,14 +138,14 @@ class TestProblemsManager {
     manager.addDiagnostics(fooProblem);
     // collate Foo
     List<PublishDiagnosticsParams> fooParams3 = manager
-        .collateDiagnostics(taskPathFoo, taskPathMap, false);
+        .collateDiagnostics(taskPathFoo, taskPathMap);
     assertEquals(1, fooParams3.size());
     PublishDiagnosticsParams fooParam3 = fooParams3.iterator().next();
     assertTrue(fooParam3.getReset());
     assertEquals(1, fooParam3.getDiagnostics().size());
     // collate Bar
     List<PublishDiagnosticsParams> barParams3 = manager
-        .collateDiagnostics(taskPathBar, taskPathMap, false);
+        .collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(barParams3.isEmpty());
 
     // compile warning gone
@@ -153,14 +155,14 @@ class TestProblemsManager {
     assertTrue(manager.getCurrentProblems().isEmpty());
     // collate Foo
     List<PublishDiagnosticsParams> fooParams4 = manager
-        .collateDiagnostics(taskPathFoo, taskPathMap, false);
+        .collateDiagnostics(taskPathFoo, taskPathMap);
     assertEquals(1, fooParams4.size());
     PublishDiagnosticsParams fooParam4 = fooParams4.iterator().next();
     assertTrue(fooParam4.getReset());
     assertTrue(fooParam4.getDiagnostics().isEmpty());
     // collate Bar
     List<PublishDiagnosticsParams> barParams4 = manager
-        .collateDiagnostics(taskPathBar, taskPathMap, false);
+        .collateDiagnostics(taskPathBar, taskPathMap);
     assertTrue(barParams4.isEmpty());
   }
 }

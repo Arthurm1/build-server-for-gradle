@@ -4,13 +4,38 @@ import ch.epfl.scala.bsp4j.extended.TestName;
 import java.util.ArrayList;
 import java.util.List;
 import org.gradle.tooling.events.OperationDescriptor;
+import org.gradle.tooling.events.configuration.ProjectConfigurationOperationDescriptor;
 import org.gradle.tooling.events.task.TaskOperationDescriptor;
 import org.gradle.tooling.events.test.JvmTestOperationDescriptor;
+import org.gradle.tooling.model.ProjectIdentifier;
 
 /**
  * Methods to help with event listeners.
  */
 public class ReporterUtils {
+
+  /**
+   * Create a fake task path from the operation descriptor.
+   * Recurses through parents to create full task path.
+   *
+   * @param operationDescriptor descriptor
+   * @return fake task path
+   */
+  public static String createFakeTaskPath(OperationDescriptor operationDescriptor) {
+    if (operationDescriptor == null) {
+      return null;
+    }
+    StringBuilder sb = new StringBuilder();
+    OperationDescriptor descriptor = operationDescriptor;
+    while (descriptor != null) {
+      if (!sb.isEmpty()) {
+        sb.append('\n');
+      }
+      sb.append(descriptor.getName());
+      descriptor = descriptor.getParent();
+    }
+    return sb.toString();
+  }
 
   /**
    * get the gradle task path from the operation descriptor.

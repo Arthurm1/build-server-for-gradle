@@ -1,25 +1,28 @@
 package com.microsoft.java.bs.core.internal.reporter;
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier;
 import ch.epfl.scala.bsp4j.CodeDescription;
 import ch.epfl.scala.bsp4j.Diagnostic;
 import ch.epfl.scala.bsp4j.DiagnosticSeverity;
 import ch.epfl.scala.bsp4j.DiagnosticTag;
 import ch.epfl.scala.bsp4j.Position;
 import ch.epfl.scala.bsp4j.Range;
-import ch.epfl.scala.bsp4j.ScalaAction;
 import ch.epfl.scala.bsp4j.TextDocumentIdentifier;
 import com.microsoft.java.bs.core.internal.managers.Problem;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import org.gradle.tooling.events.ProgressEvent;
 import org.gradle.tooling.events.problems.DocumentationLink;
 import org.gradle.tooling.events.problems.FileLocation;
 import org.gradle.tooling.events.problems.LineInFileLocation;
 import org.gradle.tooling.events.problems.Location;
 import org.gradle.tooling.events.problems.OffsetInFileLocation;
+import org.gradle.tooling.events.problems.PluginIdLocation;
 import org.gradle.tooling.events.problems.ProblemDefinition;
 import org.gradle.tooling.events.problems.Severity;
 import org.gradle.tooling.events.problems.SingleProblemEvent;
@@ -36,7 +39,8 @@ class ProblemsReporter {
     this.originId = originId;
   }
 
-  public Problem convertToDiagnostic(String taskPath, ProgressEvent event) {
+  public Problem convertToDiagnostic(String taskPath, ProgressEvent event,
+      Map<BuildTargetIdentifier, File> buildFileMap) {
     if (event instanceof SingleProblemEvent) {
       SingleProblemEvent singleProblemEvent = (SingleProblemEvent) event;
       org.gradle.tooling.events.problems.Problem problem = singleProblemEvent.getProblem();
@@ -50,52 +54,69 @@ class ProblemsReporter {
           problemDefinition.getId().getName(),
           problem.getContextualLabel().getContextualLabel(),
           problem.getSolutions(),
-          documentationLink != null ? documentationLink.getUrl() : null);
+          documentationLink != null ? documentationLink.getUrl() : null,
+          buildFileMap);
     }
     return null;
   }
 
   private Problem convertToDiagnostic(String taskPath,
       Severity severity, List<Location> locations, String errorCode, String message,
-      List<Solution> solutions, String documentationLink) {
+      List<Solution> solutions, String documentationLink,
+      Map<BuildTargetIdentifier, File> buildFileMap) {
 
     // TODO this won't handle the issue with tabs https://github.com/gradle/gradle/issues/28230
     // TODO this won't handle the issue with multiline diagnostics as Java does
     //      not return the end line.  Only way to do this is examine the file.
-    OffsetInFileLocation offsetInFileLocation = null;
-    LineInFileLocation lineInFileLocation = null;
-    FileLocation fileOnlyLocation = null;
+    Range range = null;
+    String path = null;
+    boolean isPluginDiagnostic = false;
     for (Location location : locations) {
       if (location instanceof LineInFileLocation) {
-        lineInFileLocation = (LineInFileLocation) location;
+        LineInFileLocation lineInFileLocation = (LineInFileLocation) location;
+        range = getRange(lineInFileLocation);
+        path = lineInFileLocation.getPath();
         // LineInFileLocation gives all info so no need for more
         break;
       } else if (location instanceof OffsetInFileLocation) {
-        offsetInFileLocation = (OffsetInFileLocation) location;
+        OffsetInFileLocation offsetInFileLocation = (OffsetInFileLocation) location;
+        range = getRange(offsetInFileLocation);
+        path = offsetInFileLocation.getPath();
       } else if (location instanceof FileLocation) {
-        fileOnlyLocation = (FileLocation) location;
+        FileLocation fileOnlyLocation = (FileLocation) location;
+        range = getZeroRange();
+        path = fileOnlyLocation.getPath();
+      } else if (location instanceof PluginIdLocation) {
+        isPluginDiagnostic = true;
       }
     }
-    if (offsetInFileLocation != null || lineInFileLocation != null || fileOnlyLocation != null) {
-      final Range range;
-      final String location;
-      if (lineInFileLocation != null) {
-        range = getRange(lineInFileLocation);
-        location = lineInFileLocation.getPath();
-      } else if (offsetInFileLocation != null) {
-        // TODO only way to discover line numbers is to open the file and count back newlines
-        // TODO same issue as multi-line diagnostics. Use start of file for now.
+    // don't report diagnostics that are internal to plugins
+    if (path == null && !isPluginDiagnostic && buildFileMap != null) {
+      // associate any locations not specified with a build file
+      Optional<File> buildFile = buildFileMap.values().stream().filter(Objects::nonNull).findAny();
+      if (buildFile.isPresent()) {
         range = getZeroRange();
-        location = offsetInFileLocation.getPath();
-      } else {
-        range = getZeroRange();
-        location = fileOnlyLocation.getPath();
+        path = buildFile.get().toPath().toString();
       }
+    }
+    if (path != null) {
       DiagnosticSeverity diagnosticSeverity = getSeverity(severity);
-      return convertToDiagnostic(taskPath, location, range, diagnosticSeverity,
-            errorCode, message, solutions, documentationLink);
+      return convertToDiagnostic(taskPath, path, range, diagnosticSeverity,
+          errorCode, message, solutions, documentationLink);
     }
     return null;
+  }
+
+  private String locationToUri(String location) {
+    // currently Gradle can return a path of the form `build file 'proper path'`
+    if (location.length() >= 13 && location.startsWith("build file '") && location.endsWith("'")) {
+      location = location.substring(12, location.length() - 1);
+    }
+    try {
+      return Path.of(location).toUri().toString();
+    } catch (Exception e) {
+      throw new IllegalStateException("Error translating " + location, e);
+    }
   }
 
   private Problem convertToDiagnostic(String taskPath, String location, Range range,
@@ -107,23 +128,19 @@ class ProblemsReporter {
     diagnostic.setCode(errorCode);
     diagnostic.setCodeDescription(getCodeDescription(documentationLink));
     diagnostic.setTags(getTags(errorCode));
-    if (solutions != null && !solutions.isEmpty()) {
-      diagnostic.setDataKind("scala");
-      List<ScalaAction> actions = solutions.stream()
-          .map(solution -> new ScalaAction(solution.getSolution()))
+    /*if (solutions != null && !solutions.isEmpty()) {
+      // `scala` is currently the only data kind type and allows passing back of ScalaActions, but
+      // we don't have the info to create them so just pass back suggestions
+      diagnostic.setDataKind("GradleSolutions");
+      List<String> solutionsAsStrs = solutions.stream()
+          .map(Solution::getSolution)
           .collect(Collectors.toList());
-      diagnostic.setData(actions);
-    }
-    // currently Gradle can return a path of the form `build file 'proper path'`
-    if (location.length() >= 13 && location.startsWith("build file '") && location.endsWith("'")) {
-      location = location.substring(12, location.length() - 1);
-    }
-    String uri;
-    try {
-      uri = Path.of(location).toUri().toString();
-    } catch (Exception e) {
-      throw new IllegalStateException("Error translating " + location, e);
-    }
+      diagnostic.setData(solutionsAsStrs);
+    } else {
+      diagnostic.setDataKind("TaskPath");
+      diagnostic.setData(taskPath);
+    }*/
+    String uri = locationToUri(location);
     TextDocumentIdentifier textDocument = new TextDocumentIdentifier(uri);
     return new Problem(taskPath, originId, textDocument, diagnostic);
   }
@@ -164,12 +181,23 @@ class ProblemsReporter {
     return null;
   }
 
+  private Range getRange(OffsetInFileLocation offsetInFileLocation) {
+    // TODO only way to discover line numbers is to open the file and count back newlines
+    // TODO same issue as multi-line diagnostics. Use start of file for now.
+    return getZeroRange();
+  }
+
   private Range getRange(LineInFileLocation lineInFileLocation) {
-    int startLine = lineInFileLocation.getLine() >= 0 ? lineInFileLocation.getLine() - 1 : -1;
-    int startCol = lineInFileLocation.getColumn() >= 0 ? lineInFileLocation.getColumn() - 1 : -1;
+    int startLine = lineInFileLocation.getLine() > 0 ? lineInFileLocation.getLine() - 1 : 0;
+    int startCol = lineInFileLocation.getColumn() > 0 ? lineInFileLocation.getColumn() - 1 : 0;
     Position start = new Position(startLine, startCol);
     // TODO - doesn't work for multi-line diagnostics - currently assume it's the same line
-    Position end = new Position(startLine, startCol + lineInFileLocation.getLength());
+    Position end;
+    if (lineInFileLocation.getLength() > 0) {
+      end = new Position(startLine, startCol + lineInFileLocation.getLength());
+    } else {
+      end = start;
+    }
     return new Range(start, end);
   }
 

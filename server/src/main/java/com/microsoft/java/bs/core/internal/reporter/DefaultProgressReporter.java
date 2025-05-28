@@ -17,16 +17,25 @@ import ch.epfl.scala.bsp4j.TaskStartDataKind;
 import ch.epfl.scala.bsp4j.TaskStartParams;
 import com.microsoft.java.bs.core.internal.managers.Problem;
 import com.microsoft.java.bs.core.internal.managers.ProblemsManager;
+
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
 import org.gradle.tooling.events.FailureResult;
 import org.gradle.tooling.events.FinishEvent;
 import org.gradle.tooling.events.OperationResult;
 import org.gradle.tooling.events.ProgressEvent;
 import org.gradle.tooling.events.StartEvent;
+import org.gradle.tooling.events.problems.ContextualLabel;
+import org.gradle.tooling.events.problems.SingleProblemEvent;
 import org.gradle.tooling.events.task.TaskSkippedResult;
 import org.gradle.tooling.events.task.TaskSuccessResult;
+import org.gradle.tooling.model.ProjectIdentifier;
 
 /**
  * A default implementation of {@link ProgressReporter}.
@@ -37,6 +46,7 @@ public class DefaultProgressReporter extends ProgressReporter {
   private final Map<String, Long> startTimes;
   private final Set<String> cleanTasks;
   private final Set<String> compilingTasks;
+  private final Map<BuildTargetIdentifier, File> buildFileMap;
   private final ProblemsManager problemsManager;
   private ProblemsReporter problemsReporter;
 
@@ -48,15 +58,18 @@ public class DefaultProgressReporter extends ProgressReporter {
    * @param taskPathMap all know task paths to their build targets.
    * @param cleanTasks set of all names of clean task
    * @param compilingTasks set of all names of compile task
+   * @param buildFileMap map of build targets to their build file
    * @param problemsManager state of all BSP diagnostics
    */
   public DefaultProgressReporter(BuildClient client, String originId,
       Map<String, Set<BuildTargetIdentifier>> taskPathMap, Set<String> cleanTasks,
-      Set<String> compilingTasks, ProblemsManager problemsManager) {
+      Set<String> compilingTasks, Map<BuildTargetIdentifier, File> buildFileMap,
+      ProblemsManager problemsManager) {
     super(client, originId);
     this.taskPathMap = taskPathMap;
     this.cleanTasks = cleanTasks;
     this.compilingTasks = compilingTasks;
+    this.buildFileMap = buildFileMap;
     this.problemsManager = problemsManager;
     startTimes = new HashMap<>();
     problemsReporter = null;
@@ -70,6 +83,12 @@ public class DefaultProgressReporter extends ProgressReporter {
   public void statusChanged(ProgressEvent event) {
     if (client != null) {
       String taskPath = ReporterUtils.getTaskPath(event.getDescriptor());
+      if (taskPath == null) {
+        // events about the build setup don't have a taskPath so create a fake one
+        taskPath = ReporterUtils.createFakeTaskPath(event.getDescriptor());
+      } else {
+        taskPath += "\n" + ReporterUtils.createFakeTaskPath(event.getDescriptor());
+      }
       boolean isCleaning = cleanTasks != null && cleanTasks.contains(taskPath);
       boolean isCompiling = compilingTasks != null && compilingTasks.contains(taskPath);
       boolean isCompileTask = isCleaning || isCompiling;
@@ -81,17 +100,15 @@ public class DefaultProgressReporter extends ProgressReporter {
         }
         if (isCleaning) {
           problemsManager.targetsClean(targets, taskPathMap);
-        } else if (isCompiling) {
+        } else {
           problemsManager.targetsCompile(taskPath);
         }
         taskStarted(taskId, isCompileTask, targets, event.getDisplayName());
       } else if (event instanceof FinishEvent) {
         // collate and send diagnostics before finish is called
-        if (isCompileTask) {
-          for (PublishDiagnosticsParams params : problemsManager.collateDiagnostics(taskPath,
-              taskPathMap)) {
-            client.onBuildPublishDiagnostics(params);
-          }
+        for (PublishDiagnosticsParams params : problemsManager.collateDiagnostics(taskPath,
+            taskPathMap)) {
+          client.onBuildPublishDiagnostics(params);
         }
 
         Long compileTimeDuration;
@@ -113,14 +130,35 @@ public class DefaultProgressReporter extends ProgressReporter {
             compileTimeDuration, status, noop);
       } else {
         if (problemsReporter != null) {
-          Problem problem = problemsReporter.convertToDiagnostic(taskPath, event);
+          Problem problem = problemsReporter.convertToDiagnostic(taskPath, event, buildFileMap);
           if (problem != null) {
             problemsManager.addDiagnostics(problem);
+          } else {
+            if (event instanceof SingleProblemEvent spe) {
+              sendError("found unreported problem " + taskPath + '\n' + toString2(spe,
+                  (SingleProblemEvent f) -> f.getProblem(),
+                  (org.gradle.tooling.events.problems.Problem f) -> f.getContextualLabel(),
+                  (ContextualLabel f) -> f.getContextualLabel())  + '\n');
+            }
           }
         }
         taskInProgress(taskId, isCompileTask, targets, event.getDisplayName());
       }
     }
+  }
+
+  private String toString2(Object object, Function<?, ?>... convert) {
+    var result = Stream.of(convert)
+        .reduce(object, (a, b) -> {
+          if (a != null) {
+            Object output = ((Function<Object, Object>) b).apply(a);
+            if (output != null) {
+              return output;
+            }
+          }
+          return a;
+        }, (a, b) -> a == null ? b : a);
+    return Objects.toString(result);
   }
 
   private void taskStarted(TaskId taskId, boolean isCompileTask, Set<BuildTargetIdentifier> targets,

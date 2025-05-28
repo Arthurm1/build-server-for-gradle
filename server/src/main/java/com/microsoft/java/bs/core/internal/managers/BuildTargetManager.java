@@ -53,6 +53,8 @@ public class BuildTargetManager {
 
   private volatile Set<String> cleanTasks;
 
+  private volatile Map<BuildTargetIdentifier, File> buildFileMap;
+
   /**
    * constructor.
    */
@@ -62,6 +64,7 @@ public class BuildTargetManager {
     this.fullTaskPathMap = new HashMap<>();
     this.compilingTasks = new HashSet<>();
     this.cleanTasks = new HashSet<>();
+    this.buildFileMap = new HashMap<>();
   }
 
   /**
@@ -108,6 +111,7 @@ public class BuildTargetManager {
     this.fullTaskPathMap = calculateFullTaskPathMap(newCache.values());
     this.compilingTasks = calculateCompilingTasks(newCache.values());
     this.cleanTasks = calculateCleanTasks(newCache.values());
+    this.buildFileMap = calculateBuildFileMap(newCache.values());
 
     Map<BuildTargetIdentifier, GradleBuildTarget> oldCache = cache;
     this.cache = newCache;
@@ -199,6 +203,10 @@ public class BuildTargetManager {
 
   public Map<String, Set<BuildTargetIdentifier>> getFullTaskPathMap() {
     return new HashMap<>(fullTaskPathMap);
+  }
+
+  public Map<BuildTargetIdentifier, File> getBuildFileMap() {
+    return new HashMap<>(buildFileMap);
   }
 
   public Set<String> getCompilingTasks() {
@@ -363,6 +371,17 @@ public class BuildTargetManager {
       }
     }
     return fullTaskPathMap;
+  }
+
+  private Map<BuildTargetIdentifier, File> calculateBuildFileMap(
+      Collection<GradleBuildTarget> buildTargets) {
+    Map<BuildTargetIdentifier, File> results = new HashMap<>();
+    for (GradleBuildTarget buildTarget : buildTargets) {
+      File buildFile = buildTarget.getSourceSet().getBuildFile();
+      BuildTargetIdentifier btId = buildTarget.getBuildTarget().getId();
+      results.put(btId, buildFile);
+    }
+    return results;
   }
 
   private Set<String> calculateCleanTasks(Collection<GradleBuildTarget> buildTargets) {

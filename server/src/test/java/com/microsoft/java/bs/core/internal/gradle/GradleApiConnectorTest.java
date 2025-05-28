@@ -156,7 +156,7 @@ class GradleApiConnectorTest {
 
   private DefaultProgressReporter getConsoleReporter(BuildClient client) {
     return new DefaultProgressReporter(client, "Origin",
-        null, null, null, null);
+        null, null, null, null, null);
   }
 
   @Test
