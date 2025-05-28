@@ -115,6 +115,12 @@ public class LifecycleService {
     } else {
       preferences = new Preferences();
     }
+    // TODO remove this
+    preferences.setJavaSemanticdbVersion(null);
+    preferences.setSemanticdbVersion(null);
+    preferences.setKotlinSemanticdbVersion(null);
+
+
     // setup defaults if the BSP client hasn't specified these values
     // use wrapper as default unless client has specified otherwise
     if (preferences.isWrapperEnabled() == null) {

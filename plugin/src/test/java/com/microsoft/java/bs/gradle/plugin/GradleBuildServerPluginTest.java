@@ -67,7 +67,7 @@ class GradleBuildServerPluginTest {
     ).normalize();
     // uncomment this to debug the server using attach to remote
     // see GradleAPIConnector#getGradleSourceSets for usage.
-    //System.setProperty("bsp.plugin.debug.enabled", "true");
+    System.setProperty("bsp.plugin.debug.enabled", "true");
   }
 
   @AfterAll

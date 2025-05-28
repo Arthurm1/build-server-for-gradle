@@ -240,6 +240,14 @@ public class GradleApiConnector {
     return getErrorMessage(exception, errorOut);
   }
 
+  private String getException(Exception exception) {
+    // Gradle stack traces can be long - summarize first, then add the full stack
+    Throwable[] throwables = ExceptionUtils.getThrowables(exception);
+    String cutDownMessage = Arrays.stream(throwables).map(Throwable::getMessage)
+        .collect(Collectors.joining("\n"));
+    return cutDownMessage + '\n' + ExceptionUtils.getStackTrace(exception);
+  }
+
   private String getErrorMessage(Exception exception, ByteArrayOutputStream errorOut) {
     String fullMessage = getException(exception);
     if (errorOut != null && errorOut.size() > 0) {
@@ -471,14 +479,12 @@ public class GradleApiConnector {
             } catch (BuildCancelledException ce) {
               sendError("Test search cancelled for " + Utils.arrayAsStr(taskPaths, 3), reporter);
             } catch (BuildException e) {
-              sendError(getErrorMessage(e, gradleVersion), reporter);
-            } catch (BuildException e) {
               sendError("Build exception " + initScript, reporter);
               sendError(getErrorMessage(e, gradleVersion), reporter);
             } catch (GradleConnectionException | IllegalStateException e) {
               String message = "Error searching for test classes in "
                   + Utils.arrayAsStr(taskPaths, 3) + " "
-                  + String.join("\n", ExceptionUtils.getRootCauseStackTraceList(e));
+                  + getException(e);
               sendError(message, reporter);
               throw new IllegalStateException(message, e);
             }
@@ -503,11 +509,9 @@ public class GradleApiConnector {
             sendError("Error searching for tests: " + message, reporter);
           } finally {
             if (initScript != null) {
-              initScript.delete();
+             // initScript.delete();
             }
           }
-        } catch (GradleConnectionException e) {
-          throw new IllegalStateException("Error searching for test classes", e);
         }
       }
     }

@@ -568,6 +568,31 @@ class GradleApiConnectorTest {
   }
 
   @Test
+  void testMe() {
+
+    int[] cards = new int[] { 3,4,2,3,4,7  };
+
+      Map<Integer, List<Integer>> positions = new HashMap<>();
+      for (int i = 0; i < cards.length; i++) {
+        List<Integer> indexes = positions.computeIfAbsent(cards[i], j -> new ArrayList<>());
+        indexes.add(i);
+      }
+      int min = -1;
+      for (List<Integer> indexes : positions.values()) {
+        for (int i = 1; i < indexes.size(); i++) {
+          int range = indexes.get(i) - indexes.get(i - 1) + 1;
+          if (min == -1 || range < min) {
+            min = range;
+          }
+        }
+        if (min == 2) {
+          break;
+        }
+      }
+      assertEquals(4, min);
+  }
+
+  @Test
   void testGetJvmTestEnvironment() {
     Path projectDir = projectPath.resolve("junit5-jupiter-starter-gradle");
     withConnector(connector -> {

@@ -71,6 +71,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+
+import com.microsoft.java.bs.gradle.model.GradleSourceSet;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -599,7 +601,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
         assertEquals(MessageType.ERROR, message.getType());
       }
 
-      BuildTargetIdentifier mainBt = findTarget(buildTargetsResult.getTargets(),
+      BuildTargetIdentifier mainBt = findTargetId(buildTargetsResult.getTargets(),
           "fail-compilation [main]");
       CompileReport compileReportMain = findCompileReport(client, mainBt);
       assertEquals("originId", compileReportMain.getOriginId());
@@ -620,7 +622,7 @@ class BuildTargetServiceIntegrationTest extends IntegrationTest {
       assertWarning(client, mainBt, "WarningsCreator.java", 26, 35, 26, 39, "static variable");
       assertWarning(client, mainBt, "WarningsCreator.java", 30, 18, 30, 35, "deprecatedMethod");
 
-      BuildTargetIdentifier testBt = findTarget(buildTargetsResult.getTargets(),
+      BuildTargetIdentifier testBt = findTargetId(buildTargetsResult.getTargets(),
           "fail-compilation [test]");
 
       CompileReport compileReportTest = findCompileReport(client, testBt);
