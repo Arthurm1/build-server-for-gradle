@@ -20,7 +20,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
 
   resolutionStrategy {
     componentSelection {
-      all {
+      all(Action<com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent>({
         if (candidate.group == "ch.epfl.scala" &&
             candidate.module == "bsp4j") {
           if (candidate.version == "2.2.0-M4.TEST") {
@@ -29,7 +29,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
         } else if (isNonStable(candidate.version)) {
             reject("Release candidate")
         }
-      }
+      }))
     }
   }
 }
