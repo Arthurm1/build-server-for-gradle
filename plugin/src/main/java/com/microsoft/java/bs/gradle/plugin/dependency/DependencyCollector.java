@@ -9,6 +9,8 @@ import com.microsoft.java.bs.gradle.model.impl.DefaultArtifact;
 import com.microsoft.java.bs.gradle.model.impl.DefaultGradleModuleDependency;
 import com.microsoft.java.bs.gradle.plugin.utils.Utils;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,6 +40,7 @@ import org.gradle.api.artifacts.result.ArtifactResolutionResult;
 import org.gradle.api.artifacts.result.ArtifactResult;
 import org.gradle.api.artifacts.result.ComponentArtifactsResult;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
+import org.gradle.api.specs.Spec;
 import org.gradle.api.specs.Specs;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.jvm.JvmLibrary;
@@ -67,6 +70,12 @@ public class DependencyCollector {
       Collection<Configuration> configurations) {
     GradleVersion gradleVersion = GradleVersion.current();
     if (gradleVersion.compareTo(GradleVersion.version("4.0")) < 0) {
+      final Method getFiles;
+      try {
+        getFiles = ResolvedConfiguration.class.getMethod("getFiles", Spec.class);
+      } catch (NoSuchMethodException e) {
+        throw new IllegalStateException("Error in reflection", e);
+      }
       try {
         List<ResolvedConfiguration> configs = configurations.stream()
             .map(Configuration::getResolvedConfiguration)
@@ -78,7 +87,15 @@ public class DependencyCollector {
 
         // add as individual files for direct dependencies on jars
         Stream<DefaultGradleModuleDependency> directDependencies = configs.stream()
-            .flatMap(config -> config.getFiles(Specs.satisfyAll()).stream())
+            .flatMap(config -> {
+              try {
+                @SuppressWarnings("unchecked")
+                Set<File> files = (Set<File>) getFiles.invoke(config, Specs.satisfyAll());
+                return files.stream();
+              } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new IllegalStateException("Error in reflection", e);
+              }
+            })
             .map(DependencyCollector::getFileDependency);
         return Stream.concat(moduleDependencies, directDependencies)
           .filter(Objects::nonNull)

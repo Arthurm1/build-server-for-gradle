@@ -296,7 +296,6 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
    * get all archive tasks for this project and maintain the archive file
    * to source set mapping.
    */
-  @SuppressWarnings("deprecation")
   private Map<File, List<File>> getArchiveOutputFiles(Project project, SourceSet sourceSet) {
     // get all archive tasks for this project and find the dirs that are included in the archive
     Set<AbstractArchiveTask> archiveTasks = Utils.tasksWithType(project, AbstractArchiveTask.class);
@@ -309,7 +308,7 @@ public class SourceSetsModelBuilder implements ToolingModelBuilder {
           if (GradleVersion.current().compareTo(GradleVersion.version("5.1")) >= 0) {
             archiveFile = archiveTask.getArchiveFile().get().getAsFile();
           } else {
-            archiveFile = archiveTask.getArchivePath();
+            archiveFile = Utils.invokeMethod(archiveTask, "getArchivePath");
           }
           List<File> sourceSetOutputs = new LinkedList<>(sourceSet.getOutput().getFiles());
           archiveOutputFiles.put(archiveFile, sourceSetOutputs);
