@@ -6,7 +6,7 @@ plugins {
   // publishing to Central Portal
   alias (libs.plugins.vanniktechPublish)
   // publishing to Gradle plugin portal
-  id("com.gradle.plugin-publish") version "1.2.1"
+  alias (libs.plugins.gradlePluginPublish)
 }
 
 gradlePlugin {
