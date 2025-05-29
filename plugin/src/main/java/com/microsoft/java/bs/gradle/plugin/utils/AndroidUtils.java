@@ -13,7 +13,6 @@ import com.microsoft.java.bs.gradle.plugin.JavaLanguageModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.SourceSetsModelBuilder;
 import com.microsoft.java.bs.gradle.plugin.dependency.DependencyCollector;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -405,18 +404,7 @@ public class AndroidUtils {
    * @param extensionName Name of the extension to extract.
    */
   private static Object getExtension(Project project, String extensionName) {
-    Object extension = null;
-
-    try {
-      Object convention = Utils.invokeMethod(project, "getConvention");
-      Object extensionMap = Utils.invokeMethod(convention, "getAsMap");
-      extension = extensionMap.getClass()
-          .getMethod("get", Object.class).invoke(extensionMap, extensionName);
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-      // do nothing
-    }
-
-    return extension;
+    return project.getExtensions().findByName(extensionName);
   }
 
   /**
