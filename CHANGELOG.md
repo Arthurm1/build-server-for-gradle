@@ -5,12 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.15.0
+## What's Changed
+* enhancement - Gradle 9 compatibility by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/11e239f61da511285e69f0484ff613a7d5f8f2e5 and https://github.com/Arthurm1/build-server-for-gradle/commit/7b4485ccb5a93d60f1af35be83404144ed19df1e
+
 ## 0.14.0
 ## What's Changed
 * enhancement - handle missing semantic db jar by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/b77c9677a497d38e361c0208594c550caebaad26
 * enhancement - use mixed compile order on bloop export by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/172c3b7c9536b01d865f26d838da6391a6beaae9
 * enhancement - handle included builds better by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/2bad80245ed3023edd0b6c84ca9aebb7616e3958
 * enhancement - retrieve all language extensions by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/0afe3e053a7c8d7048b6769ccb95ad7cd3d2b948
+* enhancement - publish plugin to Gradle portal by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/533652e673bd5435171262d2d377a00b3cbc0436
 
 ## 0.13.0
 ## What's Changed
