@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.file.Directory;
 import org.gradle.api.internal.tasks.compile.DefaultJavaCompileSpec;
 import org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder;
@@ -354,15 +355,18 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
   private static void addDependency(Project project, String configName, String dependency) {
     String suffixConfigName = configName.substring(0, 1).toUpperCase() + configName.substring(1);
     project.getConfigurations().forEach(config ->
-        addDependency(configName, suffixConfigName, project.getDependencies(), config, dependency)
+        addDependency(configName, suffixConfigName, project, config, dependency)
     );
   }
 
   private static void addDependency(String configName, String suffixConfigName,
-      DependencyHandler dependencies, Configuration config, String dependency) {
+      Project project, Configuration config, String dependency) {
     if (config.getName().equals(configName)
         || config.getName().endsWith(suffixConfigName)) {
-      dependencies.add(config.getName(), dependency);
+      project.getDependencies().add(config.getName(), dependency);
+      // since Java plugin is internal to Gradle, it's possible (albeit unlikely) to define
+      // a Gradle Java project without any repositories. e.g. buildSrc
+      project.getRepositories().mavenCentral();
     }
   }
 
@@ -385,7 +389,6 @@ public class JavaLanguageModelBuilder extends LanguageModelBuilder {
    */
   public static void configureSemanticDb(Project project, String sourceRoot,
       String semanticDbVersion) {
-
 
     applySemanticDbDependency(project, semanticDbVersion);
 
