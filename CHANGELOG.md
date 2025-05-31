@@ -5,12 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.16.0
+### What's Changed
+* fix - Add repository for downloading java semanticdb plugin by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/643e8a20761fbf679f9e979ef2cb712d08cd252a
+
 ## 0.15.0
-## What's Changed
+### What's Changed
 * enhancement - Gradle 9 compatibility by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/11e239f61da511285e69f0484ff613a7d5f8f2e5 and https://github.com/Arthurm1/build-server-for-gradle/commit/7b4485ccb5a93d60f1af35be83404144ed19df1e
 
 ## 0.14.0
-## What's Changed
+### What's Changed
 * enhancement - handle missing semantic db jar by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/b77c9677a497d38e361c0208594c550caebaad26
 * enhancement - use mixed compile order on bloop export by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/172c3b7c9536b01d865f26d838da6391a6beaae9
 * enhancement - handle included builds better by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/2bad80245ed3023edd0b6c84ca9aebb7616e3958
@@ -18,13 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * enhancement - publish plugin to Gradle portal by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/533652e673bd5435171262d2d377a00b3cbc0436
 
 ## 0.13.0
-## What's Changed
+### What's Changed
 * enhancement - better error reporting by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/7461a22c730225bf645c758ecd17232dc627e0a1
 * enhancement - handle multiple source jars per module by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/96519f28750d294aa99a6225e58a4455baf7e94a
 * enhancement - remove transitive project dependencies by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/40c4ce676a3913296ef176ea730c8d859f26a5a2
 
 ## 0.12.0
-## What's Changed
+### What's Changed
 * enhancement - support buildTarget/scalaTestClasses by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/0ffa0f01c7897687bd9bdf9d23103a64a47b886d
 * fix - export correct compile order to Bloop by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/cb776640a2013106ffdf474aaeef7bc4abc1cc9e
 * fix - add missing jvm args to main classes by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/d39eedfe8eb78d6f0e46464f0a6e1abfa0cd9f4b
@@ -32,26 +36,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * fix - populate annotation processor path by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/49dfccd178af07b46f138ad720cbbae9581c5815
 
 ## 0.11.0
-## What's Changed
+### What's Changed
 * enhancement - download sources for built-in Gradle jars by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/d0976cc84624287b6c26d3581adaf55e08d0813c
 * enhancement - support ANTLR by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/424c49fe6a15051b1b9eb50816566c2bfe6b467a
 
 ## 0.10.0
-## What's Changed
+### What's Changed
 * enhancement - allow BSP client config of display name and base dir usage by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/12ecf16363567905cf65b45ce0dc0d463483ce1f
 
 ## 0.9.0
-## What's Changed
+### What's Changed
 * fix - ensure BSP server works with Intellij by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/fe07d24d41deaf4f82dbba6c2107eba81d13bf0f and https://github.com/Arthurm1/build-server-for-gradle/commit/07c6576fcb9ba863bf1a38ce039a4d76fab77f1a and https://github.com/Arthurm1/build-server-for-gradle/commit/10ed7b92b38c6a11fe8d5a2946f8b0421a8d4c70
 * fix - use correct java executable depending on OS by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/6d2bfacd534b9417a8dbc6dd42e98df7299cb64a
 
 ## 0.8.0
-## What's Changed
+### What's Changed
 * enhancement - add BSP build discovery file creator by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/be08b8803a014649d0f9097ad44d2b16c100a5b9
 * fix - add missing MavenCentral repository by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/f8e79e97fbb8c972e63d808fbaf63fe971a0329f
 
 ## 0.5.0
-## What's Changed
+### What's Changed
 * enhancement - Faster source set retrieval by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/168
 * enhancement - Named pipe support by @Jiaming in https://github.com/microsoft/build-server-for-gradle/pull/162
 * enhancement - Android support by @Tanish-Ranjan in https://github.com/microsoft/build-server-for-gradle/pull/173 and in https://github.com/microsoft/build-server-for-gradle/pull/194
@@ -73,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * fix - Stop spurious buildTarget/didChange messages by @Arthurm1 in https://github.com/Arthurm1/build-server-for-gradle/commit/33dc7fedbbbca35733447f185a494af845ed6937 and https://github.com/Arthurm1/build-server-for-gradle/commit/ed49b92bd5e304a754080feb25867cd09f2a5dd8
 
 ## 0.3.0
-## What's Changed
+### What's Changed
 * enhancement - Add support for running tests by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/144
 * fix - Only send build target count during initialization by @jdneo in https://github.com/microsoft/build-server-for-gradle/pull/153
 * fix - Handle older versions of Gradle by @Arthurm1 in https://github.com/microsoft/build-server-for-gradle/pull/149
@@ -87,11 +91,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * fix - Use project dir instead of project path by @jdneo in https://github.com/microsoft/build-server-for-gradle/pull/171
 * fix - --no-daemon not working on Gradle 8.9 by @jdneo in https://github.com/microsoft/build-server-for-gradle/pull/172
 
-## New Contributors
+### New Contributors
 * @Tanish-Ranjan made their first contribution in https://github.com/microsoft/build-server-for-gradle/pull/160
 
 ## 0.2.0
-## What's Changed
+### What's Changed
 * enhancement - Populate more JavacOptionsResult info by @Arthurm1 in [#105](https://github.com/microsoft/build-server-for-gradle/pull/105)
 * enhancement - Implement buildTargetCleanCache by @Arthurm1 in [#110](https://github.com/microsoft/build-server-for-gradle/pull/110)
 * enhancement - Populate buildTarget/displayName by @Arthurm1 in [#106](https://github.com/microsoft/build-server-for-gradle/pull/106)
@@ -115,7 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * test - Add message checking to integration tests by @Arthurm1 in [#136](https://github.com/microsoft/build-server-for-gradle/pull/136)
 * test - Auto download toolchain in test project by @Arthurm1 in [#143](https://github.com/microsoft/build-server-for-gradle/pull/143)
 
-## New Contributors
+### New Contributors
 * @Arthurm1 made their first contribution in https://github.com/microsoft/build-server-for-gradle/pull/105
 * @donat made their first contribution in https://github.com/microsoft/build-server-for-gradle/pull/138
 
